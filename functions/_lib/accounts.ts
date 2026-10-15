@@ -171,7 +171,10 @@ export interface ForgetInput {
  * Las reescrituras que hacen falta para olvidar la cuenta en los documentos que comparte con otros. Puro.
  *
  * - Su uid sale de los registros de votantes y de trofeos (si estaba).
- * - Su fila sale del archivo y de los votos de cada edición, buscada por `profileId`. Las de gente de fuera de la app
+ * - Su fila sale del archivo y de los votos de cada edición. Una fila es suya solo si se cumplen LAS DOS: su
+ *   `profileId` es uno de sus seudónimos (`ownProfileIds`) y el registro de trofeos de esa edición —que escribe solo
+ *   el administrador, con el uid— dice que esta cuenta quedó en el puesto de esa fila. El seudónimo solo no basta:
+ *   lo escribe el cliente y los ajenos están a la vista en el archivo público. Las filas de gente de fuera de la app
  *   (el histórico importado) llevan el `profileId` vacío, y un vacío no se busca nunca. El resto de filas se queda
  *   con su puesto: quitar a alguien no reordena la clasificación de los demás. Los recuentos (votos por nominado,
  *   papeletas) se quedan: son cifras, no dicen de quién.
@@ -185,9 +188,21 @@ export function forgetWrites(input: ForgetInput): AdminWrite[] {
     const collection = document.name.split('/documents/')[1]?.split('/')[0] || '';
     writes.push({ update: `${collection}/${docIdOf(document)}`, fields, updateTime: document.updateTime });
   };
-  const ownRow = (entry: unknown) => {
-    const profileId = (entry as { profileId?: unknown } | null)?.profileId;
-    return typeof profileId === 'string' && profileId !== '' && input.profileIds.has(profileId);
+  // En qué puesto quedó en cada edición, según el registro de trofeos: el del trofeo o, si solo participó, el real.
+  const placeBySeason = new Map<string, number>();
+  for (const document of input.premiosAdmin) {
+    const id = docIdOf(document);
+    if (!id.startsWith('palmares-')) continue;
+    const recipients = decodeFields(document.fields).recipients;
+    const own = Array.isArray(recipients) ? (recipients.find((entry) => (entry as { uid?: unknown } | null)?.uid === input.uid) as { rank?: unknown; place?: unknown } | undefined) : undefined;
+    const place = own ? (Number(own.rank) > 0 ? Number(own.rank) : Number(own.place) || 0) : 0;
+    if (place > 0) placeBySeason.set(id.slice('palmares-'.length), place);
+  }
+  const ownRow = (seasonId: string) => (entry: unknown) => {
+    const row = (entry || {}) as { profileId?: unknown; rank?: unknown };
+    const place = placeBySeason.get(seasonId);
+    return typeof row.profileId === 'string' && row.profileId !== '' && input.profileIds.has(row.profileId)
+      && place !== undefined && Number(row.rank) === place;
   };
 
   for (const document of input.premiosAdmin) {
@@ -203,17 +218,40 @@ export function forgetWrites(input: ForgetInput): AdminWrite[] {
   }
   for (const document of input.results) {
     const data = decodeFields(document.fields);
-    if (Array.isArray(data.leaderboard) && data.leaderboard.some(ownRow)) {
-      update(document, { leaderboard: data.leaderboard.filter((entry) => !ownRow(entry)) });
+    const own = ownRow(docIdOf(document));
+    if (Array.isArray(data.leaderboard) && data.leaderboard.some(own)) {
+      update(document, { leaderboard: data.leaderboard.filter((entry) => !own(entry)) });
     }
   }
   for (const document of input.reveals) {
     const data = decodeFields(document.fields);
-    if (Array.isArray(data.ballots) && data.ballots.some(ownRow)) {
-      update(document, { ballots: data.ballots.filter((entry) => !ownRow(entry)) });
+    const own = ownRow(docIdOf(document));
+    if (Array.isArray(data.ballots) && data.ballots.some(own)) {
+      update(document, { ballots: data.ballots.filter((entry) => !own(entry)) });
     }
   }
   return writes;
+}
+
+/** Como mucho, cuántos seudónimos se comprueban por cuenta (cada uno es una consulta: ver `PURGE_BATCH_MAX`). */
+export const MAX_PROFILE_IDS = 3;
+
+/**
+ * Los seudónimos de la cuenta que se pueden usar para buscar sus filas en los premios. Puro.
+ *
+ * NO SE FÍA DE LO QUE ESCRIBE EL CLIENTE: el `profileId` de `privateConfig`, de `userMap` y del perfil los escribe su
+ * dueño, y los de los demás están a la vista en el archivo público de los premios. Sin esta comprobación, bastaría
+ * con copiar el de otra persona y darse de baja para borrar SU fila del archivo. Por eso solo vale un seudónimo que
+ * ningún perfil de otra cuenta lleve (`owners`: de quién es cada perfil que lo lleva, por su `uid` o por su id).
+ */
+export function ownProfileIds(uid: string, owners: ReadonlyMap<string, readonly string[]>): Set<string> {
+  return new Set([...owners].filter(([, uids]) => uids.every((owner) => owner === uid)).map(([profileId]) => profileId));
+}
+
+/** De quién es un perfil: su campo `uid`, o su id si no lo lleva (legacy). */
+function ownerOf(document: FirestoreDocument): string {
+  const value = decodeFields(document.fields).uid;
+  return typeof value === 'string' && value ? value : docIdOf(document);
 }
 
 /** El `profileId` de un documento, si lo tiene. */
@@ -225,9 +263,9 @@ function profileIdOf(document: FirestoreDocument | null): string {
 /**
  * Borra TODO lo de una cuenta y la cuenta de Auth la última (ver la cabecera).
  *
- * En tres tiempos: se lee todo lo que hace falta (nueve lecturas), se limpia KV y se aplica todo de golpe en un
- * `commit`. Son once llamadas a Google por cuenta, tenga las amistades que tenga (el tope de Workers Free es 50 por
- * petición; de ahí `PURGE_BATCH_MAX`).
+ * En tres tiempos: se lee todo lo que hace falta (nueve lecturas, más una por seudónimo para comprobarlo, hasta
+ * `MAX_PROFILE_IDS`), se limpia KV y se aplica todo de golpe en un `commit`. Son hasta catorce llamadas a Google por
+ * cuenta, tenga las amistades que tenga (el tope de Workers Free es 50 por petición; de ahí `PURGE_BATCH_MAX`).
  *
  * La de Auth solo se borra si lo demás salió bien: con ella fuera, lo que quedara ya no tendría dueño que pudiera
  * borrarlo ni aparecería en el censo (sale de Auth). Un `ServiceUnavailableError` se deja pasar: quien llama decide si
@@ -260,6 +298,17 @@ export async function purgeAccount(api: AdminApi, kv: KVNamespace, uid: string, 
   ]);
   if (failures.length > 0) return { failures, authDeleted: false };
 
+  // 1b) Sus seudónimos, comprobados: ver `ownProfileIds`. Uno que no se pueda comprobar no se usa.
+  const candidates = [...new Set([...(profiles || []).map(profileIdOf), profileIdOf(privateConfig), profileIdOf(userMap)].filter(Boolean))]
+    .slice(0, MAX_PROFILE_IDS);
+  const owners = new Map<string, string[]>();
+  await Promise.all(candidates.map((profileId) => attempt('seudónimos', async () => {
+    const claimants = await queryCollection(api, 'profiles', { field: 'profileId', op: 'EQUAL', value: profileId });
+    owners.set(profileId, claimants.map(ownerOf));
+  })));
+  if (failures.length > 0) return { failures, authDeleted: false };
+  const profileIds = ownProfileIds(uid, owners);
+
   // 2) KV: los enlaces públicos ANTES que los documentos (como en la baja desde la app) y lo que guarda por uid —el
   //    veto, el ajuste de cuota, el índice de sugeridos y el contador del día (vive 48 h: el de hoy y el de ayer)—.
   await attempt('enlaces', async () => {
@@ -275,9 +324,6 @@ export async function purgeAccount(api: AdminApi, kv: KVNamespace, uid: string, 
   });
 
   // 3) Firestore, de golpe.
-  const profileIds = new Set(
-    [...(profiles || []).map(profileIdOf), profileIdOf(privateConfig), profileIdOf(userMap)].filter(Boolean),
-  );
   const writes: AdminWrite[] = [
     ...forgetWrites({ uid, profileIds, premiosAdmin: premiosAdmin || [], results: results || [], reveals: reveals || [] }),
     ...(friendships || []).flatMap((document) => [{ delete: `friendships/${docIdOf(document)}` }, { delete: `friendshipKeys/${docIdOf(document)}` }]),

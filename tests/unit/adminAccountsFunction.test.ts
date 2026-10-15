@@ -2,7 +2,7 @@
 // un `fetch` de mentira que contesta como Google, y lo que se comprueba es lo que DECIDE — qué se cruza, qué se borra
 // y en qué orden, y que la cuenta de Auth se quede si algo de Firestore no se pudo borrar.
 import { beforeEach, describe, expect, it } from 'vitest';
-import { forgetWrites, premiosParticipants, purgeAccount, readAccountCensus } from '../../functions/_lib/accounts';
+import { forgetWrites, ownProfileIds, premiosParticipants, purgeAccount, readAccountCensus } from '../../functions/_lib/accounts';
 import { decodeFields, encodeValue, toAuthAccount } from '../../functions/_lib/googleAdmin';
 import { ServiceUnavailableError } from '../../functions/_lib/http';
 import type { KVNamespace } from '../../functions/_lib/keys';
@@ -195,6 +195,29 @@ describe('forgetWrites', () => {
     ]);
   });
 
+  it('el seudónimo solo no basta: la fila tiene que estar en el puesto que el registro de trofeos da a esa cuenta', () => {
+    const writes = forgetWrites({
+      uid: 'u1',
+      profileIds: new Set(['p-ajeno']),
+      // El registro (solo admin) dice que u1 quedó 5.º en 2025; la fila con ese seudónimo está en el 1.º.
+      premiosAdmin: [doc('premiosAdmin/palmares-2025', { recipients: [{ uid: 'u1', rank: 0, place: 5 }] })],
+      results: [doc('premiosResults/2025', { leaderboard: [{ rank: 1, profileId: 'p-ajeno', nickname: 'Otra', points: 9 }] })],
+      // Y de una edición sin registro de trofeos no se borra nada.
+      reveals: [doc('premiosReveal/2024', { ballots: [{ rank: 1, profileId: 'p-ajeno', nickname: 'Otra', points: 9, selections: {} }] })],
+    });
+    expect(writes).toEqual([{ update: 'premiosAdmin/palmares-2025', fields: { recipients: [] }, updateTime: 't1' }]);
+  });
+
+  it('solo valen los seudónimos que ningún perfil de otra cuenta lleva', () => {
+    const owners = new Map([
+      ['p-mio', ['u1']],
+      ['p-sin-perfil', []],
+      // Copiado del archivo público: lo lleva el perfil de otra persona.
+      ['p-copiado', ['u2', 'u1']],
+    ]);
+    expect([...ownProfileIds('u1', owners)].sort()).toEqual(['p-mio', 'p-sin-perfil']);
+  });
+
   it('sin seudónimo no toca el archivo, aunque haya filas con el profileId vacío', () => {
     const writes = forgetWrites({
       uid: 'u1',
@@ -222,7 +245,7 @@ describe('purgeAccount', () => {
       if (collection === 'friendships') return ok([{ document: fs('friendships/a__u1') }]);
       if (collection === 'friendshipKeys') return ok([{ document: fs('friendshipKeys/u1__z') }, {}]);
       // Un perfil legacy con otro id, que lleva el uid dentro, y su seudónimo.
-      if (collection === 'profiles') return ok([{ document: fs('profiles/perfil-viejo', { profileId: 'p-viejo' }) }]);
+      if (collection === 'profiles') return ok([{ document: fs('profiles/perfil-viejo', { uid: 'u1', profileId: 'p-viejo' }) }]);
       if (collection === 'adminLog') return ok([{ document: fs('adminLog/e1') }]);
     }
     if (call.method === 'GET' && call.url.includes('/documents/privateConfig/')) return ok(fs('privateConfig/u1', { profileId: 'p1' }));
@@ -278,8 +301,9 @@ describe('purgeAccount', () => {
     const results = (commit?.body as { writes: Array<{ update?: { name: string; fields: Record<string, unknown> } }> }).writes
       .find((write) => write.update?.name.endsWith('premiosResults/2025'));
     expect(results?.update?.fields).toEqual({ leaderboard: { arrayValue: { values: [] } } });
-    // Once llamadas a Google por cuenta, tenga lo que tenga: nueve lecturas, el commit y Auth.
-    expect(google.calls).toHaveLength(11);
+    // Nueve lecturas, una comprobación por seudónimo (aquí dos: el del perfil y el de privateConfig), el commit y Auth.
+    expect(google.calls).toHaveLength(13);
+    expect(google.calls.filter((call) => JSON.stringify(call.body || '').includes('"profileId"'))).toHaveLength(2);
     const last = google.calls[google.calls.length - 1];
     expect(last.url).toContain('accounts:delete');
     expect(last.body).toEqual({ localId: 'u1' });

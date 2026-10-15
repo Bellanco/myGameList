@@ -46,7 +46,7 @@ Reglas que se añadieron sobre lo decidido (`src/core/admin/accountRetention.ts`
   `{ uids }`: borra solo las que el servidor da por caducadas en ese momento (se vuelve a juzgar con
   `judgeRetention`); las demás vuelven como `skipped`, y la cuenta de quien llama no se borra nunca. Como mucho **3 por
   petición** (`PURGE_BATCH_MAX`, a la par con `PURGE_CHUNK` del panel, que trocea): Workers Free admite 50
-  subpeticiones por petición, el censo son 5 y cada cuenta 11 (5 + 3 × 11 = 38).
+  subpeticiones por petición, el censo son 5 y cada cuenta hasta 14 (5 + 3 × 14 = 47).
 - **El censo empareja los perfiles por su campo `uid`**, no solo por el id del documento: quedan perfiles legacy con
   otro id (`foreign-doc-id`), y sin esto su dueño saldría «sin perfil» y caducaría a los dos meses.
 - **Errores**: sin cupo o con Google caído, 503 «no disponible» (el panel para y deja el resto como pendiente; la baja
@@ -62,13 +62,13 @@ Reglas que se añadieron sobre lo decidido (`src/core/admin/accountRetention.ts`
   | `profiles` | el suyo y los legacy con otro id (buscados por el campo `uid`) |
   | `privateConfig`, `publicConfig`, `userMap`, `premiosBallots` | su documento |
   | `premiosAdmin/voters-*`, `palmares-*` | su uid sale de la lista |
-  | `premiosResults/*`, `premiosReveal/*` | su fila de la clasificación y de los votos, buscada por su `profileId` (el del perfil, `privateConfig` y `userMap`). Las filas de gente de fuera de la app llevan el `profileId` vacío y no se tocan. El resto conserva su puesto; los recuentos se quedan |
+  | `premiosResults/*`, `premiosReveal/*` | su fila de la clasificación y de los votos. Es suya solo si su `profileId` es un seudónimo de la cuenta que ningún perfil de otra cuenta lleva **y** el registro de trofeos de esa edición (`palmares-*`, solo admin) dice que esta cuenta quedó en ese puesto: el seudónimo lo escribe el cliente y los ajenos están a la vista en el archivo público, así que solo no basta. Las filas de gente de fuera de la app llevan el `profileId` vacío y no se tocan. El resto conserva su puesto; los recuentos se quedan |
   | `adminLog` | las entradas sobre esa persona. El borrado se apunta sin nombre ni uid |
   | KV | enlaces (`share:`, `owner:`, `user:`), `relidx:`, `ban:`, `quota:override:` y el contador del día |
   | Firebase Auth | la cuenta |
 
   Las reescrituras llevan el `updateTime` leído: si el administrador toca el mismo documento a la vez, el `commit`
-  falla entero y se reintenta. Son 11 llamadas a Google por cuenta.
+  falla entero y se reintenta. Son hasta 14 llamadas a Google por cuenta.
 - **La baja desde la app** pide primero ese mismo borrado completo al servidor (`DELETE /api/account`, que solo borra
   el uid del ID token). Va primero porque necesita el `profileId` del perfil. Si el servidor no puede (sin cuenta de
   servicio, o en `npm run dev`), el cliente borra lo que permiten las reglas, como antes, y avisa de que quedó algo.

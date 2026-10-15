@@ -19,8 +19,8 @@ type AccountsEnv = Env & ServiceAccountEnv;
 
 /**
  * Cuántas cuentas se borran en una petición, como mucho. Lo fija el tope de Workers Free, 50 subpeticiones por
- * petición: el censo son cinco (token y cuatro listados) y cada cuenta once (`purgeAccount`): 5 + 3 × 11 = 38. El
- * panel trocea.
+ * petición: el censo son cinco (token y cuatro listados) y cada cuenta hasta catorce (`purgeAccount`): 5 + 3 × 14 =
+ * 47. El panel trocea.
  */
 export const PURGE_BATCH_MAX = 3;
 
