@@ -195,13 +195,53 @@ export function useSignatureEffects(): void {
      * Gandalf: «Todo lo que tenemos que decidir es qué hacer con el tiempo que se nos ha dado». Debajo, «Juego
      * Terminado» con letra de título de las películas, la rúbrica y la luz que lo recorre.
      */
+    /**
+     * La INSCRIPCIÓN del Anillo Único: letras de fuego al estilo de la tengwar en la cara de FUERA de la banda, como
+     * cuando Gandalf lo echa a la chimenea. No es texto real (no hay fuente libre de tengwar): cada letra es un palo,
+     * uno o dos lóbulos y a veces un acento encima, con un azar con semilla para que sea siempre la misma. Va en el
+     * canto de delante (la mitad que se ve con el anillo tumbado), siguiendo su curva y estirada en vertical lo que el
+     * vuelco (`scale(1, .34)`) aplasta después. Se calcula una vez.
+     */
+    const INSCRIPCION = (() => {
+      let semilla = 11;
+      const azar = (): number => ((semilla = (semilla * 16807) % 2147483647) - 1) / 2147483646;
+      let d = '';
+      for (let g = 15; g <= 165; g += 6) {
+        const a = (g * Math.PI) / 180;
+        // `u` corre a lo largo del canto (con su escorzo) y `v` hacia arriba, en el centro del canto (y + 6.5).
+        const p = (u: number, v: number): string =>
+          `${(Math.cos(a) * 30 - Math.sin(a) * u).toFixed(2)} ${(Math.sin(a) * 30 + Math.cos(a) * u * 0.3 + 6.5 - v * 2.5).toFixed(2)}`;
+        // El palo sube o baja de la línea (las dos alturas de la tengwar) o se queda en ella; el lóbulo, a la
+        // derecha y a veces doble; y uno de cada tres lleva su acento encima.
+        const tira = azar();
+        const arriba = tira < 0.3 ? 2.1 : 1;
+        const abajo = tira > 0.75 ? -2.1 : -1;
+        d += `M${p(0, abajo)} L${p(0, arriba)}`;
+        if (azar() < 0.35) d += ` M${p(0, 1)} Q${p(1.1, 0.5)} ${p(0, 0)} Q${p(1.1, -0.5)} ${p(0, -1)}`;
+        else d += ` M${p(0, 1)} Q${p(1.5, 0)} ${p(0, -1)}`;
+        if (azar() < 0.35) d += ` M${p(-0.2, 1.6)} Q${p(0.35, 2.05)} ${p(0.9, 1.6)}`;
+      }
+      return d;
+    })();
     const elAnillo = (): HTMLElement =>
       escena(
         'fx-tm-fin',
         '<span class="fx-tm-dicho">«Todo lo que tenemos que decidir es qué hacer con el tiempo que se nos ha dado»</span>' +
-          '<svg class="fx-tm-anillo" viewBox="-60 -50 120 90" aria-hidden="true"><g class="fx-tm-anillo-cae"><g class="fx-tm-anillo-gira">' +
-          '<path class="fx-tm-oro" fill-rule="evenodd" d="M-30 0 A30 30 0 1 0 30 0 A30 30 0 1 0 -30 0 Z M-22 0 A22 22 0 1 1 22 0 A22 22 0 1 1 -22 0 Z"/>' +
-          '<path class="fx-tm-oro-luz" d="M-25 -9 A27 27 0 0 1 9 -26"/></g></g></svg>' +
+          // Una BANDA lisa de oro pulido, no un disco: el degradado le redondea el perfil (sombra en los dos filos, luz
+          // en medio) y, al tumbarse, asoman el canto de delante —con la inscripción— y la pared de dentro del hueco.
+          '<svg class="fx-tm-anillo" viewBox="-60 -50 120 90" aria-hidden="true"><defs>' +
+          '<radialGradient id="fx-tm-anillo-oro" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="30">' +
+          '<stop class="is-sombra" offset=".8"/><stop class="is-oro" offset=".86"/><stop class="is-luz" offset=".9"/>' +
+          '<stop class="is-oro" offset=".95"/><stop class="is-sombra" offset="1"/></radialGradient>' +
+          '<linearGradient id="fx-tm-anillo-canto" gradientUnits="userSpaceOnUse" x1="-30" y1="0" x2="30" y2="0">' +
+          '<stop class="is-sombra" offset="0"/><stop class="is-oro" offset=".38"/><stop class="is-luz" offset=".5"/>' +
+          '<stop class="is-oro" offset=".62"/><stop class="is-sombra" offset="1"/></linearGradient></defs>' +
+          '<g class="fx-tm-anillo-cae"><g class="fx-tm-anillo-gira">' +
+          '<path class="fx-tm-canto" d="M-30 0 A30 30 0 0 0 30 0 L30 13 A30 30 0 0 1 -30 13 Z"/>' +
+          `<path class="fx-tm-letras" d="${INSCRIPCION}"/>` +
+          '<path class="fx-tm-oro" fill-rule="evenodd" d="M-30 0 A30 30 0 1 0 30 0 A30 30 0 1 0 -30 0 Z M-24 0 A24 24 0 1 1 24 0 A24 24 0 1 1 -24 0 Z"/>' +
+          '<path class="fx-tm-hueco" d="M-23.1 6.5 A24 24 0 1 1 23.1 6.5 A24 24 0 0 0 -23.1 6.5 Z"/>' +
+          '<path class="fx-tm-oro-luz" d="M-25.4 -11.8 A28 28 0 0 1 9.6 -26.3"/></g></g></svg>' +
           '<b><span class="fx-tm-cap">J</span>uego <span class="fx-tm-cap">T</span>erminado</b><svg class="fx-tm-fin-raya" viewBox="0 0 300 14" aria-hidden="true">' +
           '<path d="M6 7 H128 M172 7 H294"/><path class="fx-tm-fin-hoja" d="M150 1 Q160 7 150 13 Q140 7 150 1 Z"/></svg>',
       );
