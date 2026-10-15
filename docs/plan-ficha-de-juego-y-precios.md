@@ -60,7 +60,7 @@ aciertan siempre con su precio porque llegan con su id.
 |---|---|
 | F0.1 | **Por encima, no como pantalla** (modal o panel: la forma es F0.11). Se abre sobre la pantalla en la que estás y pone `?juego=<clave>` en la URL. «Atrás» lo cierra, y recargar o compartir la URL lo vuelve a abrir. Sin ruta nueva ni línea en `_redirects`. Funciona sin social: tus datos, la saga y el precio |
 | F0.6 | **Sustituye al detalle desplegado de la fila.** Tocar una fila o una caja del mosaico abre la ficha; el doble clic sigue abriendo la edición. Una sola vista por juego, se abra desde donde se abra |
-| F0.11 | **Panel lateral** (15-10-2026). Entra por la derecha, **siempre a todo el alto**, y el **ancho se adapta al contenido**: con amistades, dos columnas y hasta 1.120 px u 80 % del ancho; sin ellas, una columna en 600 px, con los componentes más juntos. En el móvil, la pantalla entera. **Sin cabecera de modal:** el nombre va junto a la carátula y solo queda la X en la esquina. **Aprovechar el espacio para evitar el scroll:** dos columnas con ancho. **Los botones, fijos en una barra abajo.** Pulsar fuera cierra |
+| F0.11 | **Panel lateral** (15-10-2026). Entra por la derecha, **siempre a todo el alto**, y el **ancho se mide para que el espacio en blanco sea siempre el mínimo**: el más estrecho de tres (una columna en 600 px, dos en 880 px, dos en 1.120 px) en el que todo cabe sin scroll. En el móvil, la pantalla entera. **Sin cabecera de modal:** el nombre va junto a la carátula y solo queda la X en la esquina. **Aprovechar el espacio para evitar el scroll:** dos columnas con ancho. **Los botones, fijos en una barra abajo.** Pulsar fuera cierra |
 | F0.12 | **«Tus datos» lleva todo lo que llevaba el detalle** (15-10-2026): plataformas y Steam Deck, géneros, años, horas, puntos fuertes y débiles (o motivos), nota o interés, rejugar o reintentar y el enlace a la reseña, con el mismo marcado y las mismas reglas por lista |
 | F0.10 | **La ficha abre siempre, con o sin red.** Lo tuyo (datos, acciones, saga de tu biblioteca) sale siempre. Lo que viene de fuera (amistades, índice, precios, carátulas) es opcional: si no llega, por falta de conexión, un servicio caído o un cupo agotado, **esa sección no se pinta**, sin error ni hueco. Vale para todas las piezas de fuera. Ver «Sin conexión y servicios caídos» |
 
@@ -127,15 +127,27 @@ con «Añadir a deseados».
   propio es `ficha-juego.scss`, que sería `src/styles/gameSheet.scss`.
 
 **El panel (F0.11):**
-- **Siempre a todo el alto; el ancho sigue al contenido** (decisión del usuario, 15-10-2026, tras ver *Celeste* con
-  media ficha en blanco):
-  - **con amistades:** dos columnas, hasta 1.120 px u 80 % del ancho (`.is-ancho`);
-  - **sin amistades** (sin social, o nadie lo tiene): una columna en 600 px, con la saga bajo tus datos
-    (`.is-estrecho`). Los componentes quedan juntos en lugar de estirados.
+- **Siempre a todo el alto; el ancho se mide para que el espacio en blanco sea el mínimo** (decisión del usuario,
+  15-10-2026, tras ver *Celeste* y *Outer Wilds* con media ficha vacía). Se prueba de más estrecho a más ancho y se
+  queda en el primero en el que todo cabe sin scroll:
+
+  | Paso | Ancho | Reparto |
+  |---|---|---|
+  | 0 | 600 px | Una columna: cabecera, precio, tus datos, amistades y saga |
+  | 1 | 880 px (u 80 % del ancho) | Dos columnas: lo tuyo y lo de tus amistades |
+  | 2 | 1.120 px (u 80 % del ancho) | Dos columnas. Es el tope: si tampoco cabe, el cuerpo hace scroll |
+
+  Solo se pasa del paso 0 si hay algo que llevar a la segunda columna (amistades o saga). Con una sola amistad, o
+  solo con la saga, casi siempre cabe en una.
+- **Cómo se mide:** después de `showModal`, sobre el cuerpo (`scrollHeight` frente a `clientHeight`).
+  - Se repite cada vez que el contenido cambia de tamaño (`ResizeObserver`): la letra que llega tarde, una carátula,
+    las amistades que llegan después. Ese caso **solo ensancha**, así que no puede entrar en bucle.
+  - Cambiar el tamaño de la ventana vuelve a empezar por el paso 0.
+  - En el móvil no se mide: siempre es la pantalla entera.
+  - El panel entra deslizándose desde fuera, así que los cambios de ancho al abrir no llegan a verse. Si las
+    amistades llegan con el panel ya abierto, se ensancha con una transición.
 
   El velo es ligero (40 %), para seguir viendo la lista.
-- **El ancho se decide al abrir, con lo que ya hay en el dispositivo** (directorio e índice cacheados, F3/F4), para
-  que el panel no salte. Si las primeras amistades llegan después, el panel se ensancha con una transición.
 - **Móvil (≤ 600 px):** la pantalla entera, también desde la derecha. Se cierra con la X, «atrás» o Esc.
 - **Sin cabecera de modal:** el nombre va en la ficha, junto a la carátula. La X queda en la esquina, fuera del
   scroll.
@@ -151,17 +163,20 @@ con «Añadir a deseados».
 - **En el móvil, una columna:** cabecera, precio, tus datos, amistades y saga, en ese orden. Las columnas se
   disuelven (`display: contents`) y el orden lo pone `order`.
 
-**Medido** (scroll del cuerpo, contenido frente a visible), sin errores de consola y sin desborde horizontal:
+**Medido** con la regla de los tres pasos (contenido frente a visible del cuerpo), sin errores de consola y sin
+desborde horizontal:
 
-| Caso | Ancho | Contenido / visible |
-|---|---|---|
-| *Silksong* (deseos, con precio y 6 amistades) | 1280 × 800 | 734 / 734: **sin scroll** |
-| *Hollow Knight* (completado, con todos los datos) | 1280 × 800 | 734 / 734: **sin scroll** |
-| *Hollow Knight* | 1512 × 900 | 834 / 834: **sin scroll** |
-| *Hades 2*, arcade claro | 1440 × 900 | 833 / 833: **sin scroll** |
-| *Silksong* | 390 × 844 | 1.204 / 778: scroll en el móvil, con la barra fija |
-| *Celeste* (sin amistades ni saga), cyberpunk | 1512 × 900 | Panel estrecho de 600 px: 832 / 832 |
-| *Silksong* sin social (precio y saga) | 1512 × 900 | Panel estrecho de 600 px: 834 / 834 |
+| Caso | Ventana | Paso elegido | Contenido / visible |
+|---|---|---|---|
+| *Celeste* (sin amistades ni saga) | 1512 × 900 | 600 px, una columna | 786 / 786 |
+| *Outer Wilds* (una amistad) | 1512 × 900 | 600 px, una columna | 786 / 786 |
+| *Baldur's Gate 3* (deseo sin amistades) | 1280 × 800 | 600 px, una columna | 734 / 734 |
+| *Hades* (dos amistades y saga) | 1512 × 900 | 880 px, dos columnas | 834 / 834 |
+| *Silksong* (deseo, precio y seis amistades) | 1280 × 800 | 880 px, dos columnas | 734 / 734 |
+| *Hollow Knight* (todos los datos y cuatro amistades) | 1512 × 900 | 880 px, dos columnas | 834 / 834 |
+| *Hollow Knight* | 1280 × 800 | 1.024 px (el tope), dos columnas | 734 / 734 |
+| Saltar por la saga de *Hollow Knight* a *Silksong* | 1280 × 800 | vuelve a medir: 880 px | 734 / 734 |
+| *Hades* | 390 × 844 | pantalla entera | scroll, con la barra fija |
 
 Se borra al implementar F2/F6.
 
@@ -237,7 +252,9 @@ las peticiones con `page.route`.
 
 ## Fase F2 · El modal, con lo propio, en lugar del detalle · M–L
 
-- **El panel** (F0.11). `view/components/gameSheet/GameSheetPanel.tsx`, con `<dialog>` nativo y `useNativeDialog`. Va lazy
+- **El panel** (F0.11). `view/components/gameSheet/GameSheetPanel.tsx`, con `<dialog>` nativo y `useNativeDialog`.
+  El ancho se mide con un hook propio (`useGameSheetWidth`: los tres pasos, el `ResizeObserver` que solo ensancha y
+  el reinicio al cambiar la ventana), con su test de componente. Va lazy
   en `App.tsx`, montado **una vez** para toda la app, como la ruleta, y **precacheado** por el service worker
   (ver «Sin conexión y servicios caídos»): sin eso, sin red tras un despliegue no se abriría. El `<dialog>` se queda montado, como pide el
   hook, para devolver el foco a la fila al cerrar. Mientras carga el chunk la primera vez, la fila no se mueve. El
