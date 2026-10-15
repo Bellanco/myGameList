@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#10140f">
+    <title>Maqueta · ficha de juego</title>
+    <!-- MAQUETA DESECHABLE DE LA FICHA DE JUEGO (docs/plan-ficha-de-juego-y-precios.md). Monta la propuesta con las
+         piezas reales de la app (cáscara del hub, renglón de persona, carátula, estrellas) y datos inventados. Se
+         borra al implementar la Fase F2, cuando la ficha entre en social.tsx.
+           ?juego=silksong|hollow   (en tus deseos, con precio · en tus completados)
+           &social=0                (sin espacio social: sin amistades)
+           &gl-palette=<id> &gl-theme=dark|light &gl-effects=off &barra=0   (como social.html) -->
+    <script>(function () {
+  var BG = {
+    tierramedia: { dark: '#10140f', light: '#ece3cc' },
+    witcher: { dark: '#141922', light: '#d8e0e7' },
+    persona: { dark: '#0d0d0d', light: '#f4f1ee' },
+    portal: { dark: '#12171b', light: '#e7dabd' },
+    cyberpunk: { dark: '#08090d', light: '#e7eaee' },
+    grimdark: { dark: '#060b08', light: '#e7ddc3' },
+    seaofstars: { dark: '#0e0c24', light: '#a6e9ec' },
+    arcade: { dark: '#150a24', light: '#eee2fb' }
+  };
+  var params = new URLSearchParams(window.location.search);
+  var root = document.documentElement;
+  var theme = params.get('gl-theme') === 'light' ? 'light' : 'dark';
+  if (theme === 'light') {
+    root.setAttribute('data-theme', 'light');
+  }
+  var palette = params.get('gl-palette');
+  if (palette === 'steam') {
+    palette = 'witcher';
+  }
+  if (!BG[palette]) {
+    palette = 'tierramedia';
+  }
+  root.setAttribute('data-palette', palette);
+  // Lo que la app deja escrito al montar sus preferencias con los valores de fábrica (efectos encendidos, listado
+  // en renglones, cuadros medianos): hay CSS que cuelga de estos atributos.
+  if (params.get('gl-effects') !== 'off') {
+    root.setAttribute('data-effects', 'on');
+  }
+  // «Texto» de /cuenta en mayúsculas (`data-uppercase`): de fábrica va apagado; `gl-uppercase=on` lo enciende.
+  if (params.get('gl-uppercase') === 'on') {
+    root.setAttribute('data-uppercase', 'on');
+  }
+  root.setAttribute('data-list-shape', 'list');
+  root.setAttribute('data-grid-size', 'md');
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', BG[palette][theme]);
+  }
+})();</script>
+    <script type="module" src="/docs/maquetas/ficha-juego.tsx"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

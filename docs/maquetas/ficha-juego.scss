@@ -1,0 +1,181 @@
+// PROPUESTA de hoja de la ficha de juego (sería `src/styles/gameSheet.scss`, en el chunk de la pantalla). Solo
+// tokens: el carácter de cada tema lo ponen las clases del hub que la ficha reutiliza (tarjeta, renglón de persona,
+// metadatos), así que aquí no hay nada por tema.
+
+.gs-card { container-type: inline-size; }
+
+// ─── Cabecera: carátula + datos ──────────────────────────────────────────────────────────────────────────────
+.gs-hero {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: var(--sp-4, 1rem);
+  align-items: start;
+}
+
+.gs-cover {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--e2);
+}
+
+.gs-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  min-width: 0;
+}
+
+.gs-facts {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.gs-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .2rem; }
+
+.gs-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .6rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text);
+  background: color-mix(in srgb, var(--pill-c, var(--move-p)) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pill-c, var(--move-p)) 45%, transparent);
+
+  .ui-icon { width: var(--ico-sm, 1rem); height: var(--ico-sm, 1rem); color: var(--pill-c, var(--move-p)); }
+  &.is-c { --pill-c: var(--move-c); }
+  &.is-v { --pill-c: var(--move-v); }
+  &.is-e { --pill-c: var(--move-e); }
+  &:is(.is-p, .is-d) { --pill-c: var(--move-p); }
+}
+
+// Las dos cifras de las amistades: la media y cuántas lo tienen.
+.gs-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem 1.4rem;
+  margin: .3rem 0 0;
+
+  div { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+  dt { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+  dd { margin: 0; font-size: var(--fs-lg); font-weight: 700; color: var(--text); line-height: 1.15; }
+  dd small { font-size: var(--fs-xs); font-weight: 400; color: var(--text-muted); }
+}
+
+// En el móvil, a todo el ancho bajo la carátula; con ancho, en la columna del texto.
+.gs-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .5rem; }
+.gs-actions .btn { flex: 1 1 auto; justify-content: center; }
+
+// ─── Precio (IsThereAnyDeal) ─────────────────────────────────────────────────────────────────────────────────
+.gs-price {
+  display: grid;
+  gap: .45rem;
+  margin-top: .9rem;
+  padding: .8rem .9rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--success) 9%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 35%, transparent);
+}
+
+.gs-price-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .6rem; }
+.gs-price-now { font-size: var(--fs-2xl); font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.gs-price-regular { font-size: var(--fs-sm); color: var(--text-muted); text-decoration: line-through; }
+
+.gs-price-cut {
+  padding: .1rem .45rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--on-accent);
+  background: var(--success);
+}
+
+.gs-price-low {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: color-mix(in srgb, var(--success) 75%, var(--text));
+}
+
+.gs-price-meta { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); }
+.gs-price-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
+.gs-price-credit { font-size: var(--fs-2xs); color: var(--text-muted); }
+
+// ─── Tu entrada ──────────────────────────────────────────────────────────────────────────────────────────────
+.gs-own { display: grid; gap: .5rem; }
+.gs-own-line { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; font-size: var(--fs-sm); color: var(--text-muted); }
+
+// ─── Amistades ───────────────────────────────────────────────────────────────────────────────────────────────
+.gs-friends { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+
+// El adelanto de su reseña, en una línea bajo el estado; entero, en su reseña.
+.gs-snippet {
+  display: block;
+  margin-top: .15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.gs-wanters { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: 0; padding: 0; list-style: none; }
+
+.gs-wanter {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: var(--fs-sm);
+  color: var(--text);
+
+  .hub-avatar { width: 1.75rem; height: 1.75rem; }
+}
+
+// ─── Saga ────────────────────────────────────────────────────────────────────────────────────────────────────
+.gs-saga {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 6.5rem;
+  gap: .75rem;
+  margin: 0;
+  padding: 0 0 .3rem;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.gs-saga-item {
+  display: grid;
+  gap: .35rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  .game-cover { border-radius: var(--radius-sm); }
+  &:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+}
+
+.gs-saga-name { font-size: var(--fs-xs); font-weight: 600; line-height: 1.25; }
+.gs-saga-who { font-size: var(--fs-2xs); color: var(--text-muted); line-height: 1.3; }
+.gs-saga-item[aria-current="true"] .gs-saga-name { color: var(--fg-link); }
+
+// ─── Con ancho: carátula más grande y precio a la derecha de la cabecera ─────────────────────────────────────
+@container (min-width: 40rem) {
+  .gs-hero { grid-template-columns: 11rem minmax(0, 1fr); gap: .9rem 1.4rem; }
+  .gs-hero { grid-template-rows: auto 1fr; }
+  .gs-cover { grid-row: span 2; }
+  .gs-actions { grid-column: 2; align-self: start; }
+  .gs-actions .btn { flex: 0 0 auto; }
+  .gs-top:has(.gs-price) { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 1.2rem; align-items: start; }
+  .gs-top .gs-price { margin-top: 0; }
+  .gs-saga { grid-auto-columns: 7.5rem; }
+}
