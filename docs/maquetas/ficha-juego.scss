@@ -22,8 +22,9 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel {
   animation: gsDesdeDerecha .28s cubic-bezier(.2, .9, .3, 1) both;
 }
 
-// El ancho sigue al contenido: con amistades, dos columnas y panel ancho; sin ellas, una columna en un panel
-// estrecho, con los componentes más juntos en lugar de estirados.
+// El ancho se MIDE (ver `FichaModal`): una columna en 600 px; si no cabe, dos columnas en 880 px; si tampoco, en
+// 1.120 px. Se queda en el más estrecho en el que todo cabe sin scroll.
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-medio { width: min(880px, 80vw); }
 dialog.modal-dialog.gs-dialog[open] .gs-panel.is-ancho { width: min(1120px, 80vw); }
 dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92vw); }
 
@@ -35,7 +36,7 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
 
 // En el móvil, la pantalla entera: el panel sigue entrando por la derecha. Se cierra con la X, con «atrás» o con Esc.
 @media (max-width: 600px) {
-  dialog.modal-dialog.gs-dialog[open] .gs-panel:is(.is-ancho, .is-estrecho) { width: 100%; border-radius: 0; }
+  dialog.modal-dialog.gs-dialog[open] .gs-panel:is(.is-estrecho, .is-medio, .is-ancho) { width: 100%; border-radius: 0; }
 }
 
 // Lo que se desplaza es el cuerpo; la barra de botones se queda abajo.
@@ -273,6 +274,11 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
   .gs-bar .btn:not(:first-child) { flex: 0 0 auto; }
   .gs-bar .btn:not(:first-child) .gs-bar-label { display: none; }
   .gs-bar .btn-danger { margin-inline-start: 0; }
+}
+
+// En el panel estrecho (unos 34 rem de contenido), la carátula algo mayor que en el móvil.
+@container (min-width: 32rem) {
+  .gs-head { grid-template-columns: 8rem minmax(0, 1fr); gap: 1.2rem; }
 }
 
 // ─── Con ancho ───────────────────────────────────────────────────────────────────────────────────────────────

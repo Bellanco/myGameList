@@ -11,7 +11,7 @@
 //
 // Carátulas: la ficha las pide en `solo-cache` al gemelo `localCoverApi`, que sirve lo ya resuelto en
 // `.covers.local.json`. Sin ese fichero sale la portada de casa, que también vale para ver la composición.
-import { useCallback, useEffect, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import '../../src/styles/index.scss';
@@ -441,9 +441,47 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   const tab = g ? listaDe(g.id) : 'd';
   const amistades = g && conSocial ? AMISTADES[g.name] || [] : [];
   const precio = g && tab === 'd' && conPrecio ? PRECIOS[g.name] : undefined;
-  // EL ANCHO SIGUE AL CONTENIDO; EL ALTO, SIEMPRE ENTERO. La segunda columna solo existe si hay amistades que
-  // enseñar; sin ellas, una sola columna en un panel estrecho, con la saga debajo de tus datos.
-  const dosColumnas = amistades.length > 0;
+  // EL ESPACIO EN BLANCO, SIEMPRE EL MÍNIMO. El alto es siempre entero; el ancho se MIDE, de más estrecho a más
+  // ancho, y se queda en el primero en el que todo cabe sin scroll:
+  //   0 · una columna, 600 px;
+  //   1 · dos columnas, 880 px;
+  //   2 · dos columnas, 1.120 px (el tope; si tampoco cabe, aquí hace scroll el cuerpo).
+  // Solo se pasa de 0 si hay algo que llevar a la segunda columna (amistades o saga). Se mide después de `showModal`
+  // (el efecto de `useNativeDialog` va antes que este) y otra vez cada vez que el contenido cambia de tamaño
+  // (`ResizeObserver`: la letra que llega tarde, una carátula, las amistades que llegan después). Ese caso SOLO
+  // ensancha, así que no puede entrar en bucle. Cambiar el tamaño de la ventana sí vuelve a empezar por el más
+  // estrecho. El panel entra deslizándose desde fuera, así que los cambios de ancho no llegan a verse.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const [medida, setMedida] = useState<{ id: number; etapa: number } | null>(null);
+  const [pasada, setPasada] = useState(0);
+  const etapa = g !== null && medida?.id === g.id ? medida.etapa : 0;
+  const hayLado = amistades.length > 0 || (g ? TODOS.some((o) => o.id !== g.id && sharedSagaName(g.name, o.name)) : false);
+
+  useEffect(() => {
+    const alCambiar = () => {
+      setMedida(null);
+      setPasada((n) => n + 1);
+    };
+    window.addEventListener('resize', alCambiar);
+    return () => window.removeEventListener('resize', alCambiar);
+  }, []);
+
+  useEffect(() => {
+    const el = layoutRef.current;
+    if (!open || !el) return;
+    const observador = new ResizeObserver(() => setPasada((n) => n + 1));
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, [open, g]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    // En el móvil el panel es siempre la pantalla entera: no hay ancho que elegir.
+    if (!open || !g || etapa >= 2 || !hayLado || !el || window.matchMedia('(max-width: 600px)').matches) return;
+    if (el.scrollHeight > el.clientHeight + 1) setMedida({ id: g.id, etapa: etapa + 1 });
+  }, [open, g, etapa, hayLado, pasada]);
+
   return (
     <dialog
       ref={dialogRef}
@@ -454,26 +492,24 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
       }}
     >
       {open && g ? (
-        <div className={`modal gs-panel ${dosColumnas ? 'is-ancho' : 'is-estrecho'}`}>
+        <div className={`modal gs-panel ${['is-estrecho', 'is-medio', 'is-ancho'][etapa]}`}>
           <button className="btn-icon gs-close" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
             <Icon name="close" />
           </button>
-          <div className="gs-scroll" key={g.id}>
+          <div className="gs-scroll" key={g.id} ref={scrollRef}>
             {/* Dos columnas con ancho: lo tuyo a la izquierda (el precio también: solo sale en Deseados, que es donde
                 tus datos son pocos) y lo de tus amistades a la derecha. En el móvil, una columna con el mismo orden. */}
-            <div className="gs-layout">
+            <div className="gs-layout" ref={layoutRef}>
               <div className="gs-main">
                 <Cabecera g={g} tab={tab} amistades={amistades} />
                 {precio ? <PrecioBloque p={precio} /> : null}
                 <TusDatos g={g} tab={tab} />
-                {dosColumnas ? null : <Saga g={g} onOpen={onOpen} />}
               </div>
-              {dosColumnas ? (
-                <div className="gs-side">
-                  <Amistades amistades={amistades} />
-                  <Saga g={g} onOpen={onOpen} />
-                </div>
-              ) : null}
+              {/* En el panel estrecho esta columna se disuelve (`display: contents`) y va debajo, por `order`. */}
+              <div className="gs-side">
+                <Amistades amistades={amistades} />
+                <Saga g={g} onOpen={onOpen} />
+              </div>
             </div>
           </div>
           <BarraDeAcciones g={g} tab={tab} />
