@@ -60,8 +60,9 @@ aciertan siempre con su precio porque llegan con su id.
 |---|---|
 | F0.1 | **Por encima, no como pantalla** (modal o panel: la forma es F0.11). Se abre sobre la pantalla en la que estás y pone `?juego=<clave>` en la URL. «Atrás» lo cierra, y recargar o compartir la URL lo vuelve a abrir. Sin ruta nueva ni línea en `_redirects`. Funciona sin social: tus datos, la saga y el precio |
 | F0.6 | **Sustituye al detalle desplegado de la fila.** Tocar una fila o una caja del mosaico abre la ficha; el doble clic sigue abriendo la edición. Una sola vista por juego, se abra desde donde se abra |
-| F0.11 | **Panel lateral** (15-10-2026). Entra por la derecha, **siempre a todo el alto**, y el **ancho se mide para que el espacio en blanco sea siempre el mínimo**: el más estrecho de tres (una columna en 600 px, dos en 880 px, dos en 1.120 px) en el que todo cabe sin scroll. En el móvil, la pantalla entera. **Sin cabecera de modal:** el nombre va junto a la carátula y solo queda la X en la esquina. **Aprovechar el espacio para evitar el scroll:** dos columnas con ancho. **Los botones, fijos en una barra abajo.** Pulsar fuera cierra |
+| F0.11 | **Panel lateral** (15-10-2026). Entra por la derecha, **siempre a todo el alto**, y el **ancho se mide para que el espacio en blanco sea siempre el mínimo**: el más estrecho de tres (una columna en 600 px, dos en 880 px, dos en 1.240 px) en el que todo cabe sin scroll. En el móvil, la pantalla entera. **Sin cabecera de modal:** el nombre va junto a la carátula y solo queda la X en la esquina. **Aprovechar el espacio para evitar el scroll:** dos columnas con ancho. **Los botones, fijos en una barra abajo.** Pulsar fuera cierra |
 | F0.12 | **«Tus datos» lleva todo lo que llevaba el detalle** (15-10-2026): plataformas y Steam Deck, géneros, años, horas, puntos fuertes y débiles (o motivos), nota o interés, rejugar o reintentar y el enlace a la reseña, con el mismo marcado y las mismas reglas por lista |
+| F0.13 | **Las notas, en la escala de quien mira** (15-10-2026). La media de tus amistades sale como cifra («91 · 3 notas») solo con la nota 0–100; con estrellas, en estrellas («★★★★★ · 3 notas»). Las notas de cada amistad y las tuyas, con `ScoreDisplay` (aro o estrellas), como en el resto de la app |
 | F0.10 | **La ficha abre siempre, con o sin red.** Lo tuyo (datos, acciones, saga de tu biblioteca) sale siempre. Lo que viene de fuera (amistades, índice, precios, carátulas) es opcional: si no llega, por falta de conexión, un servicio caído o un cupo agotado, **esa sección no se pinta**, sin error ni hueco. Vale para todas las piezas de fuera. Ver «Sin conexión y servicios caídos» |
 
 **Propuestas pendientes de confirmar:**
@@ -120,8 +121,8 @@ con «Añadir a deseados».
 `docs/maquetas/ficha-juego.html` con el servidor de desarrollo (`npx vite --port 8001`).
 - **Detrás va la tabla real** (`GameTable`) con una biblioteca inventada. Tocar una fila abre la ficha.
 - **La URL hace lo que haría la app:** abrir pone `?juego=`, y «atrás», Esc, la X o pulsar fuera lo cierran.
-- **La barra de abajo a la derecha** cambia de lista (Deseados con precio, Completados), el precio («sin
-  servicio» lo quita), con o sin social, y el tema y el modo.
+- **La barra de abajo a la derecha** cambia de lista (Deseados con precio, Completados), la escala de la nota
+  (estrellas o 0–100), el precio («sin servicio» lo quita), con o sin social, y el tema y el modo.
 - **Piezas reales:** `useNativeDialog`, `.modal`, `GameTable`, el marcado del detalle (`detail-content`,
   `detail-box`, chips e insignias), `HubPersonRow`, `HubAvatar`, `GameCover`, `StarRating` y `ScoreDisplay`. Lo único
   propio es `ficha-juego.scss`, que sería `src/styles/gameSheet.scss`.
@@ -134,8 +135,14 @@ con «Añadir a deseados».
   | Paso | Ancho | Reparto |
   |---|---|---|
   | 0 | 600 px | Una columna: cabecera, precio, tus datos, amistades y saga |
-  | 1 | 880 px (u 80 % del ancho) | Dos columnas: lo tuyo y lo de tus amistades |
-  | 2 | 1.120 px (u 80 % del ancho) | Dos columnas. Es el tope: si tampoco cabe, el cuerpo hace scroll |
+  | 1 | 880 px | Dos columnas: lo tuyo y lo de tus amistades |
+  | 2 | 1.240 px | Dos columnas. Es el tope: si tampoco cabe, el cuerpo hace scroll |
+
+  **Los anchos dejan siempre unos 80 px de la lista a la vista** (`calc(100vw - 5rem)`), por donde se pulsa para
+  cerrar. Se cambió del 80 % de la ventana tras ver *Hollow Knight* con scroll en una ventana de 1.000 px: el 80 %
+  dejaba el panel en 800 px, ahí no cabían dos columnas y todo iba en una (1.185 px de contenido para 832 de alto).
+  Las dos columnas entran desde 46 rem de contenido, con la izquierda algo más ancha (1,3 : 1), porque es la que
+  más pesa: así las cajas de «Tus datos» caben de tres en tres.
 
   Solo se pasa del paso 0 si hay algo que llevar a la segunda columna (amistades o saga). Con una sola amistad, o
   solo con la saga, casi siempre cabe en una.
@@ -163,20 +170,23 @@ con «Añadir a deseados».
 - **En el móvil, una columna:** cabecera, precio, tus datos, amistades y saga, en ese orden. Las columnas se
   disuelven (`display: contents`) y el orden lo pone `order`.
 
-**Medido** con la regla de los tres pasos (contenido frente a visible del cuerpo), sin errores de consola y sin
-desborde horizontal:
+**Medido** con la regla de los tres pasos (lo que sobra = contenido − visible del cuerpo), sin errores de consola y
+sin desborde horizontal:
 
-| Caso | Ventana | Paso elegido | Contenido / visible |
+| Caso | Ventana | Paso elegido | Sobra |
 |---|---|---|---|
-| *Celeste* (sin amistades ni saga) | 1512 × 900 | 600 px, una columna | 786 / 786 |
-| *Outer Wilds* (una amistad) | 1512 × 900 | 600 px, una columna | 786 / 786 |
-| *Baldur's Gate 3* (deseo sin amistades) | 1280 × 800 | 600 px, una columna | 734 / 734 |
-| *Hades* (dos amistades y saga) | 1512 × 900 | 880 px, dos columnas | 834 / 834 |
-| *Silksong* (deseo, precio y seis amistades) | 1280 × 800 | 880 px, dos columnas | 734 / 734 |
-| *Hollow Knight* (todos los datos y cuatro amistades) | 1512 × 900 | 880 px, dos columnas | 834 / 834 |
-| *Hollow Knight* | 1280 × 800 | 1.024 px (el tope), dos columnas | 734 / 734 |
-| Saltar por la saga de *Hollow Knight* a *Silksong* | 1280 × 800 | vuelve a medir: 880 px | 734 / 734 |
-| *Hades* | 390 × 844 | pantalla entera | scroll, con la barra fija |
+| *Hollow Knight*, cyberpunk (el caso de las capturas) | 1000 × 900 | 880 px, dos columnas | 0 |
+| *Hollow Knight* | 1100 × 800 | 880 px, dos columnas | 0 |
+| *Hollow Knight* | 1280 × 720 | 1.200 px, dos columnas | 0 |
+| *Hollow Knight* | 1280 × 800 | 880 px, dos columnas | 0 |
+| *Hollow Knight*, cyberpunk | 1512 × 857 | 880 px, dos columnas | 0 |
+| *Hollow Knight*, witcher | 1440 × 900 | 880 px, dos columnas | 0 |
+| *Silksong* (deseo, precio y seis amistades) | 1280 × 800 | 880 px, dos columnas | 0 |
+| *Hades* (dos amistades y saga) | 1512 × 857 | 880 px, dos columnas | 0 |
+| *Outer Wilds* (una amistad) | 1512 × 857 | 600 px, una columna | 0 |
+| *Celeste* (sin amistades ni saga) | 1000 × 700 | 600 px, una columna | 0 |
+| *Hollow Knight*, ventana muy baja | 1000 × 530 | 920 px, dos columnas | 256: no cabe por alto |
+| *Silksong*, nota 0–100 | 390 × 844 | pantalla entera | scroll en el móvil, con la barra fija |
 
 Se borra al implementar F2/F6.
 

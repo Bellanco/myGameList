@@ -23,9 +23,11 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel {
 }
 
 // El ancho se MIDE (ver `FichaModal`): una columna en 600 px; si no cabe, dos columnas en 880 px; si tampoco, en
-// 1.120 px. Se queda en el más estrecho en el que todo cabe sin scroll.
-dialog.modal-dialog.gs-dialog[open] .gs-panel.is-medio { width: min(880px, 80vw); }
-dialog.modal-dialog.gs-dialog[open] .gs-panel.is-ancho { width: min(1120px, 80vw); }
+// 1.240 px. Se queda en el más estrecho en el que todo cabe sin scroll.
+// El tope no es un porcentaje: el panel deja siempre unos 80 px de la lista a la vista (por donde se pulsa para
+// cerrar). Con el 80 % de antes, en una ventana de 1.000 px se quedaba en 800 y no cabían dos columnas.
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-medio { width: min(880px, calc(100vw - 5rem)); }
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-ancho { width: min(1240px, calc(100vw - 5rem)); }
 dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92vw); }
 
 @keyframes gsDesdeDerecha { from { transform: translateX(100%); } to { transform: translateX(0); } }
@@ -121,6 +123,8 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
   dt { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
   dd { margin: 0; font-size: var(--fs-lg); font-weight: 700; color: var(--text); line-height: 1.15; }
   dd small { font-size: var(--fs-xs); font-weight: 400; color: var(--text-muted); }
+  dd.gs-media { display: flex; align-items: center; gap: .35rem; }
+  dd.gs-media .stars { font-size: var(--fs-md); }
 }
 
 // ─── Precio (IsThereAnyDeal) ─────────────────────────────────────────────────────────────────────────────────
@@ -158,7 +162,7 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
 .gs-price-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
 .gs-price-credit { font-size: var(--fs-2xs); color: var(--text-muted); }
 
-.gs-detail.detail-content { padding: 0; gap: .8rem 1rem; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); }
+.gs-detail.detail-content { padding: 0; gap: .8rem 1rem; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); }
 
 .gs-review-box { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; margin-top: .2rem; }
 
@@ -282,10 +286,11 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
 }
 
 // ─── Con ancho ───────────────────────────────────────────────────────────────────────────────────────────────
-// Desde 50 rem de panel, dos columnas: a la izquierda lo tuyo (carátula, nombre, precio si es un deseo y tus datos) y
+// Desde 46 rem de panel, dos columnas: a la izquierda lo tuyo (carátula, nombre, precio si es un deseo y tus datos) y
 // a la derecha lo de tus amistades (amistades y saga). Así cabe entero sin bajar en una pantalla de portátil.
-@container (min-width: 50rem) {
-  .gs-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 0 1.8rem; align-items: start; }
+@container (min-width: 46rem) {
+  // La izquierda algo más ancha: es la que más pesa (tus datos y la reseña), y así sus cajas caben de tres en tres.
+  .gs-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 0 1.8rem; align-items: start; }
   .gs-main, .gs-side { display: flex; flex-direction: column; min-width: 0; }
   .gs-head { grid-template-columns: 9.5rem minmax(0, 1fr); gap: 1.3rem; }
   .gs-head-text { padding-right: 0; }

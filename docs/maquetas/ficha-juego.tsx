@@ -23,14 +23,14 @@ import { Icon } from '../../src/view/components/Icon';
 import { GameCover } from '../../src/view/components/GameCover';
 import { GameTable } from '../../src/view/components/GameTable';
 import { StarRating } from '../../src/view/components/StarRating';
-import { ScoreDisplay } from '../../src/view/components/ScoreDisplay';
+import { ScoreRing } from '../../src/view/components/ScoreRing';
 import { HubPersonRow } from '../../src/view/components/socialhub/HubPersonRow';
 import { HubAvatar } from '../../src/view/components/socialhub/HubAvatar';
 import { useNativeDialog } from '../../src/view/modals/useNativeDialog';
 import { coverUrl } from '../../src/core/utils/coverUrl';
 import { gameTitleKey } from '../../src/core/utils/gameTitleKey';
 import { sharedSagaName } from '../../src/core/utils/gameSaga';
-import { starsFromGrade } from '../../src/core/utils/scoreScale';
+import { resolveGrade, resolveStars, starsFromGrade, type ScoredLike } from '../../src/core/utils/scoreScale';
 import { TAB_ACTIONS, UI_MESSAGES } from '../../src/core/constants/labels';
 import { COMMON_ICONS } from '../../src/core/constants/icons';
 import { categoryToneStyle } from '../../src/core/constants/categoryTone';
@@ -47,6 +47,15 @@ const lista: 'c' | 'd' = params.get('lista') === 'c' ? 'c' : 'd';
 const conSocial = params.get('social') !== '0';
 // `?precio=0`: el servicio de precios no responde (sin red, ITAD caído o sin cupo). El bloque no se pinta.
 const conPrecio = params.get('precio') !== '0';
+// `?nota=100`: la escala de quien mira es la nota 0–100. En la app la da `useScoreScale` (preferencia de su cuenta) y
+// la pinta `ScoreDisplay`; aquí no se toca esa preferencia, así que se elige por la URL y se pinta con las mismas
+// piezas (`ScoreRing` o `StarRating`).
+const escala: 'stars' | 'grade' = params.get('nota') === '100' ? 'grade' : 'stars';
+
+/** Lo que haría `ScoreDisplay`: el aro 0–100 o las estrellas, según la escala de quien mira. */
+function Nota({ game }: { game: ScoredLike }) {
+  return escala === 'grade' ? <ScoreRing grade={resolveGrade(game)} /> : <StarRating value={resolveStars(game)} />;
+}
 const avisar = (que: string) => () => window.alert(`En la app: ${que}`);
 
 // ─── Biblioteca inventada ────────────────────────────────────────────────────────────────────────────────────
@@ -186,7 +195,10 @@ function Cabecera({ g, tab, amistades }: { g: GameItem; tab: 'c' | 'd'; amistade
             {media !== null ? (
               <div>
                 <dt>Media de tus amistades</dt>
-                <dd>{media} <small>· {notas.length} notas</small></dd>
+                {/* En la escala de quien mira: la cifra con la nota 0–100 y las estrellas con estrellas. */}
+                <dd className="gs-media">
+                  {escala === 'grade' ? media : <StarRating value={starsFromGrade(media)} />} <small>· {notas.length} notas</small>
+                </dd>
               </div>
             ) : null}
             <div>
@@ -294,7 +306,7 @@ function TusDatos({ g, tab }: { g: GameItem; tab: TabId }) {
             <div className="detail-box">
               <span className="detail-label">{sinJugar ? D.interest : D.score}</span>
               <div>
-                <ScoreDisplay game={g} />
+                <Nota game={g} />
               </div>
             </div>
           ) : null}
@@ -354,7 +366,7 @@ function Amistades({ amistades }: { amistades: Amistad[] }) {
                   onOpen={avisar(a.adelanto ? `abre la reseña de ${a.nombre}` : `abre el perfil de ${a.nombre}`)}
                   openAriaLabel={a.adelanto ? `Leer la reseña de ${a.nombre}` : `Ver el perfil de ${a.nombre}`}
                 >
-                  {typeof a.nota === 'number' ? <StarRating value={starsFromGrade(a.nota)} /> : null}
+                  {typeof a.nota === 'number' ? <Nota game={{ grade: a.nota }} /> : null}
                 </HubPersonRow>
               </li>
             ))}
@@ -445,7 +457,8 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   // ancho, y se queda en el primero en el que todo cabe sin scroll:
   //   0 · una columna, 600 px;
   //   1 · dos columnas, 880 px;
-  //   2 · dos columnas, 1.120 px (el tope; si tampoco cabe, aquí hace scroll el cuerpo).
+  //   2 · dos columnas, 1.240 px (el tope; si tampoco cabe, aquí hace scroll el cuerpo).
+  // Los dos anchos dejan siempre unos 80 px de la lista a la vista.
   // Solo se pasa de 0 si hay algo que llevar a la segunda columna (amistades o saga). Se mide después de `showModal`
   // (el efecto de `useNativeDialog` va antes que este) y otra vez cada vez que el contenido cambia de tamaño
   // (`ResizeObserver`: la letra que llega tarde, una carátula, las amistades que llegan después). Ese caso SOLO
@@ -601,6 +614,10 @@ function Barra() {
       <select aria-label="Lista" style={caja} value={lista} onChange={(e) => ir({ lista: e.target.value, juego: '' })}>
         <option value="d">Deseados (con precio)</option>
         <option value="c">Completados</option>
+      </select>
+      <select aria-label="Nota" style={caja} value={escala} onChange={(e) => ir({ nota: e.target.value === 'grade' ? '100' : '' })}>
+        <option value="stars">Nota: estrellas</option>
+        <option value="grade">Nota: 0–100</option>
       </select>
       <select aria-label="Precio" style={caja} value={conPrecio ? '1' : '0'} onChange={(e) => ir({ precio: e.target.value === '0' ? '0' : '' })}>
         <option value="1">Precio: responde</option>
