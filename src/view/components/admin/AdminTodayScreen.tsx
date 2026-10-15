@@ -38,7 +38,7 @@ interface Entry {
  * se puede pulsar lleva a la tabla de usuarios ya filtrada.
  */
 export const AdminTodayScreen = memo(function AdminTodayScreen() {
-  const { vm, data, insights, confirm, health } = useAdminPanel();
+  const { vm, data, insights, confirm, health, accounts } = useAdminPanel();
   // Los retos los cambia su propia pantalla (cerrar, publicar): al volver aquí se releen, o la bandeja seguiría
   // pidiendo lo que ya está hecho. Es UN documento.
   const { refreshPremiosStatus } = data;
@@ -60,8 +60,9 @@ export const AdminTodayScreen = memo(function AdminTodayScreen() {
         capacity: health.meters.filter((meter) => meter.used !== null && meter.id !== 'covers').map((meter) => ({ metric: meter.label, used: meter.used || 0, limit: meter.limit })),
         premios: data.premiosStatus,
         dueTodos: insights.dueTodos,
+        accounts: accounts.census ? { expired: accounts.expired.length, expiring: accounts.expiring.length } : null,
       }),
-    [census, data.coverStats, data.premiosStatus, insights.now, insights.dueTodos, health.meters],
+    [census, data.coverStats, data.premiosStatus, insights.now, insights.dueTodos, health.meters, accounts.census, accounts.expired.length, accounts.expiring.length],
   );
 
   const entries = attention.map((item) =>
@@ -313,6 +314,10 @@ function toEntry(item: AttentionItem, actions: { clearPhotos: () => void; showTo
       return { icon: 'star-olive-branches', title: I.premiosPending, detail: I.premiosPendingDetail, action: { label: I.open, to: ADMIN_PATHS.premios, tone: 'open' } };
     case 'todos-due':
       return { icon: 'check', title: I.todosDue(item.count), action: { label: I.review, run: actions.showTodos, tone: 'open' } };
+    case 'accounts-expired':
+      return { icon: 'person', title: I.accountsExpired(item.count), detail: I.accountsExpiredDetail, action: { label: I.review, to: ADMIN_PATHS.accounts, tone: 'open' } };
+    case 'accounts-expiring':
+      return { icon: 'person', title: I.accountsExpiring(item.count), detail: I.accountsExpiringDetail, action: { label: I.review, to: ADMIN_PATHS.accounts, tone: 'open' } };
     case 'census-truncated':
       return { icon: 'bottom-hub', title: I.truncated(item.count), detail: I.truncatedDetail, action: { label: I.open, to: ADMIN_PATHS.users, tone: 'open' } };
   }

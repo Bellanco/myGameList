@@ -11,6 +11,7 @@ const N = ADMIN_SHELL_UI.nav;
 const ICONS: Record<AdminScreen, IconName> = {
   today: 'check',
   users: 'bottom-hub',
+  accounts: 'person',
   community: 'chart-simple',
   capacity: 'cloud-sync',
   log: 'repeat',

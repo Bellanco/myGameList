@@ -5,6 +5,7 @@ import { createContext, useContext } from 'react';
 import type { useAdminViewModel } from '../../../viewmodel/useAdminViewModel';
 import type { AdminPanelData } from '../../../viewmodel/useAdminPanelData';
 import type { AdminInsights } from '../../../viewmodel/useAdminInsights';
+import type { AdminAccountsState } from '../../../viewmodel/useAdminAccounts';
 import type { AdminHealthState } from '../../../viewmodel/useAdminHealth';
 import type { AdminLogState } from '../../../viewmodel/useAdminLog';
 
@@ -32,6 +33,8 @@ export interface AdminPanelContextValue {
   insights: AdminInsights;
   /** El consumo del día frente a los techos del plan gratuito. */
   health: AdminHealthState;
+  /** Las cuentas de Firebase Auth y su caducidad. */
+  accounts: AdminAccountsState;
   /** El registro de acciones. */
   log: AdminLogState;
   notify: (toast: AdminToast) => void;
