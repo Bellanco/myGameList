@@ -1234,16 +1234,52 @@
   color: var(--hub-text-muted);
 }
 
-/* EL SALTO AL PULSAR: el pulgar crece y vuelve, para que se note al instante que ha contado (se envía después). Solo al
-   pulsar (`data-pop`, lo pone y lo quita el componente), y nada si el sistema pide menos movimiento. */
+/* LA ANIMACIÓN AL PULSAR, para que se note al instante que ha contado (se envía después). Sutil y corta: el botón se
+   hunde un poco mientras se aprieta y, al soltar (`data-pop`, lo pone y lo quita el componente):
+   - al DARLO, el pulgar salta, un halo del color del «me gusta» se abre desde la píldora y se desvanece, y la frase,
+     que acaba de cambiar, entra con un fundido;
+   - al QUITARLO, el pulgar se encoge y vuelve, sin halo, y la frase igual.
+   El halo es una sombra que se suma a la de la píldora (por eso la repite) y no un `::after`: así ningún tema que vista
+   los pseudo de los botones lo pisa. El cambio de color y de fondo va con una transición corta incluso pidiendo menos
+   movimiento (no mueve nada); lo demás, solo sin esa preferencia. */
+.hub-like-button { transition: color .18s ease, background-color .18s ease; }
+
 @media (prefers-reduced-motion: no-preference) {
-  .hub-like-button[data-pop] .hub-like-icon { animation: hub-like-pop .32s cubic-bezier(.3, 1.6, .5, 1); }
+  .hub-like-button { transition: color .18s ease, background-color .18s ease, transform .12s ease; }
+  .hub-like-button:active { transform: scale(.94); }
+  .hub-like-button[data-pop="like"] .hub-like-icon { animation: hub-like-pop .42s cubic-bezier(.3, 1.6, .5, 1); }
+  .hub-like-button[data-pop="like"] { animation: hub-like-halo .42s ease-out; }
+  .hub-like-button[data-pop="unlike"] .hub-like-icon { animation: hub-like-unpop .26s ease-out; }
+  .hub-like-button[data-pop] ~ .hub-like-who { animation: hub-like-who-in .26s ease-out; }
 }
 
 @keyframes hub-like-pop {
   0% { transform: scale(1); }
-  45% { transform: scale(1.35) rotate(-12deg); }
+  40% { transform: scale(1.4) rotate(-14deg); }
+  70% { transform: scale(.94) rotate(3deg); }
   100% { transform: scale(1); }
+}
+
+@keyframes hub-like-unpop {
+  0% { transform: scale(1); }
+  45% { transform: scale(.78); }
+  100% { transform: scale(1); }
+}
+
+@keyframes hub-like-halo {
+  0% {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--like, var(--steam)) 45%, transparent),
+      0 0 0 0 color-mix(in srgb, var(--like, var(--steam)) 55%, transparent);
+  }
+  100% {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--like, var(--steam)) 45%, transparent),
+      0 0 0 .55rem color-mix(in srgb, var(--like, var(--steam)) 0%, transparent);
+  }
+}
+
+@keyframes hub-like-who-in {
+  from { opacity: .25; transform: translateX(-.2rem); }
+  to { opacity: 1; transform: none; }
 }
 
 .hub-feed-card-detail .hub-like-bar { margin-top: 1rem; }

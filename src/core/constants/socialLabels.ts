@@ -173,13 +173,16 @@ export const SOCIAL_UI = {
         if (names.length === 2) return `A ${names[0]} y a ${names[1]} les gusta`;
         return `A ${names[0]} y a ${names.length - 1} más les gusta`;
       },
-      /** La lista ENTERA, para el `title` de la frase cuando esta resume («y a 5 más»). */
+      /**
+       * La lista ENTERA, con los nombres enteros: el `title` de la frase cuando esta resume («y a 5 más») y la frase
+       * del detalle de una reseña, donde hay sitio para todos: «A ti, a Marta López y a Nacho os gusta».
+       */
       fullList: (names: readonly string[], mine = false): string => {
         const all = mine ? ['ti', ...names] : [...names];
         if (all.length === 0) return '';
         const verbo = mine ? 'os gusta' : all.length === 1 ? 'le gusta' : 'les gusta';
         if (all.length === 1) return mine ? 'Te gusta' : `A ${all[0]} ${verbo}`;
-        return `A ${all.slice(0, -1).join(', ')} y a ${all[all.length - 1]} ${verbo}`;
+        return `A ${all.slice(0, -1).join(', a ')} y a ${all[all.length - 1]} ${verbo}`;
       },
     },
     toolbarAria: 'Búsqueda y filtros de la actividad',
@@ -227,6 +230,11 @@ export const SOCIAL_UI = {
     readFailed: 'No hemos podido cargar la actividad de tus amigos. Inténtalo de nuevo en un rato.',
     readFailedBadge: 'Error',
     openActivityAria: (name: string, gameName: string) => `Abrir detalle de actividad de ${name} sobre ${gameName}`,
+    /**
+     * Lo que sale al pasar el ratón por el texto de una reseña del feed: adónde lleva pulsarla. Antes salía la reseña
+     * entera, que repetía lo que ya se leía y tapaba la tarjeta (pedido por el usuario, 15-10-2026).
+     */
+    openReviewTitle: (gameName: string) => (gameName ? `Ir al detalle de ${gameName}` : 'Ir al detalle de la reseña'),
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     analyzedRecently: 'Analizado recientemente',
     feedLoadMore: 'Mostrar más',

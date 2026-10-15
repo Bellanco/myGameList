@@ -11,6 +11,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   solas al acercarse al final, como el feed; la flecha del final sigue ahí para quien prefiera pulsarla. El número de
   amigos sigue siendo el de todos aunque aún no se vean, y «Descubrir» ya no lleva número: su lista sale de los
   perfiles recientes, con tope, así que decía cuántos cupieron y no cuánta gente hay.
+- **El detalle de una reseña nombra a todos a los que les gusta.** En el feed la frase sigue resumiendo en un renglón
+  («A Nacho y a 5 más les gusta»); al abrir la reseña, donde hay sitio, salen todos con el nombre entero: «A ti, a
+  Marta López, a Nacho y a Lucía R. os gusta».
+- **Pulsar «Me gusta» se nota más.** El botón se hunde un poco al apretarlo; al darlo, el pulgar salta, un halo de su
+  color se abre y se desvanece y la frase entra con un fundido; al quitarlo, el pulgar se encoge y vuelve. Nada de eso
+  se mueve si el sistema pide menos movimiento.
+- **Pasar el ratón por una reseña del feed dice adónde lleva** («Ir al detalle de Hades») en vez de enseñar el texto
+  entero de la reseña, que ya se estaba leyendo.
 
 ### Fixed
 

@@ -691,7 +691,7 @@ function Resena() {
       eventLoading={false}
       reviewLoading={false}
       coversAllowed={false}
-      likeBar={<FeedLikeBar SOCIAL_UI={SOCIAL_UI} likes={likesFor(EVENTO)} own={false} author={EVENTO.profileDisplayName} onToggle={() => toggleLike(EVENTO)} />}
+      likeBar={<FeedLikeBar SOCIAL_UI={SOCIAL_UI} likes={likesFor(EVENTO)} own={false} author={EVENTO.profileDisplayName} onToggle={() => toggleLike(EVENTO)} everyone />}
       related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={RELACIONADAS} onOpen={avisar('abriría esa reseña')} coversAllowed={false} />}
     />
   );
@@ -722,7 +722,7 @@ function ResenaDePerfil() {
       statusKind=""
       coversAllowed={false}
       // La misma reseña que el detalle del feed (`EVENTO`): su «me gusta» es el mismo.
-      likeBar={<FeedLikeBar SOCIAL_UI={SOCIAL_UI} likes={likesFor(EVENTO)} own={false} author={IVAN.displayName} onToggle={() => toggleLike(EVENTO)} />}
+      likeBar={<FeedLikeBar SOCIAL_UI={SOCIAL_UI} likes={likesFor(EVENTO)} own={false} author={IVAN.displayName} onToggle={() => toggleLike(EVENTO)} everyone />}
       related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={RELACIONADAS} onOpen={avisar('abriría esa reseña')} coversAllowed={false} />}
     />
   );
