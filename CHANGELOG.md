@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.9] - 2026-10-15
+
 ### Added
 
 - **Cuentas en el panel de administración.** La nueva pantalla Cuentas enseña todas las cuentas de Google que han
