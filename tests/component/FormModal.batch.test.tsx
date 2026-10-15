@@ -6,6 +6,14 @@ import { persistScoreScale, resetScoreScale } from '../../src/model/repository/s
 import type { GameItem, TabId } from '../../src/model/types/game';
 import type { GameDraft, SaveDraftOptions } from '../../src/viewmodel/useGameListViewModel';
 
+// La escala se guarda también en `publicConfig/{uid}` (best-effort). Sin esto, `persistScoreScale` arranca el
+// Firebase de verdad (aserción interna de Auth en jsdom) e intenta escribir en producción.
+vi.mock('../../src/model/repository/firebaseGateway', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/model/repository/firebaseGateway')>()),
+  getPublicConfig: vi.fn(async () => null),
+  setPublicConfig: vi.fn(async () => {}),
+}));
+
 function makeDraft(over: Partial<GameDraft> = {}): GameDraft {
   return {
     name: '', genres: [], platforms: [], steamDeck: false, score: 0, years: [], strengths: [], weaknesses: [],

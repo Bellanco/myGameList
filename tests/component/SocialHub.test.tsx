@@ -150,6 +150,13 @@ const shareMocks = vi.hoisted(() => ({
 
 vi.mock('../../src/viewmodel/useShareViewModel', () => shareMocks);
 
+// La papeleta de los premios: guardar el perfil le pone el nombre nuevo (`useOwnProfileEditor`). Sin el mock, el
+// repositorio arranca el Firebase de verdad (aserción interna de Auth en jsdom) y lee `premiosBallots` de producción.
+const renameOwnBallotMock = vi.fn(async (_uid: string, _name: string) => false);
+vi.mock('../../src/model/repository/premios/premiosBallotRepository', () => ({
+  renameOwnBallot: (uid: string, name: string) => renameOwnBallotMock(uid, name),
+}));
+
 // F3 — el interruptor de publicación, FORZADO A ENCENDIDO. Se mockea en vez de leer la constante para que este
 // fichero pruebe la conducta y no la configuración del día: «con la publicación activa, el hub publica» tiene que
 // seguir siendo cierto tanto antes del estreno como después, y sin esto el test se volvería verde por vacío en
@@ -1733,6 +1740,8 @@ describe('SocialHub — alta de perfil: exige juegos completados', () => {
       [string, string, { profile: Record<string, unknown> }];
     expect(payload.profile.name).toBe('Me');
     expect(payload.profile).not.toHaveProperty('favoriteGames');
+    // Con perfil social, la papeleta de los premios lleva el nombre del perfil: se le pasa al guardar.
+    await waitFor(() => expect(renameOwnBallotMock).toHaveBeenCalledWith('me', 'Me'));
   });
 });
 

@@ -174,51 +174,31 @@ if (typeof fetchReal === 'function') {
 }
 
 /**
- * RESUMEN AL FINAL DE LA EJECUCIÓN, y no un fallo por test. Es una decisión, no una rendición.
+ * EL INTENTO SUSPENDE EL TEST QUE LO PROVOCA (15-10-2026). Lanzar en el `fetch` no basta: casi siempre lo captura
+ * un `catch` best-effort de la app o el propio SDK de Firebase («RPC_ERROR HTTP error has no status»), y el test
+ * pasaba. Por eso se apunta y se revisa aquí.
  *
- * Suspender el test que lo provoca sería lo ideal, pero hoy pondría 78 tests en rojo repartidos por cuatro
- * ficheros: tres no mockean `achievementsConfigRepository` —por donde pasan `useAchievementsConfig`,
- * `useOpenFrontier` y la caché— y uno lee de verdad el avatar de Google. Ninguno de esos fallos sería un fallo de
- * la aplicación, y arreglarlos es una tarea aparte de la release que los destapó.
+ * Antes era solo un resumen al final de la ejecución, porque bloquear habría puesto en rojo 78 tests de cuatro
+ * ficheros que no mockeaban `achievementsConfigRepository` ni el avatar de Google. Ya estaban arreglados; los dos
+ * últimos —`SocialHub` (renombrar la papeleta de premios al guardar el perfil) y `FormModal.batch` (guardar la
+ * escala en `publicConfig`)— se mockearon al pasar a bloquear. La huella que dejaban era una línea suelta de
+ * `@firebase/auth: INTERNAL ASSERTION FAILED: Expected a class definition`: el Firebase real arrancando en jsdom.
  *
- * Lo que NO se puede volver a perder es la señal: el intento se registra con su fichero y su host, y se imprime
- * al acabar. Lanzar a secas no bastaba —el SDK de Firebase captura la excepción, la registra como
- * «RPC_ERROR HTTP error has no status» y sigue—, así que la suite pasaba y el aviso se ahogaba en el ruido.
- *
- * Para pasar a bloquear: mockea los cuatro ficheros que salen en el resumen y cambia esto por un `throw` en un
- * `afterEach`.
+ * Un intento que llega con el test ya acabado (una promesa que nadie esperó) se le cuenta al SIGUIENTE test del
+ * fichero, o al `afterAll` si era el último. El host y el remedio van en el mensaje.
  */
-const destinosPorFichero = new Map<string, Set<string>>();
-
-/** Tipo mínimo de `process.stderr`: el proyecto NO lleva `@types/node` a propósito (cambiaría los tipos globales
- *  de todo el repositorio), así que se declara lo justo aquí, como se hace con `HTMLRewriter` en `functions/`. */
-declare const process: { stderr: { write(texto: string): void } };
-
-afterEach((contexto) => {
+function suspenderSiSalioALaRed(cuando: string): void {
   if (violacionesDeRed.length === 0) {
     return;
   }
-  const fichero = contexto?.task?.file?.name || 'fichero desconocido';
-  const destinos = destinosPorFichero.get(fichero) || new Set<string>();
-  violacionesDeRed.forEach((destino) => destinos.add(destino.replace(/ \(.*$/, '')));
-  destinosPorFichero.set(fichero, destinos);
+  const destinos = [...new Set(violacionesDeRed)];
   violacionesDeRed.length = 0;
-});
-
-afterAll(() => {
-  if (destinosPorFichero.size === 0) {
-    return;
-  }
-  const lineas = [...destinosPorFichero.entries()]
-    .map(([fichero, destinos]) => `  · ${fichero} → ${[...destinos].join(', ')}`)
-    .join('\n');
-  // `process.stderr` y no `console.warn`: el reporter por defecto de vitest se guarda la consola de los ficheros
-  // que PASAN, que es justo el caso de todos estos. Escrito así, el aviso se ve siempre.
-  process.stderr.write(
-    '\n[red] INTENTOS DE SALIDA A LA RED BLOQUEADOS.\n'
-    + 'Ninguno llegó a salir, pero mientras estén ahí la suite depende de que el guard los pare.\n'
-    + lineas + '\n'
-    + 'Remedio: mockea el repositorio que hace la llamada. Para la configuración de logros, que no pasa por la\n'
-    + "fachada de Firebase, el sitio es `vi.mock('.../model/repository/achievementsConfigRepository', …)`.\n",
+  throw new Error(
+    `${cuando} ha intentado salir a la red:\n${destinos.map((destino) => `  · ${destino}`).join('\n')}\n`
+    + 'Mockea el repositorio que hace esa llamada (o el hook que lo usa) en este fichero. Para la configuración de '
+    + "logros, que no pasa por la fachada de Firebase, el sitio es `vi.mock('.../achievementsConfigRepository', …)`.",
   );
-});
+}
+
+afterEach(() => suspenderSiSalioALaRed('Este test (o una promesa sin esperar del anterior)'));
+afterAll(() => suspenderSiSalioALaRed('Este fichero, después de su último test,'));
