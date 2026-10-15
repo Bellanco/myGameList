@@ -1,6 +1,15 @@
-// PROPUESTA de hoja de la ficha de juego (sería `src/styles/gameSheet.scss`, en el chunk de la pantalla). Solo
-// tokens: el carácter de cada tema lo ponen las clases del hub que la ficha reutiliza (tarjeta, renglón de persona,
-// metadatos), así que aquí no hay nada por tema.
+// PROPUESTA de hoja de la ficha de juego (sería `src/styles/gameSheet.scss`, en el chunk del modal). Solo tokens: el
+// carácter de cada tema lo ponen el modal (`.modal`, que ya visten los skins) y las clases del hub que la ficha
+// reutiliza (renglón de persona, metadatos), así que aquí no hay nada por tema.
+
+// ─── El modal: centrado con ancho, hoja a pantalla completa en el móvil (como el formulario) ─────────────────
+.gs-dialog .gs-modal { width: min(94vw, 960px); max-width: 960px; max-height: 92vh; }
+
+@media (max-width: 600px) {
+  dialog.modal-dialog[open]:has(.gs-modal) { padding: 0; align-items: stretch; }
+  .gs-dialog .gs-modal { width: 100%; max-width: none; max-height: none; height: 100dvh; border-radius: 0; }
+  .gs-body { padding: 1rem; }
+}
 
 .gs-card { container-type: inline-size; }
 
@@ -68,6 +77,8 @@
 // En el móvil, a todo el ancho bajo la carátula; con ancho, en la columna del texto.
 .gs-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .5rem; }
 .gs-actions .btn { flex: 1 1 auto; justify-content: center; }
+// Borrar nunca es el botón más grande: no crece con los demás.
+.gs-actions .btn-danger { flex: 0 0 auto; }
 
 // ─── Precio (IsThereAnyDeal) ─────────────────────────────────────────────────────────────────────────────────
 .gs-price {
@@ -104,6 +115,21 @@
 .gs-price-meta { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); }
 .gs-price-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
 .gs-price-credit { font-size: var(--fs-2xs); color: var(--text-muted); }
+
+// ─── Tus datos: lo que hoy enseña el detalle desplegado de la fila ──────────────────────────────────────────
+.gs-data {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: .7rem 1.2rem;
+  margin: 0;
+
+  div { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+  dt { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+  dd { margin: 0; font-size: var(--fs-sm); color: var(--text); }
+}
+
+// La reseña, recortada a cinco renglones: entera, en «Leer tu reseña».
+.gs-review { -webkit-line-clamp: 5; line-clamp: 5; }
 
 // ─── Tu entrada ──────────────────────────────────────────────────────────────────────────────────────────────
 .gs-own { display: grid; gap: .5rem; }

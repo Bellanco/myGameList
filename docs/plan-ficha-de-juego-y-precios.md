@@ -13,9 +13,11 @@
 
 Tres piezas que se tocan entre sí:
 
-1. **Ficha de juego** (`/juego/:clave`). Una pantalla por juego con tu entrada, lo que tus amistades han hecho con él
-   (lista, nota, reseña) y la saga. Hoy un juego no tiene página: la fila de la tabla se despliega y el nombre en una
-   reseña es un chip sin acción (`ReviewDetailHead.tsx:102-105`).
+1. **Ficha de juego**: un **modal** que se abre sobre la pantalla en la que estás (`?juego=<clave>` en la URL) con
+   tus datos del juego, lo que tus amistades han hecho con él (lista, nota, reseña), la saga y el precio.
+   **Sustituye al detalle que hoy se despliega al tocar una fila** (decisión del usuario, 15-10-2026). Hoy un juego
+   no tiene vista propia: la fila de la tabla se despliega y el nombre en una reseña es un chip sin acción
+   (`ReviewDetailHead.tsx:102-105`).
 2. **Precios en Deseados**. Junto a cada juego de la lista de deseos, el mejor precio actual, el descuento, la tienda y
    si está en su mínimo histórico, sacados de ITAD a través de un proxy propio. Al abrir la app, un aviso si algo que
    deseas ha bajado.
@@ -31,7 +33,11 @@ aciertan siempre con su precio porque llegan con su id.
 |---|---|---|
 | No hay id común de juego: el `id` es `max+1` por biblioteca y el cruce es por título | `core/utils/gameTitleKey.ts:3-6, 108` | La clave de la ficha es `gameTitleKey`. ITAD también se consulta por título |
 | `GameItem` no guarda ids externos; `/cover` tira el id de la ficha de IGDB y guarda solo el de la carátula | `model/types/game.ts:18-76`, `functions/_lib/igdbCover.ts:625-627` | Nada de esto depende de C1 (`igdbId`). Si C1 llega, ficha y precios aciertan más |
-| `useSocialViewModel` solo se monta dentro de `SocialHub` | `view/components/SocialHub.tsx:73` | Una ruta fuera de `/social` no tiene el directorio en memoria: hay que leerlo de la caché |
+| `useSocialViewModel` solo se monta dentro de `SocialHub` | `view/components/SocialHub.tsx:73` | El modal se abre también desde las listas, fuera del hub: el directorio se lee de la caché |
+| Tocar una fila (o una caja del mosaico) despliega el detalle, y en el mosaico ese detalle es un bloque metido en la rejilla virtualizada | `GameTable.tsx:631-643, 1199, 1309` | Sustituirlo por el modal quita la fila `detail` de la virtualización (`VirtualRow`, `DETAIL_ROW_ESTIMATE_PX`) |
+| La misma tabla, en solo lectura, pinta las listas de una amistad en su perfil, y allí el detalle enseña **sus** datos | `SocialProfileDetailScreen.tsx:767-781` | Decisión F0.7: qué abre una fila en el perfil de otra persona |
+| El detalle lo visten tres skins | `themes/{persona,arcade,cyberpunk}/*.scss` | Al quitarlo, sus reglas se borran o se pasan al modal, que los skins ya visten (`.modal`) |
+| Ya hay modales nativos con foco atrapado, Esc y vuelta del foco | `view/modals/useNativeDialog.ts`; la ruleta se monta desde dos sitios | El modal de la ficha sigue ese molde |
 | El directorio cacheado se lee sin red y sin Firebase (ya lo hace el buscador) | `viewmodel/search/searchSources.ts:142`, `indexedDbRepository.ts:651` | La ficha puede enseñar amistades **sin cargar Firebase** |
 | Nadie descarga los gists de JUEGOS de todas las amistades; cada perfil se baja al abrirlo | `viewmodel/social/useForeignProfileGames.ts:74, 126` | «Quién lo tiene» entero necesita un índice nuevo (Fase F4) |
 | La caché `profileCache` guarda el gist ajeno 24 h, con ETag, y se invalida si cambia `gamesGistId` | `indexedDbRepository.ts:486-551`, `foreignProfileRepository.ts:21` | El índice se construye sobre esa caché: no hace falta un almacén nuevo |
@@ -39,30 +45,44 @@ aciertan siempre con su precio porque llegan con su id.
 | Las Functions no usan la Cache API; cachean en KV y con `Cache-Control` | `functions/cover.ts:44, 414-417` | KV tiene 1.000 escrituras al día **para toda la cuenta**: los precios no pueden escribir en KV por usuario |
 | Los usuarios sin sesión de Google no tienen ID token; `/cover` está abierto y limitado por IP | `functions/_lib/context.ts:18-52`, `cover.ts:116-138` | Decisión P0.2: precios abiertos como `/cover` o solo con sesión |
 | El cliente solo habla con su propio origen salvo GitHub y Firebase; la CSP no incluye ITAD | `public/_headers:2`, `tests/e2e/smoke.test.ts:65-91` | Todo pasa por `/api/precios`. La CSP no cambia |
-| Arranque crítico: 187,7 de 190 kB | `docs/investigacion-interaccion-social.md` (§A1) | Pantalla, proxy y formato de precios, todo en chunks perezosos. Solo la ruta y el helper de la clave van al arranque |
+| Arranque crítico: 187,7 de 190 kB | `docs/investigacion-interaccion-social.md` (§A1) | Modal, proxy y formato de precios, todo en chunks perezosos. Al arranque solo van el helper de la clave y la lectura de `?juego=` |
 | No hay formato de moneda en `src/` | solo `APP_LOCALE = 'es-ES'` (`core/constants/locale.ts:10`) | Helper nuevo `core/utils/money.ts` |
 
 ---
 
 # Parte 1 · Ficha de juego
 
-## Fase F0 · Decisiones (abiertas)
+## Fase F0 · Decisiones
+
+**Cerradas por el usuario (15-10-2026):**
+
+| # | Decisión |
+|---|---|
+| F0.1 | **Modal, no pantalla.** Se abre sobre la pantalla en la que estás y pone `?juego=<clave>` en la URL. «Atrás» lo cierra, y recargar o compartir la URL lo vuelve a abrir. Sin ruta nueva ni línea en `_redirects`. Funciona sin social: tus datos, la saga y el precio |
+| F0.6 | **Sustituye al detalle desplegado de la fila.** Tocar una fila o una caja del mosaico abre la ficha; el doble clic sigue abriendo la edición. Una sola vista por juego, se abra desde donde se abra |
+
+**Propuestas pendientes de confirmar:**
 
 | # | Pregunta | Propuesta |
 |---|---|---|
-| F0.1 | ¿Ruta propia `/juego/:clave` o subruta `/social/juego/:clave`? | **Propia.** Así funciona sin social (tu entrada, la saga y el precio). Con social, se suman las amistades desde la caché. Cuesta una línea en `public/_redirects` |
 | F0.2 | ¿Se enseña la **media** de notas de tus amistades o solo quién lo tiene? (es la decisión 5 de la investigación) | Media **solo con 3 o más notas**, con el número al lado («82 · 4 amistades»). Con menos, una media es la nota de alguien con otro nombre |
 | F0.3 | El buscador ⌘K, al elegir un juego tuyo, ¿abre la ficha o sigue llevando a `/<lista>?q=`? | **La ficha.** Desde ella se va a la lista con «Ver en Completados» |
 | F0.4 | ¿Entran los juegos de Deseados de las amistades en «quién lo tiene»? | **Sí, aparte:** «Lo quieren: Ana, Luis». `applyProfileVisibility` ya los incluye si la amistad no los oculta |
 | F0.5 | ¿Saga dentro de la ficha en la primera versión? | **Sí**, con `sharedSagaName` sobre tu biblioteca y lo que ya esté indexado de tus amistades. Sin IGDB (C5) |
+| F0.7 | En el **perfil de una amistad**, ¿qué abre tocar una fila de sus listas? (hoy despliega **sus** datos) | **La misma ficha, con un bloque «De Marta» arriba** (sus datos, como «Tus datos» pero suyos y filtrados por su visibilidad) y luego lo de siempre: tus datos si lo tienes, el resto de amistades, saga y precio |
+| F0.8 | ¿Qué se hace con los estilos del detalle en los skins de Persona, Arcade y Cyberpunk? | **Borrarlos.** El modal ya lleva el carácter de cada tema (`.modal`, botones, renglones), como se ve en la maqueta. Si a algún tema le falta algo, se añade sobre `.gs-*` en su hoja |
+| F0.9 | Saltar de una ficha a otra (la saga, una amistad), ¿suma pasos al historial? | **No:** se **reemplaza** el `?juego=`, así que «atrás» siempre vuelve a la lista y no recorre las fichas vistas |
 
 ## Qué enseña la ficha
 
 1. **Cabecera:** carátula (`GameCover`, con `refEntradaDeImagen`), nombre, y la unión de plataformas, géneros y años
    de todas las entradas visibles.
-2. **Tú:** lista, nota (`ScoreDisplay`), horas, puntos fuertes y débiles y el principio de la reseña, con enlace a
-   `statsReviewPath`. Acciones: editar (`FormModal`), mover y «Ver en *lista*». Si no lo tienes: «Añadir a deseados»
-   (`addGameToWishlist`, `useGameListViewModel.ts:775`) y «Añadir a próximos».
+2. **Tus datos:** todo lo que hoy enseña el detalle de la fila (`GameTable.tsx:1414-1505`): nota o interés
+   (`ScoreDisplay`), años, horas, rejugable o reintentar, puntos fuertes y débiles, y la reseña, recortada a cinco
+   renglones y con enlace a `statsReviewPath`. Respeta las mismas columnas ocultas (`visibility`).
+   **Acciones, las mismas del detalle:** los movimientos de `TAB_ACTIONS` con sus colores, «Editar», «Compartir» (con
+   reseña) y «Borrar». Si no lo tienes: «Añadir a deseados» (`addGameToWishlist`, `useGameListViewModel.ts:775`) y
+   «Añadir a próximos».
 3. **Tus amistades:** una fila por amistad con avatar, nombre, lista, nota (`StarRating`), mes en que lo terminó
    (`finishedOn`) y adelanto de la reseña, que lleva a su reseña (`activityDetail`). Orden: con reseña primero; dentro,
    por nota. La media va arriba, según F0.2. Debajo, aparte, «Lo quieren».
@@ -74,34 +94,43 @@ con «Añadir a deseados».
 
 ## Diseño (maqueta del 15-10-2026)
 
-`docs/maquetas/ficha-juego.html` con el servidor de desarrollo (`npx vite --port 8001`). La barra de abajo a la
-derecha cambia de juego (*Silksong* en deseos, con precio; *Hollow Knight* completado, con reseña), con y sin social,
-y el tema y el modo. Monta las piezas reales: `HubScreen`, `HubBackRow`, `HubPersonRow`, `HubAvatar`, `GameCover`,
-`StarRating` y `ScoreDisplay`. Lo único propio es `ficha-juego.scss`, que sería `src/styles/gameSheet.scss`.
+`docs/maquetas/ficha-juego.html` con el servidor de desarrollo (`npx vite --port 8001`).
+- **Detrás va la tabla real** (`GameTable`) con una biblioteca inventada. Tocar una fila abre la ficha.
+- **La URL hace lo que haría la app:** abrir pone `?juego=` y «atrás» o Esc lo cierran; desde la saga se reemplaza.
+- **La barra de abajo a la derecha** cambia de lista (Deseados con precio, Completados), con o sin social, y el tema
+  y el modo.
+- **Piezas reales:** `useNativeDialog`, `.modal`, `GameTable`, `HubPersonRow`, `HubAvatar`, `GameCover`,
+  `StarRating` y `ScoreDisplay`. Lo único propio es `ficha-juego.scss`, que sería `src/styles/gameSheet.scss`.
 
+Lo que se ve:
+- **El modal:**
+  - centrado, hasta 960 px de ancho y 92 vh de alto;
+  - en el móvil (≤ 600 px), hoja a pantalla completa, como el formulario;
+  - título del modal: el nombre del juego, con la X.
 - **Cabecera:**
-  - carátula 3:4 a la izquierda;
-  - plataformas, géneros y año;
+  - carátula 3:4;
+  - plataformas y géneros;
   - píldora con tu lista, con el color del canto de esa lista;
   - dos cifras: «Media de tus amistades», solo con 3 notas o más, y «Lo tienen».
-- **Botones:** a todo el ancho en el móvil y en la columna del texto con ancho. «Ya lo tengo» solo en Deseados
-  (d → p), «Editar» y «Ver en *lista*».
+- **Botones:** los del detalle de hoy (mover, «Editar», «Compartir» y «Borrar»). En el móvil van a todo el ancho y
+  «Borrar» no crece; con ancho, en la columna del texto.
 - **Precio:** a la derecha de la cabecera con ancho (≥ 40 rem de contenedor) y debajo en el móvil. Lleva el precio,
-  el descuento, el precio normal tachado, «Mínimo histórico», «Ver en *tienda*» y «Precios de IsThereAnyDeal».
-- **«Tu reseña»:** si la tienes. Nota, horas, fecha, puntos fuertes, el principio del texto y «Leer tu reseña».
+  el descuento, el precio normal tachado, «Mínimo histórico» o el mínimo con su fecha, «Ver en *tienda*» y
+  «Precios de IsThereAnyDeal». Sin oferta: «Sin oferta ahora».
+- **«Tus datos»:** una rejilla de etiqueta y valor con lo del detalle, la reseña en cinco renglones y «Leer tu
+  reseña».
 - **«Tus amistades»:** renglones de persona con lista, fecha, adelanto de la reseña y estrellas, con las reseñas
   primero. Debajo, «Lo quieren», con avatares.
-- **«Saga»:** una tira horizontal de carátulas con «Tú: …» y cuántas amistades lo tienen. La entrega actual va
-  marcada.
+- **«Saga»:** una tira de carátulas con «Tú: …» y cuántas amistades lo tienen. Sale solo con dos entregas o más.
 
-La maqueta se revisó a 360, 390 y 1280 px en tierramedia, witcher y arcade (claro y oscuro): no desborda ni da
-errores de consola. Se borra al implementar F2/F6, cuando la ficha entre en `social.tsx`.
+Revisada a 390 y 1280 px en tierramedia, persona (claro) y oscuro: no desborda ni da errores de consola. Abrir, la
+saga, «atrás» y Esc se comprobaron con Playwright. Se borra al implementar F2/F6.
 
 ## Fase F1 · Núcleo puro · S
 
 - `core/utils/gameSheetPath.ts`:
   - `gameSheetSlug(name)`: `gameTitleKey(name)` con los espacios cambiados por `-`.
-  - `gameSheetPath(name)`: `/juego/<slug>`.
+  - `gameSheetSearch(name)`: `?juego=<slug>`, para enlazar desde cualquier pantalla.
   - `matchesGameSheet(slug, name)`.
 
   Este módulo va en el arranque (lo usan la tabla y el buscador): mantenerlo mínimo y medirlo.
@@ -115,23 +144,46 @@ errores de consola. Se borra al implementar F2/F6, cuando la ficha entre en `soc
   - la media no sale con menos de 3 notas;
   - la saga no incluye el propio juego.
 
-## Fase F2 · Ruta y pantalla con lo propio · M
+## Fase F2 · El modal, con lo propio, en lugar del detalle · M–L
 
-- `APP_ROUTES` (`core/constants/routes.ts`), una línea `/juego/*` en `public/_redirects` y la comprobación de
-  `tests/unit/redirectsRoutes.test.ts`.
-- `view/components/gameSheet/GameSheetScreen.tsx`, lazy en `App.tsx` como los demás hubs. Usa `HubScreen` y
-  `HubBackRow` («Volver», con el destino en `aria-label`) y no lleva subtítulo (memoria `pantallas-sin-subtitulo`).
-- `viewmodel/gameSheet/useGameSheetViewModel.ts`: recibe la biblioteca desde `App.tsx` y llama a `buildGameSheet`.
-  No toca Firebase.
-- Textos en `core/constants/gameSheetLabels.ts`.
-- Estilos en `styles/gameSheet.scss`, atados al chunk de la pantalla y con piezas neutras de tokens. El carácter de
-  cada tema, si hace falta, en `themes/<id>/`.
-- **Verificar:** 360/768/1024/1440 px y los 8 temas × claro/oscuro (skill `verificar-en-navegador`).
+- **El modal.** `view/components/gameSheet/GameSheetModal.tsx`, con `<dialog>` nativo y `useNativeDialog`. Va lazy
+  en `App.tsx`, montado **una vez** para toda la app, como la ruleta. El `<dialog>` se queda montado, como pide el
+  hook, para devolver el foco a la fila al cerrar. Mientras carga el chunk la primera vez, la fila no se mueve. El
+  chunk se precarga en reposo al entrar en una lista (`requestIdleCallback`).
+- **`?juego=` en la URL.** `viewmodel/gameSheet/useGameSheetParam.ts` lee y escribe el parámetro con react-router
+  (`useSearchParams` / `navigate` con `state`):
+  - abrir hace *push*, para que «atrás» cierre;
+  - pasar de una ficha a otra hace *replace* (F0.9);
+  - cerrar con la X o Esc hace `navigate(-1)` si la entrada la puso el modal, y quita el parámetro si se llegó con
+    la URL ya puesta.
+
+  El parámetro no cambia el `pathname`, así que no dispara la View Transition de cambio de pantalla (memoria
+  `view-transition-query-params`). Nada de ruta nueva ni de `_redirects`.
+- **`viewmodel/gameSheet/useGameSheetViewModel.ts`:** recibe la biblioteca desde `App.tsx` y llama a
+  `buildGameSheet`. Las acciones son las mismas funciones que hoy recibe `GameTable` (`onEdit`, `onDelete`,
+  `onMigrate`, compartir). No toca Firebase.
+- **`GameTable` deja de desplegar:**
+  - tocar la fila o la caja llama a `onOpenGame(id)`;
+  - se borran `expandedId`/`onExpandedChange`, la fila `detail` de `VirtualRow`, `DETAIL_ROW_ESTIMATE_PX`, el bloque
+    del mosaico (`:631-643`) y el marcado del detalle (`:1414-1555`);
+  - el doble clic sigue editando;
+  - `readOnly` y `reviewLink` se quedan para el perfil de una amistad (F0.7).
+- **Estilos:** `styles/gameSheet.scss`, atado al chunk del modal. Se borran las reglas del detalle de `_table.scss`
+  y de los skins de Persona, Arcade y Cyberpunk (F0.8).
+- **Textos** en `core/constants/gameSheetLabels.ts`. Los del detalle que ya no se usen salen de `UI_MESSAGES.detail`.
+- **Tests:**
+  - reescribir `tests/component/GameTableColumns.test.tsx`, que hoy despliega el detalle;
+  - test de componente del modal: abre, cierra con Esc y devuelve el foco a la fila;
+  - test del hook del parámetro: *push* al abrir, *replace* entre fichas, quitar al cerrar.
+- **Verificar:**
+  - 360/768/1024/1440 px y los 8 temas × claro/oscuro (skill `verificar-en-navegador`);
+  - con **120+ juegos**, para que la tabla virtualice;
+  - en renglones y en mosaico.
 
 ## Fase F3 · Amistades desde el canal social (coste 0) · S
 
 - Leer el directorio cacheado (`peekCachedSocialDirectory`) solo si hay perfil social en este dispositivo
-  (`useSocialProfileStatus`). Nunca cargar Firebase desde `/juego` (memoria `enlace-publico-sin-firebase`).
+  (`useSocialProfileStatus`). Nunca cargar Firebase por abrir la ficha (memoria `enlace-publico-sin-firebase`).
 - De ahí salen, sin red:
   - las **reseñas** de tus amistades sobre el juego (`activity`: nota y adelanto de 160 caracteres);
   - los **avisos de lista** de los últimos 30 días (`moves`).
@@ -164,24 +216,30 @@ Para que «quién lo tiene» incluya también a quien lo tiene sin reseñar ni h
 
 ## Fase F5 · Puntos de entrada · S
 
+Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=<clave>`.
+
 | Desde | Cambio |
 |---|---|
-| Detalle de la fila en `GameTable` (`row-actions`, `:1345-1356`) | Botón con icono «Ficha». Sin chevrón (memoria `chevron-solo-sin-icono`) |
-| `ReviewDetailHead.tsx:102-105` | El chip del nombre pasa a ser un enlace a la ficha |
+| Fila o caja de tus listas (`GameTable`) | Abre la ficha **en lugar del detalle** (F0.6, hecho en F2) |
+| Fila de las listas de una amistad (`SocialProfileDetailScreen.tsx:767`) | Abre la ficha con el bloque de esa persona arriba (F0.7) |
+| `ReviewDetailHead.tsx:102-105` | El chip del nombre pasa a ser un botón que abre la ficha |
 | Feed (`FeedMoveCard.tsx:74` y tarjetas de reseña) | El nombre del juego abre la ficha si no hay reseña. Si la hay, se mantiene la reseña |
-| Perfil de una amistad (sus listas) | La fila de un juego enlaza a su ficha |
 | Buscador (`searchSources.ts:22`) | Según F0.3 |
-| Saga, dentro de la ficha | Cada entrega, a su ficha |
+| Saga, dentro de la ficha | Cada entrega, a su ficha (*replace*, F0.9) |
 
 ## Fase F6 · Maqueta, accesibilidad y e2e · S
 
 - Añadir la ficha a `docs/maquetas/social.tsx` (`PANTALLAS`, `:828-876`) y a `TODAS` de
-  `scripts/capturar-maqueta-social.mjs:31-37`, en tres variantes: sin social, con amistades, con precio.
-- e2e:
-  - `/juego/<slug>` recargado en frío (comprueba `_redirects` y el chunk perezoso);
-  - volver atrás restaura el scroll;
-  - la ficha entra en el barrido de axe de `tests/e2e/a11y.test.ts`.
-- Medir que el arranque crítico no sube más que la ruta y `gameSheetPath` (skill `medir`).
+  `scripts/capturar-maqueta-social.mjs:31-37`, en tres variantes: sin social, con amistades, con precio. Además, la
+  ficha abierta desde el perfil de una amistad (F0.7). Después se borra `docs/maquetas/ficha-juego.*`.
+- e2e, contra el build:
+  - tocar una fila abre el modal, y «atrás» lo cierra **sin mover el scroll de la lista** (con 120+ juegos);
+  - recargar con `?juego=<slug>` lo abre (chunk perezoso en frío);
+  - Esc cierra y el foco vuelve a la fila;
+  - en el mosaico, igual;
+  - el modal entra en el barrido de axe de `tests/e2e/a11y.test.ts`.
+- Medir que el arranque crítico no sube más que `gameSheetPath` y la lectura de `?juego=` (skill `medir`). Quitar
+  el detalle de `GameTable` debería **bajarlo**: medirlo también.
 
 ---
 
@@ -497,7 +555,7 @@ No se guarda ningún token y la acción es a mano, así que, con el precedente d
 | Functions | 0 | 1 petición por refresco de Deseados (como mucho cada 6 h por usuario) |
 | GitHub | ≤ 1 lectura por amistad y día (casi siempre 304) | 0 |
 | ITAD | — | ≤ 2 llamadas por petición, solo por lo no cacheado |
-| Arranque crítico | ruta + `gameSheetPath` (a medir) | 0 |
+| Arranque crítico | `gameSheetPath` + `?juego=` (a medir), menos el detalle que sale de `GameTable` | 0 |
 
 ## Orden propuesto
 
@@ -517,7 +575,8 @@ Un commit por fase, y la fase se marca como hecha aquí en el mismo commit. Cada
 
 ## Despliegue
 
-- **`public/_redirects`:** comprobar que `/juego/*` responde 200 en el dominio (memoria `pages-404-y-rutas-spa`).
+- **`public/_redirects`:** la ficha no lo necesita (es un parámetro, no una ruta). Sí la vuelta de ITAD,
+  `/itad/vuelta` (P7.2).
 - **Secreto `ITAD_API_KEY`** subido a Pages antes de publicar la versión con P1. Sin él, `/api/precios` da `501` y
   el cliente no enseña precios ni errores.
 - **Firestore:** sin cambios de reglas (salvo que P0.4 cambie).
@@ -544,8 +603,10 @@ fase y se borra de aquí.
 ### Decisiones del usuario
 
 **Ficha de juego:**
-- Dar por bueno el diseño de la maqueta (`docs/maquetas/ficha-juego.html`) o pedir cambios.
-- F0.1: ruta propia `/juego/:clave` o subruta de `/social`.
+- Dar por bueno el diseño de la maqueta del modal (`docs/maquetas/ficha-juego.html`) o pedir cambios.
+- F0.7: qué abre una fila en el perfil de una amistad (propuesta: la ficha con su bloque arriba).
+- F0.8: borrar los estilos del detalle de los skins de Persona, Arcade y Cyberpunk.
+- F0.9: que pasar de una ficha a otra no sume pasos a «atrás».
 - F0.2: si se enseña la media de notas de las amistades, y con qué mínimo (propuesta: 3).
 - F0.3: si el buscador ⌘K abre la ficha en vez de llevar a la lista.
 - F0.4: si sale la sección «Lo quieren» (los Deseados de tus amistades).
