@@ -73,8 +73,10 @@ describe('useSocialLikes', () => {
     expect(repo.setSocialLike).toHaveBeenLastCalledWith({ on: 'activity', to: 'pm', item: REVIEW.id }, false);
   });
 
-  it('lo que no admite «me gusta» no hace nada al pulsarlo', () => {
+  it('lo que no admite «me gusta» no hace nada al pulsarlo', async () => {
     const { result } = renderHook(() => useSocialLikes({ enabled: true, others: [] }));
+    // La lectura de los tuyos sale al montar: se deja llegar para que no actualice con el test ya acabado.
+    await waitFor(() => expect(repo.flushSocialLikes).toHaveBeenCalled());
     const move = { kind: 'move', id: '7:v' };
     expect(result.current.canLike(move)).toBe(false);
     act(() => result.current.toggleLike(move));

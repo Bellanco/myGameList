@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { INSTALL_UI } from '../../src/core/constants/consentLabels';
 import { ANALYTICS_CONSENT_KEY, INSTALL_HINT_KEY } from '../../src/core/constants/storageKeys';
 
@@ -81,7 +81,8 @@ describe('InstallBanner — la invitación a instalar', () => {
     expect(aviso()).not.toBeInTheDocument();
 
     const { persistAnalyticsConsent } = await import('../../src/model/repository/analyticsConsentRepository');
-    persistAnalyticsConsent('denied');
+    // En `act`: guardar la decisión avisa por un evento que el banner escucha y le cambia el estado en el acto.
+    act(() => persistAnalyticsConsent('denied'));
 
     await waitFor(() => expect(aviso()).toBeInTheDocument());
     expect(repo.hasInstallOffer()).toBe(true);

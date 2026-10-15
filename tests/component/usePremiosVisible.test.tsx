@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { usePremiosVisible } from '../../src/viewmodel/premios/usePremiosVisible';
 import { PREMIOS_VISIBLE_KEY } from '../../src/core/constants/storageKeys';
 import { PREMIOS_VISIBILITY_EVENT } from '../../src/core/premios/visibilitySnapshot';
@@ -104,7 +104,9 @@ describe('usePremiosVisible', () => {
     render(<Sonda />);
     await waitFor(() => expect(screen.getByTestId('ofrece')).toHaveTextContent('no'));
 
-    window.dispatchEvent(new CustomEvent(PREMIOS_VISIBILITY_EVENT));
+    act(() => {
+      window.dispatchEvent(new CustomEvent(PREMIOS_VISIBILITY_EVENT));
+    });
     await waitFor(() => expect(screen.getByTestId('ofrece')).toHaveTextContent('sí'));
   });
 
@@ -116,7 +118,10 @@ describe('usePremiosVisible', () => {
   it('al volver a la app no repite la pregunta antes de cinco minutos, y el panel sí fuerza', async () => {
     const pedir = respondeCon({ visible: true });
     vi.stubGlobal('fetch', pedir);
-    const volver = () => document.dispatchEvent(new Event('visibilitychange'));
+    // En `act`: la vuelta que sí pasa el tope cambia el estado del hook en el acto.
+    const volver = () => act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
 
     render(<Sonda />);
     await waitFor(() => expect(screen.getByTestId('ofrece')).toHaveTextContent('sí'));
@@ -134,7 +139,9 @@ describe('usePremiosVisible', () => {
     volver();
     await waitFor(() => expect(vi.mocked(pedir).mock.calls.length).toBe(alAbrir + 1));
 
-    window.dispatchEvent(new CustomEvent(PREMIOS_VISIBILITY_EVENT));
+    act(() => {
+      window.dispatchEvent(new CustomEvent(PREMIOS_VISIBILITY_EVENT));
+    });
     await waitFor(() => expect(vi.mocked(pedir).mock.calls.length).toBe(alAbrir + 2));
   });
 });

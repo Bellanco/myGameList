@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SocialDirectoryEntry } from '../../src/viewmodel/social/socialFeed';
 
@@ -96,7 +96,7 @@ describe('useSocialDirectory · lectura fallida con copia', () => {
     });
     const { result, reportFailure, setFeedback, setNetworkFailure } = montar(['ana']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.rawSocialDirectory.length).toBe(2));
     expect(result.current.rawSocialDirectory.find((entry) => entry.uid === 'ana')?.activity).toEqual((idb.stale[0] as SocialDirectoryEntry).activity);
@@ -113,7 +113,7 @@ describe('useSocialDirectory · lectura fallida con copia', () => {
     getSocialProfilesByUid.mockRejectedValue(Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' }));
     const { result, reportFailure } = montar(['ana']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.rawSocialDirectory).toEqual(idb.stale));
     expect(reportFailure).not.toHaveBeenCalled();
@@ -129,7 +129,7 @@ describe('useSocialDirectory · lectura fallida sin copia', () => {
     });
     const { result, reportFailure } = montar(['ana']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.feedReadFailed).toBe(true));
     expect(reportFailure).not.toHaveBeenCalled();
@@ -139,7 +139,7 @@ describe('useSocialDirectory · lectura fallida sin copia', () => {
     getSocialProfilesByUid.mockRejectedValue(Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' }));
     const { result } = montar(['ana']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.feedReadFailed).toBe(true));
   });
@@ -151,7 +151,7 @@ describe('useSocialDirectory · lectura fallida sin copia', () => {
     });
     const { result } = montar(['ana']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.rawSocialDirectory.length).toBe(2));
     expect(result.current.feedReadFailed).toBe(false);
@@ -160,11 +160,11 @@ describe('useSocialDirectory · lectura fallida sin copia', () => {
   it('una pasada buena retira el error de la anterior', async () => {
     readPublicSocialGistById.mockRejectedValueOnce(limitado()).mockRejectedValueOnce(limitado());
     const { result } = montar(['ana']);
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
     await waitFor(() => expect(result.current.feedReadFailed).toBe(true));
 
     readPublicSocialGistById.mockResolvedValue(gistVacio);
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.feedReadFailed).toBe(false));
   });
@@ -181,7 +181,7 @@ describe('useSocialDirectory · token de GitHub caducado', () => {
     });
     const { result, setFeedback } = montar(amigos);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.githubReconnectNeeded).toBe(true));
     // Como mucho las que ya estaban en vuelo (la concurrencia de la hidratación), no las trece.
@@ -200,7 +200,7 @@ describe('useSocialDirectory · token de GitHub caducado', () => {
     readPublicSocialGistById.mockRejectedValue(caducado());
     const { result, setNetworkFailure } = montar(['ana']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.githubReconnectNeeded).toBe(true));
     expect(setNetworkFailure).toHaveBeenCalledWith(false);
@@ -214,7 +214,7 @@ describe('useSocialDirectory · token de GitHub caducado', () => {
     });
     const { result, setNetworkFailure } = montar(['ana']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.rawSocialDirectory.length).toBe(2));
     expect(setNetworkFailure).not.toHaveBeenCalledWith(false);
@@ -223,11 +223,11 @@ describe('useSocialDirectory · token de GitHub caducado', () => {
   it('con el mismo token, la pasada siguiente no vuelve a preguntar a GitHub', async () => {
     readPublicSocialGistById.mockRejectedValue(caducado());
     const { result } = montar(['ana']);
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
     await waitFor(() => expect(result.current.githubReconnectNeeded).toBe(true));
     readPublicSocialGistById.mockClear();
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     expect(readPublicSocialGistById).not.toHaveBeenCalled();
     expect(result.current.githubReconnectNeeded).toBe(true);
@@ -237,13 +237,13 @@ describe('useSocialDirectory · token de GitHub caducado', () => {
     const token = { current: 'token-viejo' as string | null };
     readPublicSocialGistById.mockRejectedValue(caducado());
     const { result } = montar(['ana'], token);
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
     await waitFor(() => expect(result.current.githubReconnectNeeded).toBe(true));
 
     token.current = 'token-nuevo';
     readPublicSocialGistById.mockReset();
     readPublicSocialGistById.mockResolvedValue(gistVacio);
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.githubReconnectNeeded).toBe(false));
     expect(readPublicSocialGistById).toHaveBeenCalledWith('ana-social', 'token-nuevo');
@@ -252,7 +252,7 @@ describe('useSocialDirectory · token de GitHub caducado', () => {
   it('sin token principal, lee con la copia del canal social', async () => {
     const { result } = montar(['ana'], { current: null });
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(readPublicSocialGistById).toHaveBeenCalledWith('ana-social', 'token-social'));
   });

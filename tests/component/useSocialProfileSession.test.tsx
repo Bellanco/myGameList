@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -39,7 +39,8 @@ function harness(initialPath: string) {
     return useSocialProfileSession(new Set([1]));
   };
   const view = renderHook(useHarness, { wrapper });
-  return { view, goTo: (to: string) => navigate?.(to) };
+  // Navegar re-renderiza el router: dentro de `act`, o React avisa en cada salto.
+  return { view, goTo: (to: string) => act(() => navigate?.(to)) };
 }
 
 describe('useSocialProfileSession — de dónde se relee la identidad cacheada', () => {

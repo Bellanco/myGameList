@@ -270,7 +270,9 @@ describe('conexión inicial contra un gist existente', () => {
         makeGame({ id: 2, _ts: 2_000, name: 'Hollow Knight' }),
       ],
     };
-    markDirty();
+    // La marca avisa al hook montado (`subscribeSyncDirtyState`), que repinta: dentro de `act`. Es síncrono y no
+    // suelta ninguna de las promesas de la carrera.
+    act(() => markDirty());
 
     await act(async () => {
       pendingWrite!.resolve();

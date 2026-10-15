@@ -45,13 +45,21 @@ function renderSearch(slot = true) {
 const dialog = () => document.querySelector('dialog.search-dialog') as HTMLDialogElement;
 const input = () => screen.getByRole('combobox');
 
+/**
+ * Abre el buscador y espera a lo que pide al abrirse: las fuentes del social llegan por promesa, y en un caso que
+ * termina con el buscador abierto aterrizarían ya fuera del test (React avisa de una actualización fuera de `act`).
+ */
+async function abrirCon(gesto: () => void) {
+  await act(async () => gesto());
+}
+
 describe('GlobalSearch', () => {
   // El id va escrito en los dos sitios para no compartir módulo con el arranque (ver la nota del componente).
   it('busca el hueco con el mismo id que pone FloatingControls', () => {
     expect(SLOT_EN_EL_BUSCADOR).toBe(SEARCH_LAUNCHER_SLOT_ID);
   });
 
-  it('la lupa va en los controles flotantes, junto al tema, y abre el buscador', () => {
+  it('la lupa va en los controles flotantes, junto al tema, y abre el buscador', async () => {
     const { unmount } = renderSearch(false);
     expect(document.querySelector('.search-launcher')).toBeNull();
     unmount();
@@ -59,7 +67,7 @@ describe('GlobalSearch', () => {
     renderSearch(true);
     const lupa = document.querySelector('.floating-controls .search-launcher') as HTMLElement;
     expect(lupa).toHaveAccessibleName(SEARCH_UI.launcher(false));
-    fireEvent.click(lupa);
+    await abrirCon(() => fireEvent.click(lupa));
     expect(dialog().open).toBe(true);
   });
 
@@ -71,9 +79,9 @@ describe('GlobalSearch', () => {
     expect(dialog().open).toBe(false);
   });
 
-  it('⌘K también', () => {
+  it('⌘K también', async () => {
     renderSearch();
-    fireEvent.keyDown(window, { key: 'K', metaKey: true });
+    await abrirCon(() => fireEvent.keyDown(window, { key: 'K', metaKey: true }));
     expect(dialog().open).toBe(true);
   });
 
@@ -92,11 +100,11 @@ describe('GlobalSearch', () => {
     expect(dialog().open).toBe(false);
   });
 
-  it('«/» lo abre, salvo escribiendo en una caja', () => {
+  it('«/» lo abre, salvo escribiendo en una caja', async () => {
     renderSearch();
     fireEvent.keyDown(screen.getByLabelText('otra caja'), { key: '/' });
     expect(dialog().open).toBe(false);
-    fireEvent.keyDown(document.body, { key: '/' });
+    await abrirCon(() => fireEvent.keyDown(document.body, { key: '/' }));
     expect(dialog().open).toBe(true);
   });
 
@@ -152,9 +160,9 @@ describe('GlobalSearch', () => {
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/social/user/pm/game/7/review'));
   });
 
-  it('dice cuando no hay nada', () => {
+  it('dice cuando no hay nada', async () => {
     renderSearch();
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    await abrirCon(() => fireEvent.keyDown(window, { key: 'k', ctrlKey: true }));
     fireEvent.change(input(), { target: { value: 'zzzz' } });
     expect(screen.getByText(SEARCH_UI.empty('zzzz'))).toBeInTheDocument();
   });

@@ -1,11 +1,21 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, fireEvent, waitFor } from '@testing-library/react';
 import { HubAvatar } from '../../src/view/components/socialhub/HubAvatar';
 import { getKnownPhotoVerdict, resetPhotoVerdicts } from '../../src/core/social/googlePhoto';
 
 /** El `<use>` del sprite: es lo que identifica qué icono se está pintando. */
 function iconHref(container: HTMLElement): string | null {
   return container.querySelector('.hub-avatar-icon use')?.getAttribute('href') ?? null;
+}
+
+/**
+ * Espera a que la comprobación de genérica conteste Y a que el avatar la recoja. El veredicto se guarda un paso
+ * antes de que llegue al estado, así que esperar solo al veredicto deja esa actualización para cuando el test ya ha
+ * terminado.
+ */
+async function veredictoDe(foto: string) {
+  await waitFor(() => expect(getKnownPhotoVerdict(foto)).toBe(false));
+  await act(async () => {});
 }
 
 describe('HubAvatar', () => {
@@ -58,7 +68,7 @@ describe('HubAvatar', () => {
     } as unknown as Response));
   };
 
-  it('con highDensity ofrece 2x y 3x de la misma foto de Google', () => {
+  it('con highDensity ofrece 2x y 3x de la misma foto de Google', async () => {
     fotoReal();
     const foto = 'https://lh3.googleusercontent.com/a/ACg8ocFoto=s96-c';
     const { container } = render(<HubAvatar photoURL={foto} sizeClass="hub-avatar-lg" highDensity />);
@@ -67,15 +77,19 @@ describe('HubAvatar', () => {
     expect(img?.getAttribute('srcset')).toBe(
       `${foto} 1x, https://lh3.googleusercontent.com/a/ACg8ocFoto=s192-c 2x, https://lh3.googleusercontent.com/a/ACg8ocFoto=s288-c 3x`,
     );
+    await veredictoDe(foto);
   });
 
-  it('sin highDensity, o con una URL que no es de Google, no hay srcset', () => {
+  it('sin highDensity, o con una URL que no es de Google, no hay srcset', async () => {
     fotoReal();
-    const google = render(<HubAvatar photoURL="https://lh3.googleusercontent.com/a/ACg8ocFoto=s96-c" />);
+    const foto = 'https://lh3.googleusercontent.com/a/ACg8ocFoto=s96-c';
+    const google = render(<HubAvatar photoURL={foto} />);
     expect(google.container.querySelector('img.hub-avatar-img')?.hasAttribute('srcset')).toBe(false);
+    await veredictoDe(foto);
 
     const ajena = render(<HubAvatar photoURL="https://example.com/a.jpg" highDensity />);
     expect(ajena.container.querySelector('img.hub-avatar-img')?.hasAttribute('srcset')).toBe(false);
+    await veredictoDe('https://example.com/a.jpg');
   });
 
   it('aplica el sizeClass a la silueta', () => {

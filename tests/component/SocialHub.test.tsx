@@ -2199,7 +2199,8 @@ describe('SocialHub — los logros de otras personas', () => {
 
     // Ya se ha cargado la gente de «Perfiles» (Bob sale entre los recientes) y su pantalla está pintada…
     await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // La pantalla acaba de pintarse durante esta espera: dentro de `act`, o cada repintado avisa.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 100)));
     // …y su logro no está.
     expect(screen.queryByRole('img', { name: new RegExp(`^${BOB_LOGRO_NOMBRE}`) })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: new RegExp(`^${BOB_LOGRO_NOMBRE}`) })).not.toBeInTheDocument();

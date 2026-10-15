@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ANALYTICS_UI, INSTALL_UI } from '../../src/core/constants/consentLabels';
 import { ANALYTICS_CONSENT_KEY } from '../../src/core/constants/storageKeys';
@@ -35,7 +35,10 @@ describe('LaneBanners — cuándo se piden los avisos del carril', () => {
     const event = new Event('beforeinstallprompt') as Event & { prompt: unknown; userChoice: unknown };
     event.prompt = vi.fn(async () => {});
     event.userChoice = Promise.resolve({ outcome: 'dismissed' });
-    window.dispatchEvent(event);
+    // En `act`: el carril escucha la oferta y cambia su estado en el acto.
+    act(() => {
+      window.dispatchEvent(event);
+    });
   }
 
   it('con el consentimiento pendiente, pinta su aviso', async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, type Mock } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormModal } from '../../src/view/modals/FormModal';
 import { persistScoreScale, resetScoreScale } from '../../src/model/repository/scorePreferenceRepository';
@@ -53,7 +53,9 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>, name: stri
 }
 
 afterEach(() => {
-  resetScoreScale();
+  // Corre ANTES del `cleanup()` de tests/setup.ts (los `afterEach` van en pila): el formulario sigue montado y
+  // escucha la escala, así que volver a estrellas lo repinta y tiene que ir dentro de `act`.
+  act(() => resetScoreScale());
   vi.restoreAllMocks();
 });
 

@@ -43,7 +43,10 @@ vi.mock('../../src/model/repository/socialGistRepository', () => ({
 import { useSocialSession } from '../../src/viewmodel/social/useSocialSession';
 
 const USUARIO = { uid: 'u1', displayName: 'Ana', email: '', photoURL: '' };
-const montar = () => renderHook(() => useSocialSession({ lockProfileEditor: () => {}, navigate: () => {} }));
+// Fijas, como en la app (`useCallback` y `useNavigate`): la apertura las tiene de dependencias, y unas nuevas en
+// cada render la relanzaban tras cada cambio de estado.
+const OPCIONES = { lockProfileEditor: () => {}, navigate: () => {} };
+const montar = () => renderHook(() => useSocialSession(OPCIONES));
 
 beforeEach(() => {
   auth.cb = null;

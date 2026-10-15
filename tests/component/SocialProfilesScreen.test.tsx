@@ -125,7 +125,8 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
     ];
     const relationshipWith = (uid: string): RelationshipState => (uid === 'ada' ? 'friends' : 'none');
 
-    afterEach(() => coversPreference.set(false));
+    // Corre ANTES del `cleanup` de tests/setup.ts, con la pantalla aún montada: apagarla la repinta, y eso va en `act`.
+    afterEach(() => act(() => coversPreference.set(false)));
 
     it('dice lo último que empezó o terminó un amigo, y nada de quien no lo es', () => {
       render(<SocialProfilesScreen {...baseProps} relationshipWith={relationshipWith} filteredSocialDirectory={directorio} />);

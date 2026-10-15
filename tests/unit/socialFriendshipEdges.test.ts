@@ -111,7 +111,7 @@ describe('useSocialFriendships — lectura fallida', () => {
     expect(result.current.friendshipsFailed).toBe(true);
 
     getMyFriendships.mockResolvedValue(lista({ friends: [vista('amigo', 'friends', { otherSocialGistId: 'g' })] }));
-    await result.current.refreshFriendships(true);
+    await act(() => result.current.refreshFriendships(true));
 
     await waitFor(() => expect(result.current.friendshipsFailed).toBe(false));
   });

@@ -21,6 +21,14 @@ const { useLegalConsentNotice } = await import('../../src/view/hooks/useLegalCon
 
 const sello = (version: string) => ({ legalConsent: { uid: 'uid-1', version, checkedAt: Date.now() } });
 
+/**
+ * Da tiempo a que llegue la lectura del sello, para comprobar una AUSENCIA. Dentro de `act`: aunque la cápsula no
+ * salga, la lectura sí cambia el estado del hook (p. ej. «pendiente» con la versión ya dada por dicha).
+ */
+const dejarLeer = () => act(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+});
+
 beforeEach(() => {
   localStorage.clear();
   meta.value = null;
@@ -36,20 +44,20 @@ describe('useLegalConsentNotice', () => {
   it('no sale con la versión vigente aceptada', async () => {
     meta.value = sello(LEGAL_VERSION);
     const { result } = renderHook(() => useLegalConsentNotice(true));
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await dejarLeer();
     expect(result.current.show).toBe(false);
   });
 
   it('no sale sin el social dado de alta en este dispositivo', async () => {
     meta.value = sello('2020-01-01');
     const { result } = renderHook(() => useLegalConsentNotice(false));
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await dejarLeer();
     expect(result.current.show).toBe(false);
   });
 
   it('sin nada comprobado todavía no sale: no se sabe', async () => {
     const { result } = renderHook(() => useLegalConsentNotice(true));
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await dejarLeer();
     expect(result.current.show).toBe(false);
   });
 
@@ -57,7 +65,7 @@ describe('useLegalConsentNotice', () => {
     meta.value = sello('2020-01-01');
     localStorage.setItem(LEGAL_NOTICE_TOLD_KEY, LEGAL_VERSION);
     const { result } = renderHook(() => useLegalConsentNotice(true));
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await dejarLeer();
     expect(result.current.show).toBe(false);
   });
 
@@ -97,7 +105,7 @@ describe('useLegalConsentNotice · el espacio social', () => {
     expect(localStorage.getItem(LEGAL_NOTICE_TOLD_KEY)).toBe(LEGAL_VERSION);
 
     rerender({ inSocial: false });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await dejarLeer();
     expect(result.current.show).toBe(false);
   });
 });

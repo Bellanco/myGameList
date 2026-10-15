@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 // El panel enlaza a la pantalla de reseñas del hub social, así que necesita un router alrededor.
 import { MemoryRouter } from 'react-router-dom';
@@ -444,7 +444,8 @@ describe('StatsHub · figuras interactivas del podio', () => {
     // Las porciones son botones: se activan con Intro, no solo con el ratón. Se busca DENTRO del rosetón abierto:
     // el mismo género es señalable en otras tres figuras de la pantalla (el hexágono, el rosetón polar…).
     const rpg = within(document.querySelector('.burst') as HTMLElement).getByRole('button', { name: /^RPG/ });
-    rpg.focus();
+    // Enfocar ya señala la porción (`onFocus`): es un cambio de estado y va dentro de `act`.
+    act(() => rpg.focus());
     await userEvent.keyboard('{Enter}');
 
     expect(rpg).toHaveAttribute('aria-pressed', 'true');

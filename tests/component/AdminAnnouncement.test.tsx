@@ -40,8 +40,10 @@ function setup(current: Announcement | null = ACTUAL, history: Announcement[] = 
 }
 
 describe('panel · aviso a los usuarios', () => {
-  it('abre con lo que hay publicado y lo enseña en la muestra', () => {
+  it('abre con lo que hay publicado y lo enseña en la muestra', async () => {
     setup();
+    // El historial llega por promesa: se le deja llegar, o aterrizaría ya fuera del test (aviso de `act`).
+    await screen.findByText(A.history.empty);
     expect(screen.getByDisplayValue(ACTUAL.title)).toBeInTheDocument();
     expect(screen.getByDisplayValue(ACTUAL.url)).toBeInTheDocument();
     // La muestra es la cápsula de verdad: el enlace del aviso está en la pantalla del panel.
@@ -145,8 +147,9 @@ describe('panel · aviso a los usuarios', () => {
   });
 
   /** Los públicos posibles son tres y ninguno nombra un rango: los rangos no se le enseñan a nadie. */
-  it('el público se elige entre todos, con y sin espacio social', () => {
+  it('el público se elige entre todos, con y sin espacio social', async () => {
     setup();
+    await screen.findByText(A.history.empty);
     const opciones = within(screen.getByLabelText(A.field.audience)).getAllByRole('option').map((option) => option.textContent);
     expect(opciones).toEqual([A.audiences.all, A.audiences.social, A.audiences['no-social']]);
   });
