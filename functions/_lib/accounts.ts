@@ -171,10 +171,11 @@ export interface ForgetInput {
  * Las reescrituras que hacen falta para olvidar la cuenta en los documentos que comparte con otros. Puro.
  *
  * - Su uid sale de los registros de votantes y de trofeos (si estaba).
- * - Su fila sale del archivo y de los votos de cada edición. Una fila es suya solo si se cumplen LAS DOS: su
- *   `profileId` es uno de sus seudónimos (`ownProfileIds`) y el registro de trofeos de esa edición —que escribe solo
- *   el administrador, con el uid— dice que esta cuenta quedó en el puesto de esa fila. El seudónimo solo no basta:
- *   lo escribe el cliente y los ajenos están a la vista en el archivo público. Las filas de gente de fuera de la app
+ * - Su fila sale del archivo y de los votos de cada edición. Manda el registro de trofeos de esa edición, que escribe
+ *   solo el administrador, con el uid: una fila es suya si está en el puesto que el registro le da Y lleva el
+ *   seudónimo que el registro guarda de ella. En las ediciones publicadas antes de guardarlo, el seudónimo tiene
+ *   que ser uno de los suyos comprobados (`ownProfileIds`). Nunca basta lo que escribe el cliente: los seudónimos
+ *   ajenos están a la vista en el archivo público. Las filas de gente de fuera de la app
  *   (el histórico importado) llevan el `profileId` vacío, y un vacío no se busca nunca. El resto de filas se queda
  *   con su puesto: quitar a alguien no reordena la clasificación de los demás. Los recuentos (votos por nominado,
  *   papeletas) se quedan: son cifras, no dicen de quién.
@@ -188,21 +189,28 @@ export function forgetWrites(input: ForgetInput): AdminWrite[] {
     const collection = document.name.split('/documents/')[1]?.split('/')[0] || '';
     writes.push({ update: `${collection}/${docIdOf(document)}`, fields, updateTime: document.updateTime });
   };
-  // En qué puesto quedó en cada edición, según el registro de trofeos: el del trofeo o, si solo participó, el real.
+  // En qué puesto quedó en cada edición, según el registro de trofeos (el del trofeo o, si solo participó, el real),
+  // y con qué seudónimo, si el registro lo guarda.
   const placeBySeason = new Map<string, number>();
+  const pseudonymBySeason = new Map<string, string>();
   for (const document of input.premiosAdmin) {
     const id = docIdOf(document);
     if (!id.startsWith('palmares-')) continue;
     const recipients = decodeFields(document.fields).recipients;
-    const own = Array.isArray(recipients) ? (recipients.find((entry) => (entry as { uid?: unknown } | null)?.uid === input.uid) as { rank?: unknown; place?: unknown } | undefined) : undefined;
+    const own = Array.isArray(recipients)
+      ? (recipients.find((entry) => (entry as { uid?: unknown } | null)?.uid === input.uid) as { rank?: unknown; place?: unknown; profileId?: unknown } | undefined)
+      : undefined;
     const place = own ? (Number(own.rank) > 0 ? Number(own.rank) : Number(own.place) || 0) : 0;
-    if (place > 0) placeBySeason.set(id.slice('palmares-'.length), place);
+    const seasonId = id.slice('palmares-'.length);
+    if (place > 0) placeBySeason.set(seasonId, place);
+    if (typeof own?.profileId === 'string' && own.profileId) pseudonymBySeason.set(seasonId, own.profileId);
   }
   const ownRow = (seasonId: string) => (entry: unknown) => {
     const row = (entry || {}) as { profileId?: unknown; rank?: unknown };
     const place = placeBySeason.get(seasonId);
-    return typeof row.profileId === 'string' && row.profileId !== '' && input.profileIds.has(row.profileId)
-      && place !== undefined && Number(row.rank) === place;
+    if (typeof row.profileId !== 'string' || row.profileId === '' || place === undefined || Number(row.rank) !== place) return false;
+    const recorded = pseudonymBySeason.get(seasonId);
+    return recorded ? row.profileId === recorded : input.profileIds.has(row.profileId);
   };
 
   for (const document of input.premiosAdmin) {
@@ -242,10 +250,14 @@ export const MAX_PROFILE_IDS = 3;
  * NO SE FÍA DE LO QUE ESCRIBE EL CLIENTE: el `profileId` de `privateConfig`, de `userMap` y del perfil los escribe su
  * dueño, y los de los demás están a la vista en el archivo público de los premios. Sin esta comprobación, bastaría
  * con copiar el de otra persona y darse de baja para borrar SU fila del archivo. Por eso solo vale un seudónimo que
- * ningún perfil de otra cuenta lleve (`owners`: de quién es cada perfil que lo lleva, por su `uid` o por su id).
+ * lleve algún perfil DE ESTA CUENTA y ninguno de otra (`owners`: de quién es cada perfil que lo lleva, por su `uid`
+ * —que las reglas atan al dueño— o por su id). Uno que no lleve ningún perfil no se puede atar a nadie y no vale.
+ * Solo se usa con las ediciones antiguas: las nuevas guardan el seudónimo en el registro de trofeos.
  */
 export function ownProfileIds(uid: string, owners: ReadonlyMap<string, readonly string[]>): Set<string> {
-  return new Set([...owners].filter(([, uids]) => uids.every((owner) => owner === uid)).map(([profileId]) => profileId));
+  return new Set(
+    [...owners].filter(([, uids]) => uids.length > 0 && uids.every((owner) => owner === uid)).map(([profileId]) => profileId),
+  );
 }
 
 /** De quién es un perfil: su campo `uid`, o su id si no lo lleva (legacy). */
@@ -309,18 +321,10 @@ export async function purgeAccount(api: AdminApi, kv: KVNamespace, uid: string, 
   if (failures.length > 0) return { failures, authDeleted: false };
   const profileIds = ownProfileIds(uid, owners);
 
-  // 2) KV: los enlaces públicos ANTES que los documentos (como en la baja desde la app) y lo que guarda por uid —el
-  //    veto, el ajuste de cuota, el índice de sugeridos y el contador del día (vive 48 h: el de hoy y el de ayer)—.
+  // 2) KV: los enlaces públicos ANTES que los documentos (como en la baja desde la app).
   await attempt('enlaces', async () => {
     const rows = await listActiveShares(kv, uid);
     await removeShares(kv, uid, rows.map((row) => row.token), { everything: true });
-    await Promise.all([
-      kv.delete(banKey(uid)),
-      kv.delete(overrideKey(uid)),
-      kv.delete(relatedIndexKey(uid)),
-      kv.delete(dailyQuotaKey(uid, now)),
-      kv.delete(dailyQuotaKey(uid, now - 86_400_000)),
-    ]);
   });
 
   // 3) Firestore, de golpe.
@@ -336,5 +340,18 @@ export async function purgeAccount(api: AdminApi, kv: KVNamespace, uid: string, 
 
   if (failures.length > 0) return { failures, authDeleted: false };
   await attempt('cuenta de Google', () => deleteAuthAccount(api, uid));
-  return { failures, authDeleted: failures.length === 0 };
+  if (failures.length > 0) return { failures, authDeleted: false };
+
+  // 5) Lo que KV guarda por uid —el veto, el ajuste de cuota, el índice de sugeridos y el contador del día (vive 48 h:
+  //    el de hoy y el de ayer)—, LO ÚLTIMO y solo con la cuenta ya borrada: si se quitara antes y algo fallara
+  //    después, la cuenta seguiría viva y sin su veto. Con la cuenta fuera, un fallo aquí no se reintenta (ya no
+  //    sale en el censo), pero tampoco importa: esas claves no sirven a nadie y el contador caduca solo.
+  await Promise.allSettled([
+    kv.delete(banKey(uid)),
+    kv.delete(overrideKey(uid)),
+    kv.delete(relatedIndexKey(uid)),
+    kv.delete(dailyQuotaKey(uid, now)),
+    kv.delete(dailyQuotaKey(uid, now - 86_400_000)),
+  ]);
+  return { failures, authDeleted: true };
 }

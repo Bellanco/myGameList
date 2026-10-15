@@ -215,7 +215,29 @@ describe('forgetWrites', () => {
       // Copiado del archivo público: lo lleva el perfil de otra persona.
       ['p-copiado', ['u2', 'u1']],
     ]);
-    expect([...ownProfileIds('u1', owners)].sort()).toEqual(['p-mio', 'p-sin-perfil']);
+    // El que no lleva ningún perfil no se puede atar a nadie: fuera también.
+    expect([...ownProfileIds('u1', owners)]).toEqual(['p-mio']);
+  });
+
+  it('si el registro de trofeos guarda su seudónimo, manda ese y no los que escribe el cliente', () => {
+    const writes = forgetWrites({
+      uid: 'u1',
+      // El cliente dice que también es suyo `p-ajeno`, empatado en el mismo puesto.
+      profileIds: new Set(['p-mio', 'p-ajeno']),
+      premiosAdmin: [doc('premiosAdmin/palmares-2026', { recipients: [{ uid: 'u1', rank: 0, place: 4, profileId: 'p-mio' }] })],
+      results: [doc('premiosResults/2026', {
+        leaderboard: [
+          { rank: 4, profileId: 'p-mio', nickname: 'Yo', points: 2 },
+          { rank: 4, profileId: 'p-ajeno', nickname: 'Otra', points: 2 },
+        ],
+      })],
+      reveals: [],
+    });
+    expect(writes).toContainEqual({
+      update: 'premiosResults/2026',
+      fields: { leaderboard: [{ rank: 4, profileId: 'p-ajeno', nickname: 'Otra', points: 2 }] },
+      updateTime: 't1',
+    });
   });
 
   it('sin seudónimo no toca el archivo, aunque haya filas con el profileId vacío', () => {
@@ -309,6 +331,17 @@ describe('purgeAccount', () => {
     expect(last.body).toEqual({ localId: 'u1' });
     // KV: lo suyo se va; lo de otros, no.
     expect([...kv.data.keys()].sort()).toEqual(['ban:u2', 'share:otro']);
+  });
+
+  it('si la cuenta de Auth no se deja borrar, el veto y el ajuste de cuota se quedan', async () => {
+    const google = fakeGoogle(routes((call) => (call.url.includes('accounts:delete') ? new Response('{}', { status: 403 }) : undefined)));
+    const kv = memoryKv({ 'ban:u1': '1', 'quota:override:u1': '{}' });
+
+    const outcome = await purgeAccount({ token: 't', projectId: 'p', fetcher: google.fetcher }, kv, 'u1');
+
+    expect(outcome.authDeleted).toBe(false);
+    expect(kv.data.has('ban:u1')).toBe(true);
+    expect(kv.data.has('quota:override:u1')).toBe(true);
   });
 
   it('si el borrado de documentos falla, la cuenta de Auth se queda y se dice qué falló', async () => {

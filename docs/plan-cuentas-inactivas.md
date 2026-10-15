@@ -62,9 +62,9 @@ Reglas que se añadieron sobre lo decidido (`src/core/admin/accountRetention.ts`
   | `profiles` | el suyo y los legacy con otro id (buscados por el campo `uid`) |
   | `privateConfig`, `publicConfig`, `userMap`, `premiosBallots` | su documento |
   | `premiosAdmin/voters-*`, `palmares-*` | su uid sale de la lista |
-  | `premiosResults/*`, `premiosReveal/*` | su fila de la clasificación y de los votos. Es suya solo si su `profileId` es un seudónimo de la cuenta que ningún perfil de otra cuenta lleva **y** el registro de trofeos de esa edición (`palmares-*`, solo admin) dice que esta cuenta quedó en ese puesto: el seudónimo lo escribe el cliente y los ajenos están a la vista en el archivo público, así que solo no basta. Las filas de gente de fuera de la app llevan el `profileId` vacío y no se tocan. El resto conserva su puesto; los recuentos se quedan |
+  | `premiosResults/*`, `premiosReveal/*` | su fila de la clasificación y de los votos. Manda el registro de trofeos de esa edición (`palmares-*`, solo admin): la fila tiene que estar en el puesto que el registro da a esa cuenta **y** llevar el seudónimo que el registro guarda de ella (se guarda al publicar desde el 15-10-2026). En las ediciones anteriores, que no lo guardan, el seudónimo tiene que llevarlo un perfil de esa cuenta y ninguno de otra. Nunca basta lo que escribe el cliente: los seudónimos ajenos están a la vista en el archivo público. Consecuencia: en las ediciones antiguas no se borra la fila de quien votó sin perfil. Las filas de gente de fuera de la app llevan el `profileId` vacío y no se tocan. El resto conserva su puesto; los recuentos se quedan |
   | `adminLog` | las entradas sobre esa persona. El borrado se apunta sin nombre ni uid |
-  | KV | enlaces (`share:`, `owner:`, `user:`), `relidx:`, `ban:`, `quota:override:` y el contador del día |
+  | KV | enlaces (`share:`, `owner:`, `user:`) antes de Firestore; `relidx:`, `ban:`, `quota:override:` y el contador del día al final, solo con la cuenta de Auth ya borrada (si no, un borrado a medias dejaría la cuenta viva y sin su veto) |
   | Firebase Auth | la cuenta |
 
   Las reescrituras llevan el `updateTime` leído: si el administrador toca el mismo documento a la vez, el `commit`

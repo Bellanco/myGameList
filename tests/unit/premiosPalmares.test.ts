@@ -39,6 +39,20 @@ describe('palmaresRecipientsFrom', () => {
   });
 });
 
+describe('palmaresRecipientsFrom · seudónimo', () => {
+  it('guarda el seudónimo de la fila de cada uno, si lo tiene', () => {
+    expect(palmaresRecipientsFrom([
+      { userId: 'u0', rank: 1, profileId: 'p0' },
+      { userId: 'u1', rank: 9, profileId: 'p1' },
+      { userId: 'u2', rank: 10, profileId: '' },
+    ])).toEqual([
+      { uid: 'u0', rank: 1, profileId: 'p0' },
+      { uid: 'u1', rank: 0, place: 9, profileId: 'p1' },
+      { uid: 'u2', rank: 0, place: 10 },
+    ]);
+  });
+});
+
 describe('palmaresPlace', () => {
   it('el puesto del trofeo, o el real de quien participó', () => {
     expect(palmaresPlace(entrada('2025', 3))).toBe(3);

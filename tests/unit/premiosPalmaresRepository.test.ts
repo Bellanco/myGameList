@@ -224,6 +224,23 @@ describe('el interruptor del logro de una edición', () => {
     expect(palmaresDe('uid-2')[0]).toMatchObject({ seasonId: 'test', rank: 0, season: 2026 });
   });
 
+  // El seudónimo del registro es lo que deja a un borrado de cuenta encontrar SU fila del archivo sin fiarse del
+  // cliente (functions/_lib/accounts.ts). Apagar reconstruye la lista con lo que sale de los perfiles, que no lo
+  // lleva: tiene que sobrevivir a esa mezcla.
+  it('apagar el interruptor no pierde el seudónimo que guarda el registro', async () => {
+    await savePalmaresRecord('test', true, [
+      { uid: 'uid-1', rank: 1, profileId: 'p-1' },
+      { uid: 'uid-2', rank: 2, profileId: 'p-2' },
+    ]);
+    await setSeasonPalmaresGranted('test', 'Test', false);
+    expect((await fetchPalmaresRecord('test'))?.recipients).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ uid: 'uid-1', profileId: 'p-1' }),
+        expect.objectContaining({ uid: 'uid-2', profileId: 'p-2' }),
+      ]),
+    );
+  });
+
   it('no toca el logro de las demás ediciones', async () => {
     escribir(
       'profiles',
