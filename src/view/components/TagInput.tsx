@@ -1,6 +1,7 @@
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import { splitTagInput, TAG_SEPARATOR } from '../../core/utils/tags';
+import { capGrowth, capTag } from '../../core/utils/fieldLimits';
 import { Icon } from './Icon';
 import { useId, type KeyboardEvent } from 'react';
 
@@ -26,6 +27,13 @@ interface TagInputProps {
   errorMessage?: string;
   /** Id del `<input>` (para el `htmlFor` de la etiqueta y para poder enfocarlo desde el guardado). */
   inputId?: string;
+  /**
+   * Caracteres de cada etiqueta. No es un `maxLength` del `<input>`: ese recortaría también un pegado de VARIAS
+   * etiquetas separadas por comas. Se aplica a cada trozo y a lo que queda escrito.
+   */
+  maxLength?: number;
+  /** La lista ha llegado a su tope: el campo no admite más (se puede quitar alguna) y el `hint` dice por qué. */
+  full?: boolean;
 }
 
 /** `true` si lo escrito termina en separador ("Acción, ") → no queda nada a medias que dejar en el campo. */
@@ -46,14 +54,22 @@ export function TagInput({
   required = false,
   errorMessage,
   inputId,
+  maxLength,
+  full = false,
 }: TagInputProps) {
   const generatedId = useId();
   const fieldId = inputId || `tag-input-${generatedId}`;
   const messageId = `${fieldId}-msg`;
 
+  /** Trocea lo escrito y recorta cada etiqueta a su tope. */
+  const split = (raw: string) => {
+    const parts = splitTagInput(raw);
+    return maxLength ? parts.map((part) => capTag(part, maxLength)) : parts;
+  };
+
   /** Commit de lo que hay escrito (Enter, o el trozo cerrado por un separador). */
   const commitRaw = (raw: string) => {
-    const parts = splitTagInput(raw);
+    const parts = split(raw);
     onPendingValueChange('');
     if (parts.length) onAdd(parts);
   };
@@ -85,7 +101,10 @@ export function TagInput({
           id={fieldId}
           className="finput"
           value={pendingValue}
-          placeholder={placeholder}
+          // Llena, no se escribe más; `readOnly` y no `disabled`, para que siga en el orden del tabulador y el lector
+          // lea el aviso de por qué.
+          readOnly={full}
+          placeholder={full ? undefined : placeholder}
           enterKeyHint="done"
           autoComplete="off"
           aria-invalid={errorMessage ? true : undefined}
@@ -104,13 +123,13 @@ export function TagInput({
             // dos chips y pegar una lista entera las reparte. Lo escrito tras el último separador sigue en el
             // campo para poder terminarlo (salvo que el texto acabe justo en el separador).
             if (TAG_SEPARATOR.test(val)) {
-              const parts = splitTagInput(val);
+              const parts = split(val);
               const tail = ENDS_WITH_SEPARATOR.test(val) ? '' : (parts.pop() ?? '');
               onPendingValueChange(tail);
               if (parts.length) onAdd(parts);
               return;
             }
-            onPendingValueChange(val);
+            onPendingValueChange(maxLength ? capGrowth(val, pendingValue, maxLength) : val);
           }}
         />
       </div>

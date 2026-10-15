@@ -9,6 +9,8 @@ import { UNPLAYED_TAB_IDS, type GameItem, type TabData, type TabId } from '../..
 import type { GameDraft, SaveDraftOptions } from '../../viewmodel/useGameListViewModel';
 import { mergeTags, splitTagInput } from '../../core/utils/tags';
 import { normalizeHours } from '../../core/utils/normalize';
+import { capGrowth, capList } from '../../core/utils/fieldLimits';
+import { GAME_LIMITS } from '../../core/constants/gameLimits';
 import { Icon } from '../components/Icon';
 import { StarPicker } from '../components/StarPicker';
 import { GradeLine } from '../components/GradeLine';
@@ -79,7 +81,7 @@ const EMPTY_PENDING: PendingTagFields = {
   reasons: '',
 };
 
-const REVIEW_MAX_LENGTH = 25000;
+const REVIEW_MAX_LENGTH = GAME_LIMITS.review;
 
 /** Lo que dura en pantalla el resumen de errores del pie antes de retirarse solo. */
 const FORM_SUMMARY_TIMEOUT_MS = 5000;
@@ -107,7 +109,15 @@ const FIELD_INPUT_ID: Partial<Record<FieldKey, string>> = {
 function isValidYearValue(value: string): boolean {
   if (!/^\d{4}$/.test(value)) return false;
   const year = Number(value);
-  return year > 0 && year <= new Date().getFullYear();
+  return year >= GAME_LIMITS.firstYear && year <= new Date().getFullYear();
+}
+
+/** El aviso de año no válido, con el rango de años que se admiten. */
+const yearInvalidMessage = () => VALIDATION_MESSAGES.yearInvalid(GAME_LIMITS.firstYear, new Date().getFullYear());
+
+/** Los años de la lista tras añadir `valid`: sin repetir, con el tope de la lista y en orden. */
+function addYears(current: number[], valid: number[]): number[] {
+  return capList([...new Set([...current, ...valid])], current, GAME_LIMITS.tagCount.years).sort((a, b) => a - b);
 }
 
 /**
@@ -140,9 +150,22 @@ function withDefaultScore(draft: GameDraft, tab: TabId, scale: 'stars' | 'grade'
     : { ...draft, score: DEFAULT_STARS, grade: gradeFromStars(DEFAULT_STARS) };
 }
 
-/** Texto del campo de horas a partir del borrador (vacío cuando no hay dato, y el 0 no lo es). */
+/**
+ * Texto del campo de horas a partir del borrador (vacío cuando no hay dato, y el 0 no lo es). En español: con coma
+ * decimal («12,5»), que es como se escribe en el campo.
+ */
 function hoursToText(hours: number | null | undefined): string {
-  return normalizeHours(hours) === null ? '' : String(hours);
+  return normalizeHours(hours) === null ? '' : String(hours).replace('.', ',');
+}
+
+/**
+ * Lo tecleado o pegado en las horas, limpio: solo cifras y UNA coma decimal, con dos decimales como mucho. El punto se
+ * convierte en coma al vuelo («12.5» → «12,5»): se escriba como se escriba, se ve en español y no da error. Una
+ * segunda coma (o punto) no entra.
+ */
+function cleanHoursText(raw: string): string {
+  const [whole, ...decimals] = raw.replace(/[^\d.,]/g, '').replace(/\./g, ',').split(',');
+  return decimals.length ? `${whole},${decimals.join('').slice(0, GAME_LIMITS.hoursDecimals)}` : whole;
 }
 
 export function FormModal({ open, draft: initialDraft, currentTab, lookups, library, findDuplicate, onClose, onSave }: FormModalProps) {
@@ -177,6 +200,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
   const reviewLiveMessage =
     reviewProgress >= 100 ? FORM_UI.charLimitReached : reviewProgress >= 90 ? FORM_UI.charNearLimit : '';
   const isNew = !initialDraft.id;
+  const nameAtMax = draft.name.length >= GAME_LIMITS.name;
   const mac = isMacPlatform();
   const suggestions = useMemo(
     () => (open && library ? buildFormSuggestions([library.c, library.v, library.e, library.p, library.d]) : EMPTY_FORM_SUGGESTIONS),
@@ -262,7 +286,10 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
    */
   const addTextTags = (key: TextTagField, rawValues: string[]) => {
     if (!rawValues.length) return;
-    setLocalDraft((prev) => ({ ...prev, [key]: mergeTags(prev[key] as string[], rawValues, lookupFor(key)) }));
+    setLocalDraft((prev) => ({
+      ...prev,
+      [key]: capList(mergeTags(prev[key], rawValues, lookupFor(key)), prev[key], GAME_LIMITS.tagCount[key]),
+    }));
     // El campo NO se toca aquí: `TagInput` ya ha decidido qué queda escrito (nada tras un Enter, y el trozo a
     // medias tras un separador). Vaciarlo desde aquí se comía lo escrito después de la coma ("pc; switch").
     if (key === 'genres' || key === 'platforms') clearFieldError(key);
@@ -274,11 +301,11 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
     const valid = rawValues.filter(isValidYearValue).map(Number);
 
     if (valid.length) {
-      setLocalDraft((prev) => ({ ...prev, years: [...new Set([...prev.years, ...valid])].sort((a, b) => a - b) }));
+      setLocalDraft((prev) => ({ ...prev, years: addYears(prev.years, valid) }));
     }
 
     if (invalid.length) {
-      setFieldErrors((prev) => ({ ...prev, years: VALIDATION_MESSAGES.yearInvalid(new Date().getFullYear()) }));
+      setFieldErrors((prev) => ({ ...prev, years: yearInvalidMessage() }));
       // Lo que no es un año se devuelve al campo para poder corregirlo, salvo que ya se esté escribiendo otra cosa.
       setPending((prev) => ({ ...prev, years: prev.years || invalid.join(', ') }));
       return;
@@ -298,7 +325,14 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
   const handleHoursChange = (raw: string) => {
     // El signo menos (y cualquier otro carácter que no sea cifra o separador decimal) NO llega al campo: las
     // horas negativas no se validan al final, es que no se pueden escribir ni pegar.
-    const cleaned = raw.replace(/[^\d.,]/g, '');
+    const cleaned = cleanHoursText(raw);
+    const { invalid, value } = parseHours(cleaned);
+
+    // Por encima del tope no entra: el campo se queda como estaba y lo dice, igual que con el menos.
+    if (value !== null && value > GAME_LIMITS.hoursMax) {
+      setHoursNotice(FORM_UI.hoursMax(GAME_LIMITS.hoursMax));
+      return;
+    }
     setHoursText(cleaned);
 
     // Si lo tecleado o pegado traía un menos se dice: se ha filtrado, no ignorado en silencio. El aviso no se va
@@ -306,7 +340,6 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
     if (/-/.test(raw)) setHoursNotice(VALIDATION_MESSAGES.hoursNegative);
     else if (!cleaned) setHoursNotice('');
 
-    const { invalid, value } = parseHours(cleaned);
     if (invalid) {
       setFieldErrors((prev) => ({ ...prev, hours: VALIDATION_MESSAGES.hoursInvalid }));
       return;
@@ -353,16 +386,16 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
 
       if (key === 'years') {
         const valid = parts.filter(isValidYearValue).map(Number);
-        if (valid.length) nextDraft.years = [...new Set([...nextDraft.years, ...valid])].sort((a, b) => a - b);
+        if (valid.length) nextDraft.years = addYears(nextDraft.years, valid);
         if (parts.some((value) => !isValidYearValue(value))) {
-          errors.years = VALIDATION_MESSAGES.yearInvalid(new Date().getFullYear());
+          errors.years = yearInvalidMessage();
         } else {
           setPendingValue('years', '');
         }
         continue;
       }
 
-      nextDraft[key] = mergeTags(nextDraft[key] as string[], parts, lookupFor(key));
+      nextDraft[key] = capList(mergeTags(nextDraft[key], parts, lookupFor(key)), nextDraft[key], GAME_LIMITS.tagCount[key]);
       setPendingValue(key, '');
     }
 
@@ -448,6 +481,11 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
 
   const currentYear = new Date().getFullYear();
   const pointsTaken = [...draft.strengths, ...draft.weaknesses];
+  const yearsFull = draft.years.length >= GAME_LIMITS.tagCount.years;
+
+  /** El aviso bajo un campo de etiquetas: la lista llena o la etiqueta al tope; si no, cómo se añade. */
+  const tagHint = (full: boolean, maxCount: number, atMaxLength = false, maxLength = 0) =>
+    full ? FORM_UI.tagListFull(maxCount) : atMaxLength ? FORM_UI.maxChars(maxLength) : FORM_UI.enterToAddHint;
 
   /**
    * Un campo de etiquetas con sus sugerencias de un toque debajo. Hacen también de autocompletado: mientras se
@@ -468,6 +506,8 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
     const query = pending[key].trim();
     // Todas las que casan (no solo las que caben): cuantas menos quedan, más se encienden.
     const matches = filterSuggestions(pool, query, taken, query ? Infinity : limit);
+    const maxLength = GAME_LIMITS.tagLength[key];
+    const full = draft[key].length >= GAME_LIMITS.tagCount[key];
     return (
       <div className="form-field">
         <TagInput
@@ -480,11 +520,14 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
           onAdd={(values) => addTextTags(key, values)}
           onRemove={(value) => removeTextTag(key, value)}
           chipClassName={chipClassName}
-          hint={FORM_UI.enterToAddHint}
+          hint={tagHint(full, GAME_LIMITS.tagCount[key], pending[key].length >= maxLength, maxLength)}
           errorMessage={errorMessage}
+          maxLength={maxLength}
+          full={full}
         />
+        {/* Llena la lista, no se ofrece nada más que añadir. */}
         <QuickPicks
-          options={matches.slice(0, limit)}
+          options={full ? [] : matches.slice(0, limit)}
           taken={taken}
           label={query ? FORM_UI.quickPicks.matching : picksLabel}
           fieldId={`draft-${key}`}
@@ -593,17 +636,20 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                 value={draft.name}
                 placeholder={FORM_UI.namePlaceholder}
                 autoComplete="off"
+                maxLength={Math.max(GAME_LIMITS.name, draft.name.length)}
                 aria-invalid={duplicate || fieldErrors.name ? true : undefined}
-                aria-describedby={duplicate || fieldErrors.name ? 'draft-name-error' : undefined}
+                aria-describedby={duplicate || fieldErrors.name || nameAtMax ? 'draft-name-error' : undefined}
                 onChange={(event) => {
                   clearFieldError('name');
-                  setLocalDraft({ ...draft, name: event.target.value });
+                  setLocalDraft({ ...draft, name: capGrowth(event.target.value, draft.name, GAME_LIMITS.name) });
                 }}
               />
               {duplicate || fieldErrors.name ? (
                 <small id="draft-name-error" className="tag-hint is-error" role="alert">
                   {duplicateMessage || fieldErrors.name}
                 </small>
+              ) : nameAtMax ? (
+                <small id="draft-name-error" className="tag-hint">{FORM_UI.maxChars(GAME_LIMITS.name)}</small>
               ) : null}
             </div>
             {scoreField}
@@ -628,10 +674,11 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                     setLocalDraft({ ...draft, years: draft.years.filter((entry) => entry !== Number(value)) });
                   }}
                   chipClassName="chip-generic"
-                  hint={FORM_UI.enterToAddHint}
+                  hint={tagHint(yearsFull, GAME_LIMITS.tagCount.years)}
                   errorMessage={fieldErrors.years}
+                  full={yearsFull}
                 />
-                <QuickPicks options={[currentYear, currentYear - 1]} taken={draft.years} label={FORM_UI.quickPicks.years}
+                <QuickPicks options={yearsFull ? [] : [currentYear, currentYear - 1]} taken={draft.years} label={FORM_UI.quickPicks.years}
                   fieldId="draft-years" onPick={(value) => addYearTags([value])} />
               </div>
             ) : null}
@@ -667,15 +714,15 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                     id="draft-review"
                     className="ftextarea"
                     rows={2}
-                    maxLength={REVIEW_MAX_LENGTH}
+                    // Un análisis que ya pasaba del tope (de antes de bajarlo) se puede acortar, pero no se recorta solo.
+                    maxLength={Math.max(REVIEW_MAX_LENGTH, draft.review.length)}
                     value={draft.review}
                     placeholder={FORM_UI.reviewPlaceholder}
                     onChange={(event) => {
-                      const nextReview = event.target.value.slice(0, REVIEW_MAX_LENGTH);
-                      setLocalDraft({ ...draft, review: nextReview });
+                      setLocalDraft({ ...draft, review: capGrowth(event.target.value, draft.review, REVIEW_MAX_LENGTH) });
                     }}
                   />
-                  {/* El conteo solo aparece al escribir: con el campo vacío, una cifra «0 / 25.000» sugería que
+                  {/* El conteo solo aparece al escribir: con el campo vacío, una cifra «0 / 22.500» sugería que
                       había que llenarlo. A11y-3: conteo visible sin aria-live (no se anuncia por pulsación). */}
                   {reviewCount ? (
                     <div className="field-footer">

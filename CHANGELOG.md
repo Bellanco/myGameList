@@ -17,6 +17,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Pulsar «Me gusta» se nota más.** El botón se hunde un poco al apretarlo; al darlo, el pulgar salta, un halo de su
   color se abre y se desvanece y la frase entra con un fundido; al quitarlo, el pulgar se encoge y vuelve. Nada de eso
   se mueve si el sistema pide menos movimiento.
+- **El formulario de juego tiene topes.** Nombre hasta 80 caracteres; cada plataforma hasta 30, cada género hasta 40
+  y cada punto fuerte, débil o motivo hasta 50; el análisis hasta 22.500 (antes 25.000); como mucho 6 plataformas, 5
+  géneros, 10 puntos fuertes, 10 débiles, 10 motivos y 20 años; años desde 1970 y horas hasta 9999. Al llegar, el
+  campo lo dice debajo. Solo frenan lo que se escribe: lo que ya tenías, la sincronización y Playnite no se recortan.
+- **Las horas se escriben y se ven con coma decimal** («12,5»). Si se escribe un punto se convierte en coma al
+  momento y ya no da error; como mucho, una coma y dos decimales.
 - **Pasar el ratón por una reseña del feed dice adónde lleva** («Ir al detalle de Hades») en vez de enseñar el texto
   entero de la reseña, que ya se estaba leyendo.
 
