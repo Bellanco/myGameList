@@ -91,11 +91,11 @@ const FORM_SUMMARY_TIMEOUT_MS = 5000;
  * juntos y en este orden, en el resumen del pie del modal. Antes eran banderas y el único texto era un "revisa
  * los campos marcados" que además salía en el banner de la página, es decir, detrás del `<dialog>`.
  */
-type FieldKey = 'name' | 'genres' | 'platforms' | 'years' | 'score' | 'hours';
+type FieldKey = 'name' | 'genres' | 'platforms' | 'years' | 'score' | 'hours' | 'review';
 type FieldErrorMap = Partial<Record<FieldKey, string>>;
 
 // En el orden en que se ven: el nombre y la nota arriba; plataformas, géneros y años en la fila de debajo.
-const FIELD_ORDER: FieldKey[] = ['name', 'score', 'platforms', 'genres', 'years', 'hours'];
+const FIELD_ORDER: FieldKey[] = ['name', 'score', 'platforms', 'genres', 'years', 'hours', 'review'];
 
 /** Id del control de cada campo, para llevar el foco al primero que falle. La puntuación no es un `input`. */
 const FIELD_INPUT_ID: Partial<Record<FieldKey, string>> = {
@@ -104,6 +104,7 @@ const FIELD_INPUT_ID: Partial<Record<FieldKey, string>> = {
   platforms: 'draft-platforms',
   years: 'draft-years',
   hours: 'draft-hours',
+  review: 'draft-review',
 };
 
 function isValidYearValue(value: string): boolean {
@@ -134,6 +135,16 @@ function parseHours(text: string): { invalid: boolean; value: number | null } {
   const parsed = Number(trimmed.replace(',', '.'));
   if (!Number.isFinite(parsed) || parsed < 0) return { invalid: true, value: null };
   return { invalid: false, value: normalizeHours(parsed) };
+}
+
+/**
+ * Cuántos caracteres le faltan al análisis para llegar al mínimo (0 si no le falta nada). Vacío vale —es opcional— y
+ * el que ya estaba guardado no se exige mientras su texto no cambie: el mínimo frena lo que se escribe, como los topes.
+ */
+function reviewMissing(review: string, saved: string): number {
+  const text = review.trim();
+  if (!text || text === saved.trim()) return 0;
+  return Math.max(0, GAME_LIMITS.reviewMin - text.length);
 }
 
 /** Cuántas sugerencias de un toque se ofrecen por campo (en una línea; lo que no cabe se desplaza). */
@@ -199,6 +210,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
   // A11y-3: mensaje anunciado por SR solo en umbrales (texto constante por banda → no se reanuncia por tecla).
   const reviewLiveMessage =
     reviewProgress >= 100 ? FORM_UI.charLimitReached : reviewProgress >= 90 ? FORM_UI.charNearLimit : '';
+  const reviewShortBy = supportsReview(currentTab) ? reviewMissing(draft.review, initialDraft.review) : 0;
   const isNew = !initialDraft.id;
   const nameAtMax = draft.name.length >= GAME_LIMITS.name;
   const mac = isMacPlatform();
@@ -448,6 +460,8 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
     if (supportsScore(currentTab) && resolveGrade({ grade: nextDraft.grade, score: nextDraft.score }) <= 0) {
       errors.score = VALIDATION_MESSAGES.scoreRequired;
     }
+    const reviewShort = supportsReview(currentTab) ? reviewMissing(nextDraft.review, initialDraft.review) : 0;
+    if (reviewShort) errors.review = VALIDATION_MESSAGES.reviewTooShort(GAME_LIMITS.reviewMin, reviewShort);
 
     setFieldErrors(errors);
     if (FIELD_ORDER.some((key) => errors[key])) {
@@ -728,22 +742,30 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                   <label htmlFor="draft-review" className="flabel">{FORM_UI.reviewLabel}</label>
                   <textarea
                     id="draft-review"
-                    className="ftextarea"
+                    className={`ftextarea ${fieldErrors.review ? 'has-error' : ''}`.trim()}
                     rows={2}
                     // Un análisis que ya pasaba del tope (de antes de bajarlo) se puede acortar, pero no se recorta solo.
                     maxLength={Math.max(REVIEW_MAX_LENGTH, draft.review.length)}
                     value={draft.review}
                     placeholder={FORM_UI.reviewPlaceholder}
+                    aria-invalid={fieldErrors.review ? true : undefined}
+                    aria-describedby={fieldErrors.review ? 'draft-review-error' : undefined}
                     onChange={(event) => {
+                      clearFieldError('review');
                       setLocalDraft({ ...draft, review: capGrowth(event.target.value, draft.review, REVIEW_MAX_LENGTH) });
                     }}
                   />
                   {/* El conteo solo aparece al escribir: con el campo vacío, una cifra «0 / 22.500» sugería que
                       había que llenarlo. A11y-3: conteo visible sin aria-live (no se anuncia por pulsación). */}
-                  {reviewCount ? (
+                  {/* Por debajo del mínimo, lo que falta en vez del conteo; tras intentar guardar, el error. */}
+                  {fieldErrors.review ? (
+                    <small id="draft-review-error" className="tag-hint is-error">{fieldErrors.review}</small>
+                  ) : reviewCount ? (
                     <div className="field-footer">
                       <small className={`tag-hint ${reviewProgressClass}`.trim()}>
-                        {FORM_UI.charCount(reviewCount, REVIEW_MAX_LENGTH)}
+                        {reviewShortBy
+                          ? FORM_UI.charMissing(reviewShortBy, GAME_LIMITS.reviewMin)
+                          : FORM_UI.charCount(reviewCount, REVIEW_MAX_LENGTH)}
                       </small>
                     </div>
                   ) : null}

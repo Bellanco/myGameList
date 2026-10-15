@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+
+- **El análisis pide al menos 200 caracteres.** Si escribes uno, tiene que tener al menos 200 caracteres. Mientras
+  no llega, debajo del campo se ve cuántos faltan. Dejarlo vacío sigue valiendo, y los análisis más cortos que ya
+  tenías se conservan aunque edites el juego: el mínimo solo se pide si cambias su texto.
+
 ## [1.7.9] - 2026-10-15
 
 ### Added

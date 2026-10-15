@@ -117,6 +117,8 @@ export const VALIDATION_MESSAGES = {
   scoreRequired: 'Selecciona una puntuación.',
   hoursInvalid: 'Escribe las horas como un número, con decimales si hace falta (ej: 12,5).',
   hoursNegative: 'Las horas jugadas no pueden ser negativas.',
+  reviewTooShort: (min: number, missing: number) =>
+    `El análisis necesita al menos ${min} caracteres: faltan ${missing}. También puedes dejarlo vacío.`,
   /** Cabecera del resumen del pie del modal; debajo va la lista de lo que falta. */
   formSummary: (count: number) =>
     count === 1 ? 'Falta 1 cosa para poder guardar:' : `Faltan ${count} cosas para poder guardar:`,

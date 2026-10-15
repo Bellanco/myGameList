@@ -128,6 +128,68 @@ describe('FormModal — topes', () => {
   });
 });
 
+describe('FormModal — mínimo del análisis', () => {
+  const min = GAME_LIMITS.reviewMin;
+
+  it('uno más corto que el mínimo no se guarda: dice cuánto falta y lleva el foco', () => {
+    const { onSave, save } = renderForm();
+    const review = screen.getByLabelText('Análisis');
+    fireEvent.change(review, { target: { value: 'Muy bueno.' } });
+    expect(screen.getByText(`Faltan ${min - 10} caracteres (mínimo ${min})`)).toBeInTheDocument();
+    save();
+    expect(onSave).not.toHaveBeenCalled();
+    expect(review).toHaveAttribute('aria-invalid', 'true');
+    expect(review).toHaveFocus();
+    expect(screen.getAllByText(new RegExp(`al menos ${min} caracteres: faltan ${min - 10}`)).length).toBeGreaterThan(0);
+  });
+
+  it('los espacios de los extremos no cuentan; con el mínimo justo, se guarda', () => {
+    const { onSave, save } = renderForm();
+    const review = screen.getByLabelText('Análisis');
+    fireEvent.change(review, { target: { value: `  ${'a'.repeat(min - 1)}  ` } });
+    save();
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.change(review, { target: { value: 'a'.repeat(min) } });
+    expect(screen.getByText(`${min} / 22.500 caracteres`)).toBeInTheDocument();
+    save();
+    expect(onSave).toHaveBeenCalledOnce();
+  });
+
+  it('vacío vale: el análisis es opcional', () => {
+    const { onSave, save } = renderForm({ review: '' });
+    save();
+    expect(onSave).toHaveBeenCalledOnce();
+  });
+
+  it('uno corto de antes se conserva al editar otros campos, pero no se puede cambiar por otro corto', () => {
+    const { onSave, save } = renderForm({ review: 'Como juego, correcto.' });
+    expect(screen.queryByText(/Faltan/)).toBeNull();
+    save();
+    expect(onSave.mock.calls[0][0].review).toBe('Como juego, correcto.');
+
+    fireEvent.change(screen.getByLabelText('Análisis'), { target: { value: 'Como juego, regular.' } });
+    save();
+    expect(onSave).toHaveBeenCalledOnce();
+  });
+
+  it('en próximos no hay análisis y no se exige nada', () => {
+    const onSave = vi.fn();
+    render(
+      <FormModal
+        open
+        draft={makeDraft({ years: [], review: 'corto' })}
+        currentTab="p"
+        lookups={{ genres: [], platforms: [], strengths: [], weaknesses: [] }}
+        findDuplicate={() => null}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(onSave).toHaveBeenCalledOnce();
+  });
+});
+
 describe('FormModal — horas en español', () => {
   it('se enseñan con coma decimal', () => {
     renderForm({ hours: 12.5 });
