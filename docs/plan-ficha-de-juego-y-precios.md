@@ -65,18 +65,21 @@ aciertan siempre con su precio porque llegan con su id.
 | F0.14 | **Cabecera con aire y sin títulos obvios** (15-10-2026). En la cabecera, sin chips: tu lista y desde cuándo (`enteredAt`), un resumen de una línea (la primera plataforma, el primer género y, en completados, el último año) y la fila de cifras. Las listas enteras de plataformas y géneros, como chips, en el cuerpo, en dos renglones **sin etiqueta**. Fuera los títulos «Tus datos», «Plataformas» y «Géneros»: se dan por supuestos |
 | F0.15 | **El recuadro del precio, completo y repartido en diagonal** (15-10-2026): precio, descuento y precio normal arriba a la izquierda; el sello «Mínimo histórico» arriba a la derecha; dónde y hasta cuándo; los tres mínimos (histórico con su fecha, último año y últimos 3 meses) en una fila; las dos tiendas siguientes más baratas; «Ver en *tienda*» abajo a la izquierda y el crédito de ITAD abajo a la derecha. Ocupa todo el alto de su columna |
 | F0.13 | **Las notas, en la escala de quien mira** (15-10-2026). La media de tus amistades sale como cifra («91 · 3 notas») solo con la nota 0–100; con estrellas, en estrellas («★★★★★ · 3 notas»). Las notas de cada amistad y las tuyas, con `ScoreDisplay` (aro o estrellas), como en el resto de la app |
+| F0.2 | **La media de notas de tus amistades, con las que haya** (15-10-2026), con cuántas al lado («81 · 3 notas», «92 · 1 nota»), en la escala de quien mira (F0.13) |
+| F0.3 | **El buscador ⌘K, al elegir un juego, abre su ficha** (15-10-2026) |
+| F0.4 | **«Lo quieren» es relleno** (15-10-2026): sale solo si sobra sitio. Primero se elige el ancho sin esa sección; después se prueba a añadirla y, si así ya no cabe sin scroll, se quita. Nunca ensancha el panel ni provoca scroll. Si el contenido crece después (la letra, una carátula), es lo primero que se va |
+| F0.5 | **La saga entra, para todos** (15-10-2026). Sale de `sharedSagaName` (ver «Qué enseña la ficha», 4): tus entregas siempre, también sin social; las de tus amistades, con social y según lo que llegue de ellas (F3 en bronce; el índice F4 desde plata) |
+| F0.7 | **Las amistades llevan a su perfil, con el juego abierto** (15-10-2026). Tocar una amistad en la ficha lleva a su perfil con ese juego abierto: sus datos y su reseña. Y en su perfil, tocar un juego de sus listas lo abre ahí, con sus datos |
+| F0.8 | **De los estilos del detalle antiguo, solo se borra lo de la fila desplegada** (15-10-2026): el filo de color de Arcade (`.detail-row.open`) y la animación de cierre de Persona (`tr.detail-row.is-leaving`). Lo de las cajas, las etiquetas y los chips (`detail-box`, `detail-label`, `.detail-content .chip` en Persona, Arcade y Cyberpunk) **se queda**: la ficha usa ese mismo marcado y así cada tema la viste igual |
 | F0.10 | **La ficha abre siempre, con o sin red.** Lo tuyo (datos, acciones, saga de tu biblioteca) sale siempre. Lo que viene de fuera (amistades, índice, precios, carátulas) es opcional: si no llega, por falta de conexión, un servicio caído o un cupo agotado, **esa sección no se pinta**, sin error ni hueco. Vale para todas las piezas de fuera. Ver «Sin conexión y servicios caídos» |
 
 **Propuestas pendientes de confirmar:**
 
 | # | Pregunta | Propuesta |
 |---|---|---|
-| F0.2 | ¿Se enseña la **media** de notas de tus amistades o solo quién lo tiene? (es la decisión 5 de la investigación) | Media **solo con 3 o más notas**, con el número al lado («82 · 4 amistades»). Con menos, una media es la nota de alguien con otro nombre |
-| F0.3 | El buscador ⌘K, al elegir un juego tuyo, ¿abre la ficha o sigue llevando a `/<lista>?q=`? | **La ficha.** Desde ella se va a la lista con «Ver en Completados» |
-| F0.4 | ¿Entran los juegos de Deseados de las amistades en «quién lo tiene»? | **Sí, aparte:** «Lo quieren: Ana, Luis». `applyProfileVisibility` ya los incluye si la amistad no los oculta |
-| F0.5 | ¿Saga dentro de la ficha en la primera versión? | **Sí**, con `sharedSagaName` sobre tu biblioteca y lo que ya esté indexado de tus amistades. Sin IGDB (C5) |
-| F0.7 | En el **perfil de una amistad**, ¿qué abre tocar una fila de sus listas? (hoy despliega **sus** datos) | **La misma ficha, con un bloque «De Marta» arriba** (sus datos, como «Tus datos» pero suyos y filtrados por su visibilidad) y luego lo de siempre: tus datos si lo tienes, el resto de amistades, saga y precio |
-| F0.8 | ¿Qué se hace con los estilos del detalle en los skins de Persona, Arcade y Cyberpunk? | **Borrarlos.** El modal ya lleva el carácter de cada tema (`.modal`, botones, renglones), como se ve en la maqueta. Si a algún tema le falta algo, se añade sobre `.gs-*` en su hoja |
+| P0.9 | ¿La casilla «Avisarme cuando baje» viene marcada? | **No:** como el interruptor de ITAD, apagada hasta que se marca |
+| P0.10 | ¿Cómo se sabe que un juego está en un bundle? | `/games/prices/v3` no lo trae. Comprobar en P0 si `/games/overview/v2` da los bundles activos (la documentación cita `bundled`): sería **una llamada más por refresco**, para todos los juegos a la vez. Si no, `/games/bundles/v2` va de uno en uno y no compensa: el aviso de bundle se quedaría fuera |
+| F0.16 | ¿Algo más de la ficha depende del rango? | **No:** solo el índice de bibliotecas (F4), ya decidido |
 | F0.9 | Saltar de una ficha a otra (la saga, una amistad), ¿suma pasos al historial? | **No:** se **reemplaza** el `?juego=`, así que «atrás» siempre vuelve a la lista y no recorre las fichas vistas |
 
 ## Qué enseña la ficha
@@ -175,6 +178,7 @@ con «Añadir a deseados».
 **El cuerpo:**
 - **En columnas CSS** (`columns: 2` con ancho): tus datos, el análisis, tus amistades, lo quieren y la saga (en
   estrecho; con ancho va arriba). El navegador las equilibra solas.
+- **«Lo quieren» es relleno** (F0.4): solo sale si cabe sin scroll y sin ensanchar el panel.
 - **Ninguna sección se parte:** partida, la de amistades dejaba una persona suelta y sin título al principio de la
   segunda columna. Si así no cabe, el panel se ensancha.
 - **El margen de cada sección va abajo y no arriba:** en columnas, el de arriba se pierde al saltar de columna y las
@@ -410,16 +414,16 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 | P0.1 | **Un solo interruptor, «IsThereAnyDeal», en Ajustes, apagado por defecto.** Enciende toda la integración: los precios (P2–P5) y el botón «Traer de IsThereAnyDeal» (P7). Apagado, no se pide nada a ITAD. Es el precedente de las carátulas, que permitió no subir `LEGAL_VERSION` con IGDB (`5c58166a`) |
 | P0.2 | **Solo con espacio social.** Sin social, el interruptor no aparece. Así el borde siempre sabe quién pide (`requireUser`) y aplica su rango; no hace falta limitar por IP |
 | P0.8 | **Si el servicio no está, el precio no se muestra** (15-10-2026). Sin conexión, con ITAD caído o sin cupo, el bloque no sale, aunque haya un precio guardado. Con conexión y dentro del plazo de su rango, el guardado vale: es el funcionamiento normal, y no se pregunta a ITAD |
+| P0.3 | **España y euros, fijos** (15-10-2026). La preferencia de región, más adelante (P8) |
+| P0.4 | **La preferencia se sincroniza entre dispositivos** (15-10-2026): campo nuevo en `FirestorePublicConfig` y en el `hasOnly` de `publicConfig` en `firestore.rules`, con su despliegue de reglas y `npm run test:rules`, como `covers` |
+| P0.5 | **Aviso de bajada: desde plata, con casilla propia y llevando a la ficha** (15-10-2026). Solo avisa de tres cosas: **un mínimo histórico nuevo, un descuento de al menos el 75 % o que el juego entre en un bundle**. La cápsula y la campana abren la ficha del juego. Bajo el interruptor «IsThereAnyDeal», una casilla «Avisarme cuando baje» que solo ven plata, oro y mithril. Sin la casilla marcada, no hay aviso ni refresco en segundo plano |
+| P0.6 | **Las tiendas, elegibles desde administración** (15-10-2026). En `/admin`, la lista de tiendas de ITAD (`/service/shops/v1`) con una casilla cada una; por defecto, todas. Se guarda en KV, como el aviso del administrador (memoria `avisos-admin-decisiones`), y `/api/precios` la pasa a ITAD como `shops=`. Una escritura de KV por cambio; leerla, una lectura por petición, de las 100.000 diarias |
 | P0.7 | **Precios para todos los rangos, desde bronce. El refresco depende del rango:** bronce 18 h, plata 12 h, oro 6 h y mithril 15 min. Ver «Límites por rango» |
 
 **Propuestas pendientes de confirmar:**
 
 | # | Pregunta | Propuesta |
 |---|---|---|
-| P0.3 | ¿País y moneda? | **España/EUR fijo** en la primera entrega. La preferencia de región, más adelante (P8) |
-| P0.4 | ¿La preferencia se sincroniza entre dispositivos? | **No, al principio.** Sincronizarla exige ampliar `FirestorePublicConfig` y el `hasOnly` de `firestore.rules`, con despliegue de reglas. Se puede añadir después, como `covers` |
-| P0.5 | ¿Aviso de bajada de precio? | **Sí, al abrir la app:** una cápsula del carril y la campana, solo con un mínimo histórico nuevo o una bajada ≥ 50 % desde la última vez. Sin push: Pages no tiene cron (investigación §B6) |
-| P0.6 | ¿Qué tiendas? | **Todas las que devuelve ITAD.** Filtrar a «solo tiendas oficiales» se valora si salen tiendas de claves grises |
 
 **Preparación (la hace el usuario):** registrar la app en ITAD, guardar la clave como secreto de Pages
 (`npx wrangler pages secret put ITAD_API_KEY`) y en `.dev.vars` (con la entrada comentada en `.dev.vars.example`).
@@ -510,7 +514,7 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 - **Atribución:** una línea discreta al pie de Deseados, «Precios de IsThereAnyDeal», con enlace. También en `CREDITS`.
 - **Carga:** todo el código de precios en un chunk que solo se pide con el interruptor encendido y Deseados abierto.
 
-## Fase P4 · Aviso de bajada · S
+## Fase P4 · Aviso de bajada · S (decidido en P0.5)
 
 - Al refrescar los precios, comparar con el último visto: hay aviso con un **mínimo histórico nuevo** o una bajada
   ≥ 50 % (P0.5).
@@ -575,6 +579,13 @@ ITAD) no entra en esta fase.
 | D1 | **Por dónde entra: la misma pantalla que Playnite**, la bandeja de importados (`InboxScreen`), con origen `itad` y una acción en bloque nueva, «Añadir a Deseados (n)». Es una excepción a «la bandeja no clasifica en Deseados» que solo vale para orígenes que son deseos |
 | D8 | **Depende del rango:** (a) si se puede importar o no, (b) si se pueden importar DLC y paquetes y (c) el tope de juegos |
 | D9 | **Solo con espacio social.** Sin social, el botón «Traer de IsThereAnyDeal» no aparece, como `/elegir` |
+| D2 | **Cada juego entra con la fecha en que se apuntó en ITAD** (`added` → `enteredAt.d`): lo apuntado allí hace más de 30 días no se anuncia en el feed; lo reciente sí. Sin `added`, hoy menos 31 días. `_ts` es el de ahora |
+| D4 | **Plataforma: la tienda del mejor precio en ITAD, si se conoce; si no, vacía,** para elegirla en la bandeja. Las bibliotecas reales usan tiendas (Steam, Epic, GOG…), no «PC» |
+| D5 | **Si no caben todos, entran primero los apuntados más recientemente** (`added`) |
+| D6 | **Volver a importar, a mano, con el mismo botón.** Es idempotente. Lo borrado en ITAD no se borra aquí |
+| D7 | **El id de ITAD, solo en el dispositivo** (`gameTitleKey → UUID` en la caché de precios), para acertar con el precio. No va al gist |
+| D11 | **Las cifras por rango y que el tope limite solo cada importación** (ver «Límites por rango»): bronce no importa; plata, 50 sin DLC y una vez al día; oro, 100 con DLC y tres veces al día; mithril, 100 con DLC y sin tope. Deseados sigue en 100 para todos |
+| D12 | **El panel de administración enseña el límite de importación** de cada usuario, en su ficha, como ya hace con los enlaces compartidos |
 | D10 | **El tope no se explica.** Si el rango deja pasar menos juegos de los que hay, se marcan los que caben y el resto queda desmarcado en la bandeja, sin texto que lo explique. Tampoco se nombra el rango en ningún sitio (memoria `rangos-ocultos-al-usuario`). Si el rango no permite importar, el botón no aparece |
 
 **Cómo encaja con lo que ya hay:**
@@ -588,16 +599,6 @@ ITAD) no entra en esta fase.
 - El cliente usa la misma tabla solo para enseñar u ocultar el botón y para marcar las casillas.
 - En el panel de administración, la ficha de un usuario ya enseña sus límites por rango. Añadir allí este, si se
   quiere, sería un renglón más.
-
-**Propuestas pendientes de confirmar:**
-
-| # | Pregunta | Propuesta |
-|---|---|---|
-| D2 | ¿Cómo se evita llenar el feed? | **El sello `enteredAt.d` toma la fecha `added` de ITAD.** Lo apuntado allí hace más de 30 días queda fuera de la ventana del feed y no se anuncia; lo reciente sí, porque es verdad. Sin `added`, la fecha de hoy menos 31 días. `_ts` (el reloj del CRDT) sí es el de ahora |
-| D4 | ¿Qué plataforma se pone? | **Revisado con una biblioteca real:** las plataformas se usan como **tiendas** (Steam, Epic, GOG…), no «PC». Propuesta: la tienda del mejor precio en ITAD si se conoce y, si no, vacía para elegirla en la bandeja. Pendiente de decidir |
-| D5 | ¿En qué orden se llena el tope? | **Por `added`, del más reciente al más antiguo.** Lo que no quepa en Deseados (100) tampoco se marca |
-| D6 | ¿Volver a importar? | **A mano, con el mismo botón.** Es idempotente. Lo borrado en ITAD **no** se borra aquí |
-| D7 | ¿Se guarda el id de ITAD para los precios? | **Sí, en local** (`gameTitleKey → UUID` en la caché de precios). No va al gist |
 
 ### P7.0 · Prueba de concepto (½ día)
 
@@ -672,8 +673,8 @@ ITAD) no entra en esta fase.
 
 Solo hay que añadir una frase en `legalContent.ts`, junto a IGDB:
 
-> «Si traes tu lista de IsThereAnyDeal, inicias sesión en su web y nuestro servidor la lee una vez para pasarla a tu
-> bandeja; no guardamos ningún acceso a tu cuenta.»
+> «Si importas tu lista de seguimiento de IsThereAnyDeal, inicias sesión en su web y autorizas una única lectura:
+> nuestro servidor la recibe, la deja en tu bandeja de importados y no conserva ningún acceso a tu cuenta.»
 
 No se guarda ningún token y la acción es a mano, así que, con el precedente de IGDB, **no se sube `LEGAL_VERSION`**.
 
@@ -712,12 +713,12 @@ hay (`PROFILE_TIER_SHARE_MAX_ACTIVE`, `PROFILE_TIER_FEED_TTL_MS`).
 | Ficha: índice completo de sus bibliotecas (F4), cada | — | **No** | **24 h** | **12 h** | **30 min** | **Decidido** (15-10-2026) |
 | Interruptor «IsThereAnyDeal» | **No aparece** | Sí | Sí | Sí | Sí | **Decidido** (P0.1, P0.2) |
 | Precios: refresco cada | — | **18 h** | **12 h** | **6 h** | **15 min** | **Decidido** (P0.7) |
-| Precios: aviso de bajada al abrir (P4) | — | No | Sí | Sí | Sí | Propuesta |
-| Precios: otras tiendas y mínimos de 1 año y 3 meses en el recuadro | — | Sí | Sí | Sí | Sí | La maqueta lo enseña a todos (F0.15). Pendiente: ¿o solo desde oro? |
-| Importar de ITAD | **No** | ¿? | Sí | Sí | Sí | **Decidido** que depende del rango (D8); cifras pendientes |
-| Importar: DLC y paquetes | — | No | No | Sí | Sí | Decidido que depende (D8b); cifras propuestas |
-| Importar: juegos por importación | — | 25 | 50 | 100 | 100 | Decidido que depende (D8c); cifras propuestas |
-| Importar: importaciones al día | — | 1 | 1 | 3 | Sin tope | Propuesta |
+| Precios: aviso de bajada al abrir (P4), con su casilla | — | No | Sí | Sí | Sí | **Decidido** (P0.5) |
+| Precios: otras tiendas y mínimos de 1 año y 3 meses en el recuadro | — | Sí | Sí | Sí | Sí | **Decidido:** para todos los que tienen precios (F0.15) |
+| Importar de ITAD | **No** | **No** | Sí | Sí | Sí | **Decidido** (D8) |
+| Importar: DLC y paquetes | — | — | No | Sí | Sí | **Decidido** (D8b) |
+| Importar: juegos por importación | — | — | 50 | 100 | 100 | **Decidido** (D8c). El tope de Deseados sigue en 100 para todos |
+| Importar: importaciones al día | — | — | 1 | 3 | Sin tope | **Decidido** |
 
 Con mithril a 15 minutos, la caché del borde no puede tener un plazo fijo más largo: por eso guarda la hora de
 cada precio y es cada petición la que decide si le vale (P1).
@@ -790,34 +791,11 @@ fase y se borra de aquí.
 ### Decisiones del usuario
 
 **Ficha de juego:**
-- Dar por bueno el diseño de la maqueta del modal (`docs/maquetas/ficha-juego.html`) o pedir cambios.
-- F0.7: qué abre una fila en el perfil de una amistad (propuesta: la ficha con su bloque arriba).
-- F0.8: borrar los estilos del detalle de los skins de Persona, Arcade y Cyberpunk.
 - F0.9: que pasar de una ficha a otra no sume pasos a «atrás».
-- Si las otras tiendas y los mínimos de 1 año y 3 meses del recuadro de precio son para todos o solo desde oro.
-- F0.2: si se enseña la media de notas de las amistades, y con qué mínimo (propuesta: 3).
-- F0.3: si el buscador ⌘K abre la ficha en vez de llevar a la lista.
-- F0.4: si sale la sección «Lo quieren» (los Deseados de tus amistades).
-- F0.5: si la saga entra en la primera versión.
-- Si algo de la ficha depende también del rango (hoy no se ha planteado).
+- F0.16: que nada más de la ficha dependa del rango.
 
 **Precios:**
-- Las cifras que siguen como propuesta en «Límites por rango»: el aviso de
-  bajada, el desglose por tienda, si bronce puede importar de ITAD, y los topes de importación.
-- P0.3: España/EUR fijo, o elegible.
-- P0.4: preferencia solo local, o sincronizada (esta pide desplegar reglas de Firestore).
-- P0.5: aviso de bajada en la app, y su umbral (propuesta: mínimo histórico nuevo o ≥ 50 %).
-- P0.6: todas las tiendas, o solo las oficiales.
-
-**Traer la lista de ITAD:**
-- **Las cifras por rango (D8):** por cada uno de bronce, plata, oro y mithril, si puede importar, si puede importar
-  DLC y paquetes, y cuántos juegos.
-- **Qué tope limita el rango (D8c):** solo cuántos entran por importación, o también el tope total de Deseados (hoy
-  100 para todos, `WISHLIST_MAX_GAMES`). Lo segundo afectaría también al alta a mano.
-- D2 (fecha de ITAD para no llenar el feed), D4 (`PC`), D5 (orden), D6 (reimportar a mano) y D7 (id de ITAD en
-  local): confirmar o cambiar.
-- Si el límite por rango se enseña en el panel de administración.
-- El texto legal propuesto (P7 · Texto legal).
+- P0.9: que la casilla «Avisarme cuando baje» venga apagada.
 
 ### Datos que hay que conseguir
 
@@ -830,6 +808,7 @@ fase y se borra de aquí.
   `type`) y si ITAD recuerda el consentimiento.
 - **Medición P0:** el porcentaje de acierto de `/lookup/id/title/v1` con los nombres reales de unas listas de deseos.
   Decide si P6 (corregir el emparejamiento) sube de prioridad.
+- **Comprobación P0 (P0.10):** si `/games/overview/v2` trae los bundles activos de cada juego.
 - **Medición P0:** si `caches.default` guarda y devuelve en las Pages Functions del dominio real. Si no, la caché de
   precios va solo en el cliente.
 - **En F3, mirando el código:** si el directorio cacheado (`peekCachedSocialDirectory`) trae la visibilidad y el

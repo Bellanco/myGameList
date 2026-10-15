@@ -299,7 +299,8 @@ function PrecioBloque({ p }: { p: Precio }) {
 function Cabecera({ g, tab, amistades, lado }: { g: GameItem; tab: Lista; amistades: Amistad[]; lado?: ReactElement | null }) {
   const loTienen = amistades.filter((a) => a.tab !== 'd');
   const notas = loTienen.map((a) => a.nota).filter((n): n is number => typeof n === 'number');
-  const media = notas.length >= 3 ? Math.round(notas.reduce((s, n) => s + n, 0) / notas.length) : null;
+  // La media, con las notas que haya (decisión del usuario, 15-10-2026), y cuántas son al lado.
+  const media = notas.length ? Math.round(notas.reduce((s, n) => s + n, 0) / notas.length) : null;
   const desde = g.enteredAt?.[tab];
   const ultimoAnio = tab === 'c' && g.years?.length ? Math.max(...g.years) : null;
   const resumen = [g.platforms[0], g.genres[0], ultimoAnio].filter(Boolean).join(' · ');
@@ -336,7 +337,7 @@ function Cabecera({ g, tab, amistades, lado }: { g: GameItem; tab: Lista; amista
               <dt>Media de tus amistades</dt>
               {/* En la escala de quien mira: la cifra con la nota 0–100 y las estrellas con estrellas. */}
               <dd className="gs-media">
-                {escala === 'grade' ? media : <StarRating value={starsFromGrade(media)} />} <small>· {notas.length} notas</small>
+                {escala === 'grade' ? media : <StarRating value={starsFromGrade(media)} />} <small>· {notas.length} {notas.length === 1 ? 'nota' : 'notas'}</small>
               </dd>
             </div>
           ) : null}
@@ -477,10 +478,11 @@ function Analisis({ g }: { g: GameItem }) {
   );
 }
 
-function Amistades({ amistades }: { amistades: Amistad[] }) {
+function Amistades({ amistades, conQuieren }: { amistades: Amistad[]; conQuieren: boolean }) {
   const loTienen = amistades.filter((a) => a.tab !== 'd');
-  const loQuieren = amistades.filter((a) => a.tab === 'd');
-  if (!amistades.length) return null;
+  // «Lo quieren» es RELLENO: solo sale si cabe sin quitarle sitio a nada (lo decide `FichaModal`).
+  const loQuieren = conQuieren ? amistades.filter((a) => a.tab === 'd') : [];
+  if (!loTienen.length && !loQuieren.length) return null;
   // Orden: con reseña primero y, dentro, por nota.
   const orden = [...loTienen].sort((a, b) => Number(Boolean(b.adelanto)) - Number(Boolean(a.adelanto)) || (b.nota ?? -1) - (a.nota ?? -1));
   return (
@@ -503,8 +505,8 @@ function Amistades({ amistades }: { amistades: Amistad[] }) {
                       {a.adelanto ? <span className="gs-snippet">«{a.adelanto}»</span> : null}
                     </>
                   }
-                  onOpen={avisar(a.adelanto ? `abre la reseña de ${a.nombre}` : `abre el perfil de ${a.nombre}`)}
-                  openAriaLabel={a.adelanto ? `Leer la reseña de ${a.nombre}` : `Ver el perfil de ${a.nombre}`}
+                  onOpen={avisar(`va al perfil de ${a.nombre} con este juego abierto (sus datos y su reseña)`)}
+                  openAriaLabel={`Ver ${a.nombre}: su perfil, con este juego abierto`}
                 >
                   {typeof a.nota === 'number' ? <Nota game={{ grade: a.nota }} /> : null}
                 </HubPersonRow>
@@ -612,12 +614,16 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   const panelRef = useRef<HTMLDivElement>(null);
   const barraRef = useRef<HTMLElement>(null);
   const [medida, setMedida] = useState<{ id: number; etapa: number } | null>(null);
+  // «Lo quieren», como relleno: primero se elige el ancho SIN esa sección; después se prueba a añadirla y, si así ya
+  // no cabe sin scroll, se quita. Nunca ensancha el panel ni provoca scroll.
+  const [quieren, setQuieren] = useState<{ id: number; estado: 'probando' | 'si' | 'no' } | null>(null);
   const [pasada, setPasada] = useState(0);
   const etapa = g !== null && medida?.id === g.id ? medida.etapa : 0;
 
   useEffect(() => {
     const alCambiar = () => {
       setMedida(null);
+      setQuieren(null);
       setPasada((n) => n + 1);
     };
     window.addEventListener('resize', alCambiar);
@@ -647,12 +653,34 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
 
   useEffect(() => {
     const el = scrollRef.current;
-    // En el móvil el panel es siempre la pantalla entera: no hay ancho que elegir.
-    if (!open || !g || etapa >= 2 || !el || window.matchMedia('(max-width: 600px)').matches) return;
-    // Solo ensancha si hay más de una sección en el cuerpo: con una sola, dos columnas no ganarían altura.
-    const secciones = el.querySelector('.gs-cuerpo')?.children.length ?? 0;
-    if (secciones > 1 && el.scrollHeight > el.clientHeight + 1) setMedida({ id: g.id, etapa: etapa + 1 });
-  }, [open, g, etapa, pasada]);
+    if (!open || !g || !el) return;
+    // En el móvil el panel es siempre la pantalla entera: no hay ancho que elegir, pero el relleno sí se prueba.
+    const esMovil = window.matchMedia('(max-width: 600px)').matches;
+    const sobra = el.scrollHeight > el.clientHeight + 1;
+    const estadoQuieren = quieren?.id === g.id ? quieren.estado : null;
+    // 1 · Se estaba probando el relleno: se queda si cabe y se quita si no.
+    if (estadoQuieren === 'probando') {
+      setQuieren({ id: g.id, estado: sobra ? 'no' : 'si' });
+      return;
+    }
+    if (sobra) {
+      // 2 · Sobra contenido (la letra llegó tarde, una carátula…): lo primero que se va es el relleno.
+      if (estadoQuieren === 'si') {
+        setQuieren({ id: g.id, estado: 'no' });
+        return;
+      }
+      // 3 · Sin relleno y aún no cabe: se ensancha, y con el ancho nuevo se vuelve a probar el relleno. Solo si hay
+      //     más de una sección que repartir (con una sola, dos columnas no ganarían altura).
+      const secciones = el.querySelector('.gs-cuerpo')?.children.length ?? 0;
+      if (!esMovil && etapa < 2 && secciones > 1) {
+        setMedida({ id: g.id, etapa: etapa + 1 });
+        setQuieren(null);
+      }
+      return;
+    }
+    // 4 · Cabe y hay relleno por probar: se prueba.
+    if (estadoQuieren === null && amistades.some((a) => a.tab === 'd')) setQuieren({ id: g.id, estado: 'probando' });
+  }, [open, g, etapa, pasada, quieren, amistades]);
 
   return (
     <dialog
@@ -683,7 +711,7 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
               <div className="gs-cuerpo">
                 <TusDatos g={g} tab={tab} />
                 <Analisis g={g} />
-                <Amistades amistades={amistades} />
+                <Amistades amistades={amistades} conQuieren={quieren?.id === g.id && quieren.estado !== 'no'} />
                 <Saga g={g} onOpen={onOpen} className={precio ? '' : 'is-solo-estrecho'} />
               </div>
             </div>
