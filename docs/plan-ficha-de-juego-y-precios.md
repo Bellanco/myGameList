@@ -272,7 +272,7 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 |---|---|
 | P0.1 | **Un solo interruptor, «IsThereAnyDeal», en Ajustes, apagado por defecto.** Enciende toda la integración: los precios (P2–P5) y el botón «Traer de IsThereAnyDeal» (P7). Apagado, no se pide nada a ITAD. Es el precedente de las carátulas, que permitió no subir `LEGAL_VERSION` con IGDB (`5c58166a`) |
 | P0.2 | **Solo con espacio social.** Sin social, el interruptor no aparece. Así el borde siempre sabe quién pide (`requireUser`) y aplica su rango; no hace falta limitar por IP |
-| P0.7 | **El refresco de precios depende del rango:** bronce 24 h, plata 12 h, oro 6 h y mithril 15 min. Ver «Límites por rango» |
+| P0.7 | **Precios para todos los rangos, desde bronce. El refresco depende del rango:** bronce 18 h, plata 12 h, oro 6 h y mithril 15 min. Ver «Límites por rango» |
 
 **Propuestas pendientes de confirmar:**
 
@@ -312,7 +312,7 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 - **Caché en el borde, sin KV** (P0, sujeto a la medición), con un valor por juego:
   - título normalizado → id de ITAD: 30 días; un `null`, 7 días (como el `MISS_TTL` de las carátulas);
   - id → precio, **con la hora a la que se pidió**. Cada petición acepta lo cacheado si es más reciente que el plazo
-    de su rango (P0.7): para bronce vale un precio de hace 20 h y para mithril no, y ese caso sí se vuelve a pedir.
+    de su rango (P0.7): para bronce vale un precio de hace 15 h y para mithril no, y ese caso sí se vuelve a pedir.
 
   Dos usuarios que desean el mismo juego comparten la consulta. Cada petición del cliente cuesta como mucho
   2 llamadas a ITAD, y solo por lo que no esté en caché o esté más viejo que su plazo.
@@ -571,7 +571,7 @@ hay (`PROFILE_TIER_SHARE_MAX_ACTIVE`, `PROFILE_TIER_FEED_TTL_MS`).
 | Ficha: reseñas y avisos de tus amistades (F3) | — | Sí | Sí | Sí | Sí | Propuesta |
 | Ficha: índice completo de sus bibliotecas (F4), cada | — | No | 24 h | 12 h | 1 h | Propuesta. ¿Doblar también, como los precios? |
 | Interruptor «IsThereAnyDeal» | **No aparece** | Sí | Sí | Sí | Sí | **Decidido** (P0.1, P0.2) |
-| Precios: refresco cada | — | **24 h** | **12 h** | **6 h** | **15 min** | **Decidido** (P0.7) |
+| Precios: refresco cada | — | **18 h** | **12 h** | **6 h** | **15 min** | **Decidido** (P0.7) |
 | Precios: aviso de bajada al abrir (P4) | — | No | Sí | Sí | Sí | Propuesta |
 | Precios: desglose por tienda (`prices/v3`) | — | No | No | Sí | Sí | Propuesta, opcional |
 | Importar de ITAD | **No** | ¿? | Sí | Sí | Sí | **Decidido** que depende del rango (D8); cifras pendientes |
@@ -597,7 +597,7 @@ cada precio y es cada petición la que decide si le vale (P1).
 
 | | Ficha | Precios |
 |---|---|---|
-| Firestore | 0 | 1 lectura por petición (el rango). Como mucho, una al día por usuario de bronce; mithril, hasta 96 |
+| Firestore | 0 | 1 lectura por petición (el rango). Como mucho, dos al día por usuario de bronce; mithril, hasta 96 |
 | KV | 0 | 0 |
 | Functions | 0 | 1 petición por refresco de Deseados, según el plazo del rango |
 | GitHub | ≤ 1 lectura por amistad y día (casi siempre 304) | 0 |
