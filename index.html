@@ -67,41 +67,42 @@
     document.head.appendChild(fuente);
   }
 })();</script>
-    <meta name="description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
+    <meta name="description" content="Tu historia como jugador, partida a partida.">
     <!-- `og:type` y `og:url` los reescribe la Function de `/r/:token` para las reseñas compartidas (pasan a
          `article` y a la URL del enlace). Tienen que existir aquí porque HTMLRewriter solo modifica etiquetas
          presentes: no puede inventarse una que no esté en el shell. -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://mygamelist.pages.dev/">
-    <meta property="og:site_name" content="My Game List">
-    <meta property="og:title" content="My Game List">
-    <meta property="og:description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
+    <meta property="og:site_name" content="Mis Listas">
+    <meta property="og:title" content="Mis Listas">
+    <meta property="og:description" content="Tu historia como jugador, partida a partida.">
     <!-- La tarjeta es JPEG, no SVG: X, WhatsApp, Facebook y LinkedIn no renderizan SVG en og:image (aceptan
          PNG, JPEG, WebP y GIF), así que la previsualización salía vacía en todas ellas. El .jpg lo genera
-         `scripts/build-share-card.mjs` a partir de `public/share-card.svg`, que sigue siendo la fuente editable.
+         `scripts/build-share-card.mjs` a partir de `scripts/share-card.html`, que es la fuente editable. El `?v=`
+         se sube cada vez que cambia: las redes guardan la vista previa por su URL.
          La URL es ABSOLUTA porque es lo que pide Open Graph (los agentes actuales resuelven las relativas, pero
          no todos lo garantizan). En los despliegues de vista previa apuntará a la imagen de producción, que es
          justo lo que se quiere: la tarjeta no cambia entre entornos. -->
-    <meta property="og:image" content="https://mygamelist.pages.dev/share-card.jpg">
+    <meta property="og:image" content="https://mygamelist.pages.dev/share-card.jpg?v=2">
     <meta property="og:image:type" content="image/jpeg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="My Game List. Organiza, puntúa y sincroniza tu colección de videojuegos">
+    <meta property="og:image:alt" content="Mis Listas. Tu historia como jugador, partida a partida">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="My Game List">
-    <meta name="twitter:description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
-    <meta name="twitter:image" content="https://mygamelist.pages.dev/share-card.jpg">
-    <meta name="twitter:image:alt" content="My Game List. Organiza, puntúa y sincroniza tu colección de videojuegos">
+    <meta name="twitter:title" content="Mis Listas">
+    <meta name="twitter:description" content="Tu historia como jugador, partida a partida.">
+    <meta name="twitter:image" content="https://mygamelist.pages.dev/share-card.jpg?v=2">
+    <meta name="twitter:image:alt" content="Mis Listas. Tu historia como jugador, partida a partida">
     <title>Mis Listas de juegos</title>
     <!-- Iconos como archivos reales (no data: URI): así Firefox y Chromium los usan de forma
          fiable en pestaña, marcadores, historial y página de inicio, en escritorio y móvil.
          El .ico va primero: superficies como la barra de favoritos y los accesos directos
          piden /favicon.ico de forma implícita; sin él, Chromium/Edge muestran la letra del título. -->
-    <link rel="icon" href="/favicon.ico?v=2" sizes="32x32">
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=2">
-    <link rel="apple-touch-icon" href="/icon-192.png?v=2">
+    <link rel="icon" href="/favicon.ico?v=3" sizes="32x32">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=3">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=3">
+    <link rel="apple-touch-icon" href="/icon-192.png?v=3">
     <link rel="manifest" href="/manifest.json">
     <!-- Las fuentes se sirven desde el propio origen (`public/fonts/`, generado por scripts/vendor-fonts.mjs) y
          se declaran en el CSS de la app, así que aquí no hay nada que enlazar. Antes había dos `preconnect` y una

@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Changed
 
+- **Nueva cara al compartir y al instalar.** El icono son los dos aros de siempre, ahora entrelazados y con relieve.
+  La tarjeta que sale al pegar un enlace en WhatsApp, X o Telegram es nueva: fondo de aurora, «Mis Listas» en Exo 2,
+  la frase «Tu historia como jugador, partida a partida» y una reseña de vidrio con su nota 92 y su «Me gusta». El
+  enlace ya se presenta como «Mis Listas» en todas partes (antes «My Game List»), también en el título de las
+  reseñas y los resúmenes compartidos.
 - **Perfiles se recorre sin pulsar «Mostrar más».** Las listas de amigos y de «Descubrir» cargan las siguientes filas
   solas al acercarse al final, como el feed; la flecha del final sigue ahí para quien prefiera pulsarla. El número de
   amigos sigue siendo el de todos aunque aún no se vean, y «Descubrir» ya no lleva número: su lista sale de los

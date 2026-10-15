@@ -1,0 +1,133 @@
+<!doctype html>
+<!--
+  FUENTE de la tarjeta de previsualización (`public/share-card.jpg`, 1200×630): la imagen que enseñan WhatsApp, X,
+  Telegram… al compartir un enlace de la app, y también los enlaces de reseñas (`/r/:token`) y de resumen del año,
+  que reescriben el título y la descripción pero no la imagen. La convierte en JPEG `scripts/build-share-card.mjs`.
+
+  ES HTML Y NO SVG desde el rediseño de octubre de 2026: el diseño vive del desenfoque (las manchas de la aurora y
+  el vidrio de la reseña, con `filter: blur` y `backdrop-filter`), y un SVG no lo reproduce igual. Se fotografía con
+  Chromium, así que cualquier CSS que pinte Chromium vale.
+
+  Las rutas `/fonts/…` y `/favicon.svg` son las de `public/`: el script las sirve desde ahí, y con `npm run dev`
+  esta página se ve tal cual en http://localhost:5173/scripts/share-card.html. Si `vendor-fonts.mjs` cambia el hash
+  de una fuente, el script falla diciendo cuál falta: actualiza aquí el nombre.
+
+  La reseña no lleva texto a propósito: nombres, juego y análisis son barras, para que nadie lea una reseña
+  inventada como si fuera real. Lo que sí es de la app tal cual es su FORMATO: el aro de nota 0–100 con el color de
+  `hueFromGrade` (92 → tono 124), las etiquetas de puntos fuertes y débiles y el «Me gusta» con el pulgar de Lucide.
+-->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Tarjeta para compartir · Mis Listas</title>
+<style>
+@font-face { font-family: 'Exo 2'; src: url(/fonts/exo-2-latin-3dad6838.woff2) format('woff2'); font-weight: 100 900; font-display: block; }
+@font-face { font-family: 'Atkinson Next'; src: url(/fonts/atkinson-hyperlegible-next-latin-1e4cea71.woff2) format('woff2'); font-weight: 200 800; font-display: block; }
+
+html, body { margin: 0; padding: 0; background: #070a1c; }
+* { box-sizing: border-box; }
+
+.tarjeta { width: 1200px; height: 630px; overflow: hidden; position: relative; isolation: isolate; background: #070a1c; color: #fff; font-family: 'Exo 2', sans-serif; }
+
+/* Fondo «aurora viva»: cinco manchas de color muy desenfocadas, un haz de luz en diagonal y un velo a la izquierda
+   para que el texto no dependa de dónde caiga cada mancha. */
+.aurora { position: absolute; inset: -60px; z-index: -3; filter: blur(46px) saturate(1.4); background:
+  radial-gradient(circle at 72% 22%, #ff3d9a 0, transparent 30%),
+  radial-gradient(circle at 98% 82%, #22e1ff 0, transparent 32%),
+  radial-gradient(circle at 34% 108%, #ffb020 0, transparent 30%),
+  radial-gradient(circle at 4% 4%, #6d4cff 0, transparent 32%),
+  radial-gradient(circle at 55% 60%, #2b59ff 0, transparent 28%); }
+.haz { position: absolute; inset: 0; z-index: -2; background:
+  linear-gradient(118deg, transparent 38%, rgba(255,255,255,.13) 47%, transparent 56%),
+  linear-gradient(118deg, transparent 58%, rgba(255,255,255,.08) 62%, transparent 66%); }
+.velo { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(7,10,28,.55), transparent 55%); }
+
+/* Marca, nombre y frase */
+.contenido { position: absolute; left: 80px; top: 64px; width: 600px; height: 460px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
+.marca { width: 104px; height: 104px; display: block; filter: drop-shadow(0 12px 26px rgba(0,0,0,.5)); }
+.titulo { margin: 24px 0 16px; white-space: nowrap; line-height: .95; font-weight: 900; font-size: 116px; letter-spacing: -0.015em; text-shadow: 0 4px 30px rgba(0,0,0,.35); }
+.frase { margin: 0; max-width: 560px; font-size: 46px; line-height: 1.14; font-weight: 600; color: #eef0ff; text-wrap: balance; text-shadow: 0 2px 18px rgba(0,0,0,.4); }
+.frase em { font-style: normal; color: #ffd479; }
+
+/* Las cinco listas, con el color de cada una */
+.listas { position: absolute; left: 80px; bottom: 48px; display: flex; gap: 12px; margin: 0; padding: 0; list-style: none; z-index: 3; }
+.listas li { font-size: 22px; font-weight: 600; padding: 7px 16px; border-radius: 999px; background: rgba(8,12,30,.5); border: 2px solid rgba(255,255,255,.22); backdrop-filter: blur(10px); }
+.listas li::before { content: ''; display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 9px; vertical-align: 2px; background: var(--c); }
+
+/* La reseña de vidrio, con el formato del detalle de una reseña de la app */
+.vidrio { position: absolute; border-radius: 24px; border: 2px solid rgba(255,255,255,.24); backdrop-filter: blur(18px) saturate(1.3); box-shadow: 0 24px 60px rgba(0,0,0,.4);
+  background: linear-gradient(160deg, rgba(30,24,70,.62), rgba(12,12,36,.72)); }
+.detras { left: 780px; top: 70px; width: 380px; height: 440px; transform: rotate(5deg); opacity: .5; z-index: 1; }
+.resena { left: 712px; top: 92px; width: 430px; padding: 24px 26px 18px; transform: rotate(-4deg); display: grid; gap: 18px; z-index: 1; font-family: 'Atkinson Next', sans-serif; }
+.cabecera { display: grid; grid-template-columns: auto 1fr; justify-items: start; align-items: center; column-gap: 14px; row-gap: 9px; }
+.avatar { grid-row: span 3; width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg, #ff8fc8, #7c5cff); border: 3px solid rgba(255,255,255,.7); box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+.juego { padding: 3px 12px; border-radius: 8px; background: rgba(0,0,0,.3); border: 1.5px solid rgba(255,255,255,.3); }
+.texto { display: grid; gap: 11px; }
+.etiquetas { display: flex; flex-wrap: wrap; gap: 8px; }
+.etiqueta { padding: 3px 10px; border-radius: 7px; }
+.etiqueta.fuerte { background: rgba(10,40,34,.6); border: 1.5px solid rgba(79,211,165,.6); --b: #7ff0c6; }
+.etiqueta.debil { background: rgba(50,12,20,.6); border: 1.5px solid rgba(255,122,112,.6); --b: #ffa3a8; }
+.etiqueta.plataforma { background: rgba(14,24,52,.6); border: 1.5px solid rgba(134,181,240,.6); --b: #b8d4ff; }
+.pie { display: flex; align-items: center; gap: 12px; padding-top: 14px; border-top: 2px solid rgba(255,255,255,.16); }
+.me-gusta { display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 17px; color: #ffd479;
+  background: rgba(255,196,80,.2); border: 2px solid rgba(255,212,121,.75); white-space: nowrap; }
+.me-gusta svg { width: 20px; height: 20px; }
+
+/* Barras en lugar de texto */
+.barra { display: block; height: 14px; border-radius: 7px; background: rgba(255,255,255,.82); filter: blur(.6px); }
+.barra.tenue { opacity: .5; }
+.barra.nombre { background: #ffd479; height: 16px; width: 130px; }
+.barra.fecha { height: 10px; opacity: .45; width: 190px; }
+.juego .barra { height: 11px; margin: 3px 0; opacity: .85; width: 120px; }
+.etiqueta .barra { height: 10px; margin: 4px 0; background: var(--b); }
+
+/* El aro de nota, como `.score-ring` de la app pero en grande, saliendo por la esquina como una medalla */
+.aro { --sz: 128px; position: absolute; left: 1068px; top: 50px; z-index: 2; width: var(--sz); height: var(--sz); border-radius: 50%; display: grid; place-items: center; transform: rotate(8deg);
+  background: conic-gradient(hsl(var(--h) 70% 62%) calc(var(--g) * 1%), rgba(255,255,255,.18) 0);
+  filter: drop-shadow(0 0 16px hsl(var(--h) 80% 55% / .55)); }
+.aro::after { content: ''; position: absolute; inset: calc(var(--sz) * .085); border-radius: 50%; background: radial-gradient(circle at 40% 35%, #2a2160, #140f33); }
+.aro b { position: relative; z-index: 1; font: 900 calc(var(--sz) * .38)/1 'Exo 2', sans-serif; color: hsl(var(--h) 75% 68%); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="tarjeta">
+  <div class="aurora"></div><div class="haz"></div><div class="velo"></div>
+
+  <div class="vidrio detras"></div>
+  <div class="vidrio resena">
+    <div class="cabecera">
+      <div class="avatar"></div>
+      <i class="barra nombre"></i>
+      <span class="juego"><i class="barra"></i></span>
+      <i class="barra fecha"></i>
+    </div>
+    <div class="texto"><i class="barra"></i><i class="barra tenue"></i><i class="barra tenue" style="width: 64%"></i></div>
+    <div class="etiquetas">
+      <span class="etiqueta fuerte"><i class="barra" style="width: 74px"></i></span>
+      <span class="etiqueta fuerte"><i class="barra" style="width: 92px"></i></span>
+      <span class="etiqueta debil"><i class="barra" style="width: 52px"></i></span>
+      <span class="etiqueta plataforma"><i class="barra" style="width: 26px"></i></span>
+    </div>
+    <div class="pie">
+      <span class="me-gusta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>Me gusta</span>
+      <i class="barra tenue" style="width: 170px; height: 12px"></i>
+    </div>
+  </div>
+  <span class="aro" style="--g: 92; --h: 124"><b>92</b></span>
+
+  <div class="contenido">
+    <img class="marca" src="/favicon.svg" width="104" height="104" alt="">
+    <div class="titulo">Mis Listas</div>
+    <p class="frase">Tu historia como jugador, <em>partida a partida.</em></p>
+  </div>
+
+  <ul class="listas">
+    <li style="--c: #4fd3a5">Completados</li>
+    <li style="--c: #86b5f0">En curso</li>
+    <li style="--c: #f0c66c">Próximos</li>
+    <li style="--c: #ff7a70">Abandonados</li>
+    <li style="--c: #b9a2f5">Deseados</li>
+  </ul>
+</div>
+</body>
+</html>

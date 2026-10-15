@@ -1,5 +1,5 @@
 /**
- * Service Worker de My Game List (PWA).
+ * Service Worker de Mis Listas (PWA).
  *
  * QUÉ ARREGLA ESTE FICHERO (bug histórico): la versión anterior decía cachear para funcionar offline, pero
  * precacheaba solo `['/', '/manifest.json']` y para `/assets/*` hacía `fetch(request)` a pelo, SIN caché ni
