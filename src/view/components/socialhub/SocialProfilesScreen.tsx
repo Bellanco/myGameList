@@ -21,7 +21,7 @@ type DirectoryCard = Pick<SocialDirectoryEntry, 'id' | 'uid' | 'displayName' | '
   & Partial<Pick<SocialDirectoryEntry, 'moves' | 'activity'>>;
 
 /**
- * Filas visibles de entrada en cada sección (y cuántas añade cada "mostrar más"). Seis y no tres desde que cada persona
+ * Filas visibles de entrada en cada sección (y cuántas añade cada página del scroll infinito). Seis y no tres desde que cada persona
  * es un renglón (14-10-2026): en el teléfono hay una sola columna, y tres filas eran tres personas, la mitad que con
  * la rejilla de tarjetas a dos columnas. En escritorio salen 18, lo mismo que antes.
  */
@@ -210,6 +210,7 @@ function SocialProfilesScreenBase({
               rowsPerPage={PROFILE_ROWS_PER_PAGE}
               resetKey={profileSearch}
               gridClassName="hub-person-rows"
+              infinite
             />
             <HubUserSection
               title={SOCIAL_UI.profiles.othersTitle}
@@ -222,6 +223,8 @@ function SocialProfilesScreenBase({
               rowsPerPage={PROFILE_ROWS_PER_PAGE}
               resetKey={profileSearch}
               gridClassName="hub-person-rows"
+              infinite
+              showCount={false}
             />
             {/* AL FINAL, DEBAJO DE «DESCUBRIR»: primero la gente que ya está, y solo después, a quien le quede alguien
                 por traer, cómo traerlo. Arriba competía con la lista que se viene a mirar. */}

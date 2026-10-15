@@ -89,7 +89,7 @@
   Cache-Control: public, max-age=86400, must-revalidate
 
 # La tarjeta de previsualización la generan las redes sociales una vez y la cachean por su cuenta; aquí basta con
-# un día, que es lo que tarda en propagarse un rediseño de `share-card.svg` (ver scripts/build-share-card.mjs).
+# un día, que es lo que tarda en propagarse un rediseño de `scripts/share-card.html` (ver scripts/build-share-card.mjs).
 /share-card.jpg
   Cache-Control: public, max-age=86400, must-revalidate
 

@@ -17,7 +17,7 @@ export interface ShareMeta {
 }
 
 const DESCRIPTION_MAX = 200;
-const SITE_NAME = 'My Game List';
+const SITE_NAME = 'Mis Listas';
 
 /**
  * Deja el texto en texto PLANO antes de meterlo en un metadato.

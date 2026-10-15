@@ -258,7 +258,7 @@ describe('FormModal — etiquetas', () => {
 
     await user.type(years, '20{Enter}');
 
-    expect(screen.getByText(/Escribe el año con 4 cifras/)).toBeTruthy();
+    expect(screen.getByText(/Escribe un año entre 1970 y \d{4}\./)).toBeTruthy();
     expect(years).toHaveValue('20'); // se queda para poder corregirlo
 
     await user.click(screen.getByRole('button', { name: 'Guardar' }));

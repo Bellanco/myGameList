@@ -438,6 +438,7 @@ const SocialHubInner = memo(function SocialHubInner({
               own={isOwnDetailEvent}
               author={activeDetailEvent.profileDisplayName}
               onToggle={() => toggleLike(activeDetailEvent)}
+              everyone
             />
           ) : null}
           related={(
@@ -583,6 +584,7 @@ const SocialHubInner = memo(function SocialHubInner({
               own={isOwnProfileDetail}
               author={(selectedProfileDetail as { displayName?: string })?.displayName || activeProfileReviewEvent.profileDisplayName}
               onToggle={() => toggleLike(activeProfileReviewEvent)}
+              everyone
             />
           ) : null}
           related={(

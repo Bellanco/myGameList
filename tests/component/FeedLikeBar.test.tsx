@@ -27,9 +27,10 @@ describe('la frase de «me gusta»', () => {
     expect(phrase(['  Bea  '])).toBe('A Bea le gusta');
   });
 
-  it('la lista entera, para el title', () => {
-    expect(fullList(['Nacho', 'Marta', 'Lucía'])).toBe('A Nacho, Marta y a Lucía les gusta');
-    expect(fullList(['Nacho', 'Marta'], true)).toBe('A ti, Nacho y a Marta os gusta');
+  it('la lista entera, para el title y el detalle: con los nombres enteros y una «a» delante de cada uno', () => {
+    expect(fullList(['Nacho', 'Marta', 'Lucía'])).toBe('A Nacho, a Marta y a Lucía les gusta');
+    expect(fullList(['Nacho', 'Marta López'], true)).toBe('A ti, a Nacho y a Marta López os gusta');
+    expect(fullList(['Marta López'])).toBe('A Marta López le gusta');
     expect(fullList([], true)).toBe('Te gusta');
   });
 });
@@ -53,7 +54,7 @@ describe('FeedLikeBar', () => {
     fireEvent.click(button);
     expect(onToggle).toHaveBeenCalledTimes(1);
     expect(onCardClick).not.toHaveBeenCalled();
-    expect(button).toHaveAttribute('data-pop');
+    expect(button).toHaveAttribute('data-pop', 'like');
 
     // El view-model marca el «me gusta» al instante (antes de subirlo): la barra lo pinta ya.
     rerender(
@@ -63,6 +64,17 @@ describe('FeedLikeBar', () => {
     );
     expect(button).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('A ti y a Paula os gusta')).toBeInTheDocument();
+
+    // Quitarlo tiene su propia animación, más callada.
+    fireEvent.click(button);
+    expect(button).toHaveAttribute('data-pop', 'unlike');
+  });
+
+  it('en el detalle (`everyone`) nombra a todos, con el nombre entero y sin title', () => {
+    const names = ['Marta López', 'Nacho', 'Lucía R.', 'Paula G.'];
+    render(<FeedLikeBar SOCIAL_UI={SOCIAL_UI} likes={{ names, mine: true }} own={false} author="Iván" onToggle={vi.fn()} everyone />);
+    const who = screen.getByText('A ti, a Marta López, a Nacho, a Lucía R. y a Paula G. os gusta');
+    expect(who).not.toHaveAttribute('title');
   });
 
   it('las teclas del botón no llegan a la tarjeta (Intro abriría el detalle)', () => {

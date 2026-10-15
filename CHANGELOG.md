@@ -5,6 +5,43 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+
+- **Nueva cara al compartir y al instalar.** El icono son los dos aros de siempre, ahora entrelazados y con relieve.
+  La tarjeta que sale al pegar un enlace en WhatsApp, X o Telegram es nueva: fondo de aurora, «Mis Listas» en Exo 2,
+  la frase «Tu historia como jugador, partida a partida» y una reseña de vidrio con su nota 92 y su «Me gusta». El
+  enlace ya se presenta como «Mis Listas» en todas partes (antes «My Game List»), también en el título de las
+  reseñas y los resúmenes compartidos.
+- **Perfiles se recorre sin pulsar «Mostrar más».** Las listas de amigos y de «Descubrir» cargan las siguientes filas
+  solas al acercarse al final, como el feed; la flecha del final sigue ahí para quien prefiera pulsarla. El número de
+  amigos sigue siendo el de todos aunque aún no se vean, y «Descubrir» ya no lleva número: su lista sale de los
+  perfiles recientes, con tope, así que decía cuántos cupieron y no cuánta gente hay.
+- **El detalle de una reseña nombra a todos a los que les gusta.** En el feed la frase sigue resumiendo en un renglón
+  («A Nacho y a 5 más les gusta»); al abrir la reseña, donde hay sitio, salen todos con el nombre entero: «A ti, a
+  Marta López, a Nacho y a Lucía R. os gusta».
+- **Pulsar «Me gusta» se nota más.** El botón se hunde un poco al apretarlo; al darlo, el pulgar salta, un halo de su
+  color se abre y se desvanece y la frase entra con un fundido; al quitarlo, el pulgar se encoge y vuelve. Nada de eso
+  se mueve si el sistema pide menos movimiento.
+- **El formulario de juego tiene topes.** Nombre hasta 80 caracteres; cada plataforma hasta 30, cada género hasta 40
+  y cada punto fuerte, débil o motivo hasta 50; el análisis hasta 22.500 (antes 25.000); como mucho 6 plataformas, 5
+  géneros, 10 puntos fuertes, 10 débiles, 10 motivos y 20 años; años desde 1970 y horas hasta 9999. Al llegar, el
+  campo lo dice debajo. Solo frenan lo que se escribe: lo que ya tenías, la sincronización y Playnite no se recortan.
+- **En «Años completado» solo se pueden escribir cifras**, cuatro por año (en el móvil sale el teclado numérico), y
+  si el año no vale el aviso lo dice claro: «Escribe un año entre 1970 y 2026».
+- **Las horas se escriben y se ven con coma decimal** («12,5»). Si se escribe un punto se convierte en coma al
+  momento y ya no da error; como mucho, una coma y dos decimales.
+- **Pasar el ratón por una reseña del feed dice adónde lleva** («Ir al detalle de Hades») en vez de enseñar el texto
+  entero de la reseña, que ya se estaba leyendo.
+
+### Fixed
+
+- **Lo que borras deja de verse en tu Social al momento.** Al borrar un juego, vaciar su reseña o pasarlo a próximos
+  o deseados, tu feed, tu ficha y el detalle seguían enseñando la reseña (y los avisos de lista del juego borrado)
+  hasta que el canal social se reescribía, a veces hasta la siguiente vez que entrabas. Ahora el hub los quita en
+  cuanto tus listas cambian, sin esperar a la red. Y borrar un juego con reseña la retira también del canal en ese
+  mismo momento: antes solo lo hacía la revisión al abrir Social, así que tus amistades la seguían viendo hasta
+  entonces.
+
 ## [1.7.7] - 2026-10-14
 
 ### Changed

@@ -75,7 +75,7 @@ describe('metadatos de la previsualización de un resumen del año', () => {
     expect(yearShareTitle(meta)).toBe('El 2026 de Bellanco: 34 juegos terminados');
     expect(yearShareTitle({ ...meta, count: 1, authorNick: '' })).toBe('Resumen de 2026: 1 juego terminado');
     expect(yearShareDescription(meta)).toBe('Su juego del año: Hollow Knight · 96/100. Los juegos, géneros y meses de su 2026.');
-    expect(yearShareDescription({ ...meta, best: null })).toBe('Los juegos, géneros y meses de su 2026 en My Game List.');
+    expect(yearShareDescription({ ...meta, best: null })).toBe('Los juegos, géneros y meses de su 2026 en Mis Listas.');
   });
 
   it('sin etiquetas en lo que escribe el usuario', () => {

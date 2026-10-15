@@ -18,6 +18,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "build:share-card": "node scripts/build-share-card.mjs",
+    "build:icons": "node scripts/build-icons.mjs",
     "audit:privacy": "node scripts/audit-privacy.js",
     "audit:rules": "node scripts/audit-profile-rules.mjs",
     "audit:deploy": "node scripts/audit-deploy.mjs",

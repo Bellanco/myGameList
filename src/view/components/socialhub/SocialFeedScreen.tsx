@@ -584,7 +584,7 @@ function SocialFeedScreenBase({
                                 ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
                                 : <NoScoreMedal />}
                             </div>
-                            {reviewText ? <p className="hub-feed-review-text" title={reviewText}><ReviewParagraphs text={reviewText} /></p> : null}
+                            {reviewText ? <p className="hub-feed-review-text" title={SOCIAL_UI.feed.openReviewTitle(entry.gameName)}><ReviewParagraphs text={reviewText} /></p> : null}
                             {likesFor && toggleLike && entry.type === 'review' ? (
                               <FeedLikeBar
                                 SOCIAL_UI={SOCIAL_UI}

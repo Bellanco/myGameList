@@ -39,6 +39,12 @@ export const FORM_UI = {
   charLimitReached: 'Has alcanzado el límite de caracteres del análisis.',
   // Bajo cada campo de etiquetas, siempre: cómo pasa lo escrito a etiqueta (y que con comas entran varias).
   enterToAddHint: 'Pulsa Enter o separa con comas',
+  // LOS TOPES (`GAME_LIMITS`), en el mismo aviso diminuto bajo el campo, solo al llegar: un tope que se enseña
+  // siempre invita a llenarlo.
+  maxChars: (max: number) => `Máximo ${max.toLocaleString(APP_LOCALE)} caracteres`,
+  /** Una lista de etiquetas llena: vale para todas («de 6», sin decir de qué), sean plataformas o años. */
+  tagListFull: (max: number) => `Has llegado al máximo de ${max}`,
+  hoursMax: (max: number) => `Como mucho ${max.toLocaleString(APP_LOCALE)} horas`,
   // Sugerencias de un toque bajo cada campo de etiquetas (nombre del grupo y de cada botón, para el lector).
   quickPicks: {
     platforms: 'Tus plataformas más usadas',

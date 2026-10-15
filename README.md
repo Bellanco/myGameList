@@ -107,7 +107,8 @@ el directorio, lo que no significa que el código esté mal, sino que **la regla
 | `npm run format` / `format:check` | Prettier sobre `src` y `tests` (no sobre un fichero entero ajeno: reformatea lo que no tocas) |
 | `npm run emulators` | Emulador de Firestore |
 | `npm run emulate:social` | Emula el hub social e imprime lo que lee y pinta (no afirma: se mira) |
-| `npm run build:share-card` | Rasteriza `public/share-card.svg` a la `.jpg` de vista previa (necesita Chromium de Playwright) |
+| `npm run build:share-card` | Fotografía `scripts/share-card.html` y la guarda como `public/share-card.jpg`, la vista previa de los enlaces (necesita Chromium de Playwright) |
+| `npm run build:icons` | Genera los PNG y el `.ico` de `public/` a partir de `public/favicon.svg` (necesita Chromium de Playwright) |
 | `npm run validate` | Validación CI + HTML + ESLint |
 | `npm run lint` | Autocorrecciones ESLint |
 | `npm run audit:privacy` | Auditoría de privacidad |
