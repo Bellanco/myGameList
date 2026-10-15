@@ -60,6 +60,8 @@ aciertan siempre con su precio porque llegan con su id.
 |---|---|
 | F0.1 | **Por encima, no como pantalla** (modal o panel: la forma es F0.11). Se abre sobre la pantalla en la que estás y pone `?juego=<clave>` en la URL. «Atrás» lo cierra, y recargar o compartir la URL lo vuelve a abrir. Sin ruta nueva ni línea en `_redirects`. Funciona sin social: tus datos, la saga y el precio |
 | F0.6 | **Sustituye al detalle desplegado de la fila.** Tocar una fila o una caja del mosaico abre la ficha; el doble clic sigue abriendo la edición. Una sola vista por juego, se abra desde donde se abra |
+| F0.11 | **Panel lateral** (15-10-2026). Entra por la derecha y ocupa casi toda la pantalla (hasta 1.120 px u 80 % del ancho; la pantalla entera en el móvil). **Sin cabecera de modal:** el nombre va junto a la carátula y solo queda la X en la esquina. **Aprovechar el espacio para evitar el scroll:** dos columnas con ancho. **Los botones, fijos en una barra abajo.** Pulsar fuera cierra |
+| F0.12 | **«Tus datos» lleva todo lo que llevaba el detalle** (15-10-2026): plataformas y Steam Deck, géneros, años, horas, puntos fuertes y débiles (o motivos), nota o interés, rejugar o reintentar y el enlace a la reseña, con el mismo marcado y las mismas reglas por lista |
 | F0.10 | **La ficha abre siempre, con o sin red.** Lo tuyo (datos, acciones, saga de tu biblioteca) sale siempre. Lo que viene de fuera (amistades, índice, precios, carátulas) es opcional: si no llega, por falta de conexión, un servicio caído o un cupo agotado, **esa sección no se pinta**, sin error ni hueco. Vale para todas las piezas de fuera. Ver «Sin conexión y servicios caídos» |
 
 **Propuestas pendientes de confirmar:**
@@ -72,16 +74,23 @@ aciertan siempre con su precio porque llegan con su id.
 | F0.5 | ¿Saga dentro de la ficha en la primera versión? | **Sí**, con `sharedSagaName` sobre tu biblioteca y lo que ya esté indexado de tus amistades. Sin IGDB (C5) |
 | F0.7 | En el **perfil de una amistad**, ¿qué abre tocar una fila de sus listas? (hoy despliega **sus** datos) | **La misma ficha, con un bloque «De Marta» arriba** (sus datos, como «Tus datos» pero suyos y filtrados por su visibilidad) y luego lo de siempre: tus datos si lo tienes, el resto de amistades, saga y precio |
 | F0.8 | ¿Qué se hace con los estilos del detalle en los skins de Persona, Arcade y Cyberpunk? | **Borrarlos.** El modal ya lleva el carácter de cada tema (`.modal`, botones, renglones), como se ve en la maqueta. Si a algún tema le falta algo, se añade sobre `.gs-*` en su hoja |
-| F0.11 | **¿Por dónde entra?** El usuario plantea un panel en vez del modal centrado (15-10-2026). La maqueta tiene las tres formas (`?forma=`) | **Lateral:** desde la derecha en escritorio (600 px, la lista sigue a la vista) y como hoja desde abajo en el móvil (hasta el 88 % del alto, con asa). Es la que mejor conserva el contexto, y en el móvil es el gesto que ya se espera. Por dentro es el mismo `<dialog>` modal, así que cuesta lo mismo: velo, Esc, pulsar fuera y el foco de vuelta a la fila |
 | F0.9 | Saltar de una ficha a otra (la saga, una amistad), ¿suma pasos al historial? | **No:** se **reemplaza** el `?juego=`, así que «atrás» siempre vuelve a la lista y no recorre las fichas vistas |
 
 ## Qué enseña la ficha
 
 1. **Cabecera:** carátula (`GameCover`, con `refEntradaDeImagen`), nombre, y la unión de plataformas, géneros y años
    de todas las entradas visibles.
-2. **Tus datos:** todo lo que hoy enseña el detalle de la fila (`GameTable.tsx:1414-1505`): nota o interés
-   (`ScoreDisplay`), años, horas, rejugable o reintentar, puntos fuertes y débiles, y la reseña, recortada a cinco
-   renglones y con enlace a `statsReviewPath`. Respeta las mismas columnas ocultas (`visibility`).
+2. **Tus datos (F0.12):** todo lo que hoy enseña el detalle de la fila (`GameTable.tsx:1414-1505`), con su mismo
+   marcado (`detail-content`, `detail-box`, chips e insignias) y sus mismas reglas por lista:
+   - plataformas, con Steam Deck, y géneros, en todas;
+   - años y rejugar, en completados;
+   - horas, en completados y abandonados;
+   - puntos fuertes, en c/v/e; débiles, en c/e; motivos, en v;
+   - reintentar, en v;
+   - nota o interés (`ScoreDisplay`);
+   - la reseña, recortada a cuatro renglones, con «Ver análisis» a `statsReviewPath`.
+
+   Respeta las mismas columnas ocultas (`visibility`).
    **Acciones, las mismas del detalle:** los movimientos de `TAB_ACTIONS` con sus colores, «Editar», «Compartir» (con
    reseña) y «Borrar». Si no lo tienes: «Añadir a deseados» (`addGameToWishlist`, `useGameListViewModel.ts:775`) y
    «Añadir a próximos».
@@ -89,6 +98,18 @@ aciertan siempre con su precio porque llegan con su id.
    (`finishedOn`) y adelanto de la reseña, que lleva a su reseña (`activityDetail`). Orden: con reseña primero; dentro,
    por nota. La media va arriba, según F0.2. Debajo, aparte, «Lo quieren».
 4. **Saga:** las otras entregas en tu biblioteca y en las de tus amistades. Cada una enlaza a su ficha.
+   - **De dónde sale:** `sharedSagaName` (`core/utils/gameSaga.ts`), que ya usan las reseñas relacionadas y las
+     estadísticas de Deseados. No hay datos externos ni lista de franquicias: compara los títulos y se queda con el
+     prefijo de palabras común cuando nombra de verdad una saga («Hollow Knight» ~ «Hollow Knight: Silksong»,
+     «Persona 3» ~ «Persona 5»). Las cifras y las palabras de función no cuentan, y una sola palabra necesita marca
+     de serie, para no emparentar «Dead Space» con «Dead Cells».
+   - **Lo que se le escapa, a conciencia:** sagas que solo se distinguen por subtítulo («Nier Automata» ~ «Nier
+     Replicant») y las de nombre distinto («Dark Souls» ~ «Demon's Souls», «Thronebreaker» ~ «The Witcher»). Las
+     arreglaría la franquicia de IGDB (idea C5 de la investigación), fuera de este plan.
+   - **Quién la ve:** cada uno, en su ficha y solo sobre lo que puede ver. Tus entregas, siempre, también sin social.
+     Las de tus amistades, solo con social y según su visibilidad: con el índice de bibliotecas (F4, desde plata)
+     todas; sin él (bronce), solo las que han reseñado o movido de lista en los últimos 30 días. Nadie ve tu saga:
+     tus amistades ven tus juegos en sus fichas, con tu visibilidad.
 5. **Precio** (Parte 2, Fase P5): solo si no lo tienes en c/v/e/p y los precios están activados.
 
 Sin sesión social se pintan 1, 2, 4 (solo con tu biblioteca) y 5. Sin entrada tuya ni de nadie, un estado vacío
@@ -96,49 +117,44 @@ con «Añadir a deseados».
 
 ## Diseño (maqueta del 15-10-2026)
 
-`docs/maquetas/ficha-juego.html` con el servidor de desarrollo (`npx vite --port 8001`). Tiene **tres formas** para
-comparar (`?forma=`, F0.11):
-- **lateral**, la de por defecto: desde la derecha en escritorio y desde abajo en el móvil;
-- **abajo**: una hoja que sube en todos los tamaños;
-- **modal**: centrado.
-
-`?precio=0` simula que el servicio de precios no responde.
+`docs/maquetas/ficha-juego.html` con el servidor de desarrollo (`npx vite --port 8001`).
 - **Detrás va la tabla real** (`GameTable`) con una biblioteca inventada. Tocar una fila abre la ficha.
-- **La URL hace lo que haría la app:** abrir pone `?juego=` y «atrás» o Esc lo cierran; desde la saga se reemplaza.
-- **La barra de abajo a la derecha** cambia de lista (Deseados con precio, Completados), con o sin social, y el tema
-  y el modo.
-- **Piezas reales:** `useNativeDialog`, `.modal`, `GameTable`, `HubPersonRow`, `HubAvatar`, `GameCover`,
-  `StarRating` y `ScoreDisplay`. Lo único propio es `ficha-juego.scss`, que sería `src/styles/gameSheet.scss`.
+- **La URL hace lo que haría la app:** abrir pone `?juego=`, y «atrás», Esc, la X o pulsar fuera lo cierran.
+- **La barra de abajo a la derecha** cambia de lista (Deseados con precio, Completados), el precio («sin
+  servicio» lo quita), con o sin social, y el tema y el modo.
+- **Piezas reales:** `useNativeDialog`, `.modal`, `GameTable`, el marcado del detalle (`detail-content`,
+  `detail-box`, chips e insignias), `HubPersonRow`, `HubAvatar`, `GameCover`, `StarRating` y `ScoreDisplay`. Lo único
+  propio es `ficha-juego.scss`, que sería `src/styles/gameSheet.scss`.
 
-Lo que se ve:
-- **El contenedor:**
-  - lateral: 600 px de ancho y todo el alto, pegado a la derecha, con el velo más ligero (35 %) para seguir viendo
-    la lista;
-  - abajo: hasta 960 px de ancho y el 85 % del alto, con asa y las esquinas de arriba redondeadas;
-  - modal: centrado, hasta 960 px de ancho y 92 vh de alto, y a pantalla completa en el móvil, como el formulario;
-  - en el móvil (≤ 600 px), lateral y abajo son la misma hoja (88 % del alto);
-  - en todas, el título es el nombre del juego, con la X, y pulsar fuera cierra.
-- **Ancho estrecho:** en el lateral, la cabecera apila el precio debajo, por la container query de 40 rem, igual
-  que en el móvil.
-- **Cabecera:**
-  - carátula 3:4;
-  - plataformas y géneros;
-  - píldora con tu lista, con el color del canto de esa lista;
-  - dos cifras: «Media de tus amistades», solo con 3 notas o más, y «Lo tienen».
-- **Botones:** los del detalle de hoy (mover, «Editar», «Compartir» y «Borrar»). En el móvil van a todo el ancho y
-  «Borrar» no crece; con ancho, en la columna del texto.
-- **Precio:** a la derecha de la cabecera con ancho (≥ 40 rem de contenedor) y debajo en el móvil. Lleva el precio,
-  el descuento, el precio normal tachado, «Mínimo histórico» o el mínimo con su fecha, «Ver en *tienda*» y
-  «Precios de IsThereAnyDeal». Sin oferta: «Sin oferta ahora».
-- **«Tus datos»:** una rejilla de etiqueta y valor con lo del detalle, la reseña en cinco renglones y «Leer tu
-  reseña».
-- **«Tus amistades»:** renglones de persona con lista, fecha, adelanto de la reseña y estrellas, con las reseñas
-  primero. Debajo, «Lo quieren», con avatares.
-- **«Saga»:** una tira de carátulas con «Tú: …» y cuántas amistades lo tienen. Sale solo con dos entregas o más.
+**El panel (F0.11):**
+- **Tamaño:** entra por la derecha, hasta 1.120 px u 80 % del ancho y todo el alto. El velo es ligero (40 %),
+  para seguir viendo la lista.
+- **Móvil (≤ 600 px):** la pantalla entera, también desde la derecha. Se cierra con la X, «atrás» o Esc.
+- **Sin cabecera de modal:** el nombre va en la ficha, junto a la carátula. La X queda en la esquina, fuera del
+  scroll.
+- **Botones fijos abajo:** una barra con los botones del detalle (mover según la lista, «Editar», «Compartir» con
+  reseña y «Borrar», separado a la derecha). En el móvil solo el primero lleva texto; los demás, icono con su
+  nombre en `aria-label`.
 
-Revisada a 390 y 1280 px en tierramedia, persona (claro) y oscuro: no desborda ni da errores de consola. Abrir, la
-saga, «atrás» y Esc se comprobaron con Playwright. Las formas lateral y abajo, a 390 y 1280 px, también; pulsar
-fuera cierra y quita `?juego=`. Se borra al implementar F2/F6.
+**El reparto (contenedor ≥ 50 rem):**
+- **A la izquierda, lo tuyo:** carátula y nombre con tu lista y las cifras de tus amistades; debajo, el precio si es
+  un deseo; luego «Tus datos». El precio va aquí porque solo sale en Deseados, que es donde tus datos son pocos.
+- **A la derecha, lo de tus amistades:** «Tus amistades» (renglones de persona más prietos), «Lo quieren» y
+  «Saga».
+- **En el móvil, una columna:** cabecera, precio, tus datos, amistades y saga, en ese orden. Las columnas se
+  disuelven (`display: contents`) y el orden lo pone `order`.
+
+**Medido** (scroll del cuerpo, contenido frente a visible), sin errores de consola y sin desborde horizontal:
+
+| Caso | Ancho | Contenido / visible |
+|---|---|---|
+| *Silksong* (deseos, con precio y 6 amistades) | 1280 × 800 | 734 / 734: **sin scroll** |
+| *Hollow Knight* (completado, con todos los datos) | 1280 × 800 | 734 / 734: **sin scroll** |
+| *Hollow Knight* | 1512 × 900 | 834 / 834: **sin scroll** |
+| *Hades 2*, arcade claro | 1440 × 900 | 833 / 833: **sin scroll** |
+| *Silksong* | 390 × 844 | 1.204 / 778: scroll en el móvil, con la barra fija |
+
+Se borra al implementar F2/F6.
 
 ## Sin conexión y servicios caídos
 
@@ -212,7 +228,7 @@ las peticiones con `page.route`.
 
 ## Fase F2 · El modal, con lo propio, en lugar del detalle · M–L
 
-- **El modal.** `view/components/gameSheet/GameSheetModal.tsx`, con `<dialog>` nativo y `useNativeDialog`. Va lazy
+- **El panel** (F0.11). `view/components/gameSheet/GameSheetPanel.tsx`, con `<dialog>` nativo y `useNativeDialog`. Va lazy
   en `App.tsx`, montado **una vez** para toda la app, como la ruleta, y **precacheado** por el service worker
   (ver «Sin conexión y servicios caídos»): sin eso, sin red tras un despliegue no se abriría. El `<dialog>` se queda montado, como pide el
   hook, para devolver el foco a la fila al cerrar. Mientras carga el chunk la primera vez, la fila no se mueve. El
@@ -235,7 +251,9 @@ las peticiones con `page.route`.
     del mosaico (`:631-643`) y el marcado del detalle (`:1414-1555`);
   - el doble clic sigue editando;
   - `readOnly` y `reviewLink` se quedan para el perfil de una amistad (F0.7).
-- **Estilos:** `styles/gameSheet.scss`, atado al chunk del modal. Se borran las reglas del detalle de `_table.scss`
+- **Los ayudantes del detalle salen de `GameTable`:** `renderTags`, `yearsDesc` y `renderBooleanBadge`
+  (`GameTable.tsx:325-400`) pasan a un módulo compartido (`view/components/gameTags.tsx`) que usan la tabla y la ficha.
+- **Estilos:** `styles/gameSheet.scss`, atado al chunk del panel. Se borran las reglas del detalle de `_table.scss`
   y de los skins de Persona, Arcade y Cyberpunk (F0.8).
 - **Textos** en `core/constants/gameSheetLabels.ts`. Los del detalle que ya no se usen salen de `UI_MESSAGES.detail`.
 - **Tests:**
@@ -727,7 +745,6 @@ fase y se borra de aquí.
 - F0.7: qué abre una fila en el perfil de una amistad (propuesta: la ficha con su bloque arriba).
 - F0.8: borrar los estilos del detalle de los skins de Persona, Arcade y Cyberpunk.
 - F0.9: que pasar de una ficha a otra no sume pasos a «atrás».
-- F0.11: la forma, lateral (propuesta), desde abajo o modal centrado. Verla en la maqueta con `?forma=`.
 - F0.2: si se enseña la media de notas de las amistades, y con qué mínimo (propuesta: 3).
 - F0.3: si el buscador ⌘K abre la ficha en vez de llevar a la lista.
 - F0.4: si sale la sección «Lo quieren» (los Deseados de tus amistades).

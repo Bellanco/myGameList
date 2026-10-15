@@ -1,30 +1,20 @@
-// PROPUESTA de hoja de la ficha de juego (sería `src/styles/gameSheet.scss`, en el chunk del modal). Solo tokens: el
-// carácter de cada tema lo ponen el modal (`.modal`, que ya visten los skins) y las clases del hub que la ficha
+// PROPUESTA de hoja de la ficha de juego (sería `src/styles/gameSheet.scss`, en el chunk del panel). Solo tokens: el
+// carácter de cada tema lo ponen `.modal` (que ya visten los skins), los botones y las clases del hub que la ficha
 // reutiliza (renglón de persona, metadatos), así que aquí no hay nada por tema.
+//
+// EL PANEL LATERAL (decisión del usuario, 15-10-2026): entra por la derecha, ocupa casi toda la pantalla, no lleva
+// cabecera con el nombre (el nombre va en la ficha, junto a la carátula), reparte el contenido en columnas para
+// ahorrar scroll y deja los botones fijos en una barra abajo. Por dentro es el `<dialog>` modal de siempre: velo, Esc,
+// pulsar fuera y el foco de vuelta a la fila.
 
-// TRES FORMAS PARA COMPARAR (`?forma=`), todas con el mismo `<dialog>` modal: el fondo atenuado, Esc y pulsar
-// fuera cierran, y el foco vuelve a la fila. Solo cambia por dónde entra y cuánto tapa.
+// ─── El panel ────────────────────────────────────────────────────────────────────────────────────────────────
+// Velo más ligero que el de un modal: lo que se quiere es seguir viendo de dónde se vino.
+dialog.modal-dialog.gs-dialog::backdrop { background: rgba(0, 0, 0, .4); backdrop-filter: none; }
 
-// ─── Modal: centrado con ancho, hoja a pantalla completa en el móvil (como el formulario) ────────────────────
-.gs-dialog.is-modal .gs-modal { width: min(94vw, 960px); max-width: 960px; max-height: 92vh; }
+dialog.modal-dialog.gs-dialog[open] { padding: 0; justify-content: flex-end; align-items: stretch; }
 
-@media (max-width: 600px) {
-  dialog.modal-dialog.gs-dialog.is-modal[open] { padding: 0; align-items: stretch; }
-  .gs-dialog.is-modal .gs-modal { width: 100%; max-width: none; max-height: none; height: 100dvh; border-radius: 0; }
-}
-
-@media (max-width: 600px) {
-  .gs-body { padding: 1rem; }
-}
-
-// ─── Lateral: entra por la derecha y deja ver la lista a la izquierda; en el móvil, sube desde abajo ─────────
-// El velo es más ligero que el del modal: lo que se quiere es seguir viendo de dónde se vino.
-dialog.modal-dialog.gs-dialog:is(.is-lateral, .is-abajo)::backdrop { background: rgba(0, 0, 0, .35); backdrop-filter: none; }
-
-dialog.modal-dialog.gs-dialog.is-lateral[open] { padding: 0; justify-content: flex-end; align-items: stretch; }
-
-dialog.modal-dialog.gs-dialog.is-lateral[open] .gs-modal {
-  width: min(600px, 92vw);
+dialog.modal-dialog.gs-dialog[open] .gs-panel {
+  width: min(1120px, 80vw);
   max-width: none;
   height: 100dvh;
   max-height: none;
@@ -32,92 +22,68 @@ dialog.modal-dialog.gs-dialog.is-lateral[open] .gs-modal {
   animation: gsDesdeDerecha .28s cubic-bezier(.2, .9, .3, 1) both;
 }
 
-// ─── Desde abajo: una hoja que sube y tapa hasta el 85 % del alto ────────────────────────────────────────────
-dialog.modal-dialog.gs-dialog.is-abajo[open] { padding: 0; justify-content: center; align-items: flex-end; }
+@keyframes gsDesdeDerecha { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-dialog.modal-dialog.gs-dialog.is-abajo[open] .gs-modal {
-  width: min(100%, 960px);
-  max-width: none;
-  height: auto;
-  max-height: 85dvh;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  animation: gsDesdeAbajo .3s cubic-bezier(.2, .9, .3, 1) both;
+@media (prefers-reduced-motion: reduce) {
+  dialog.modal-dialog.gs-dialog[open] .gs-panel { animation: none; }
 }
 
-// El asa de la hoja: dice «esto se puede bajar». Solo cuando entra desde abajo.
-.gs-asa { display: none; }
+// En el móvil, la pantalla entera: el panel sigue entrando por la derecha. Se cierra con la X, con «atrás» o con Esc.
+@media (max-width: 600px) {
+  dialog.modal-dialog.gs-dialog[open] .gs-panel { width: 100%; border-radius: 0; }
+}
 
-dialog.gs-dialog.is-abajo .gs-asa {
-  display: block;
-  flex: none;
-  width: 2.5rem;
-  height: .3rem;
-  margin: .55rem auto 0;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--text) 30%, transparent);
+// Lo que se desplaza es el cuerpo; la barra de botones se queda abajo.
+.gs-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.4rem 1.6rem 1.2rem;
+  container-type: inline-size;
+  scrollbar-width: thin;
 }
 
 @media (max-width: 600px) {
-  dialog.modal-dialog.gs-dialog.is-lateral[open] { justify-content: center; align-items: flex-end; }
-
-  dialog.modal-dialog.gs-dialog.is-lateral[open] .gs-modal {
-    width: 100%;
-    height: auto;
-    max-height: 88dvh;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    animation-name: gsDesdeAbajo;
-  }
-
-  dialog.gs-dialog.is-lateral .gs-asa {
-    display: block;
-    flex: none;
-    width: 2.5rem;
-    height: .3rem;
-    margin: .55rem auto 0;
-    border-radius: var(--radius-pill);
-    background: color-mix(in srgb, var(--text) 30%, transparent);
-  }
-
-  dialog.modal-dialog.gs-dialog.is-abajo[open] .gs-modal { max-height: 88dvh; }
+  .gs-scroll { padding: 1rem 1rem .9rem; }
 }
 
-@keyframes gsDesdeDerecha { from { transform: translateX(100%); } to { transform: translateX(0); } }
-@keyframes gsDesdeAbajo { from { transform: translateY(100%); } to { transform: translateY(0); } }
+// La X, en la esquina del panel: fuera del scroll, siempre a mano.
+.gs-panel { position: relative; }
+.gs-close { position: absolute; top: .6rem; right: .6rem; z-index: 2; }
 
-@media (prefers-reduced-motion: reduce) {
-  dialog.modal-dialog.gs-dialog:is(.is-lateral, .is-abajo)[open] .gs-modal { animation: none; }
-}
+// ─── El reparto: una columna en el móvil, dos con ancho ──────────────────────────────────────────────────────
+.gs-layout { display: flex; flex-direction: column; }
+.gs-main, .gs-side { display: contents; }
+.gs-head { order: 1; }
+.gs-main > .gs-price { order: 2; margin-top: .9rem; }
+.gs-sec-datos { order: 3; }
+.gs-sec-amigos { order: 4; }
+.gs-sec-saga { order: 5; }
 
-.gs-card { container-type: inline-size; }
-
-// ─── Cabecera: carátula + datos ──────────────────────────────────────────────────────────────────────────────
-.gs-hero {
+// ─── Cabecera: carátula, nombre, tu lista y las cifras de tus amistades ───────────────────────────────────────
+.gs-head {
   display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
-  gap: var(--sp-4, 1rem);
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 1rem;
   align-items: start;
 }
 
-.gs-cover {
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--e2);
-}
+.gs-cover { border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--e2); }
+// Sitio para la X, que va encima.
+.gs-head-text { display: flex; flex-direction: column; gap: .45rem; min-width: 0; padding-right: 2.4rem; }
 
-.gs-hero-text {
-  display: flex;
-  flex-direction: column;
-  gap: .45rem;
-  min-width: 0;
-}
-
-.gs-facts {
+.gs-title {
   margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
+  font-family: var(--font-display, inherit);
+  font-size: var(--fs-xl);
+  line-height: 1.15;
+  color: var(--text);
+  text-wrap: balance;
 }
 
-.gs-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .2rem; }
+.gs-facts { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
+
+.gs-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
 
 .gs-pill {
   display: inline-flex;
@@ -142,8 +108,8 @@ dialog.gs-dialog.is-abajo .gs-asa {
 .gs-numbers {
   display: flex;
   flex-wrap: wrap;
-  gap: .4rem 1.4rem;
-  margin: .3rem 0 0;
+  gap: .3rem 1.4rem;
+  margin: .1rem 0 0;
 
   div { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
   dt { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
@@ -151,18 +117,11 @@ dialog.gs-dialog.is-abajo .gs-asa {
   dd small { font-size: var(--fs-xs); font-weight: 400; color: var(--text-muted); }
 }
 
-// En el móvil, a todo el ancho bajo la carátula; con ancho, en la columna del texto.
-.gs-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .5rem; }
-.gs-actions .btn { flex: 1 1 auto; justify-content: center; }
-// Borrar nunca es el botón más grande: no crece con los demás.
-.gs-actions .btn-danger { flex: 0 0 auto; }
-
 // ─── Precio (IsThereAnyDeal) ─────────────────────────────────────────────────────────────────────────────────
 .gs-price {
   display: grid;
-  gap: .45rem;
-  margin-top: .9rem;
-  padding: .8rem .9rem;
+  gap: .4rem;
+  padding: .75rem .9rem;
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--success) 9%, var(--surface));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 35%, transparent);
@@ -193,11 +152,14 @@ dialog.gs-dialog.is-abajo .gs-asa {
 .gs-price-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
 .gs-price-credit { font-size: var(--fs-2xs); color: var(--text-muted); }
 
-// ─── Tus datos: lo que hoy enseña el detalle desplegado de la fila ──────────────────────────────────────────
+.gs-detail.detail-content { padding: 0; gap: .8rem 1rem; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); }
+
+.gs-review-box { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; margin-top: .2rem; }
+
 .gs-data {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-  gap: .7rem 1.2rem;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: .6rem 1rem;
   margin: 0;
 
   div { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
@@ -205,20 +167,32 @@ dialog.gs-dialog.is-abajo .gs-asa {
   dd { margin: 0; font-size: var(--fs-sm); color: var(--text); }
 }
 
-// La reseña, recortada a cinco renglones: entera, en «Leer tu reseña».
-.gs-review { -webkit-line-clamp: 5; line-clamp: 5; }
+// La reseña, recortada: entera, en «Leer tu reseña».
+.gs-review { -webkit-line-clamp: 4; line-clamp: 4; }
 
-// ─── Tu entrada ──────────────────────────────────────────────────────────────────────────────────────────────
-.gs-own { display: grid; gap: .5rem; }
-.gs-own-line { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; font-size: var(--fs-sm); color: var(--text-muted); }
+.gs-link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--fg-link);
+  cursor: pointer;
 
-// ─── Amistades ───────────────────────────────────────────────────────────────────────────────────────────────
-.gs-friends { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+  &:hover { text-decoration: underline; }
+  &:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+}
+
+// Amistades: renglones de persona más prietos que en el directorio, para que quepan más sin bajar.
+.gs-friends { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.gs-friends .hub-person-row { padding-block: .5rem; }
 
 // El adelanto de su reseña, en una línea bajo el estado; entero, en su reseña.
 .gs-snippet {
   display: block;
-  margin-top: .15rem;
+  margin-top: .1rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -239,12 +213,12 @@ dialog.gs-dialog.is-abajo .gs-asa {
   .hub-avatar { width: 1.75rem; height: 1.75rem; }
 }
 
-// ─── Saga ────────────────────────────────────────────────────────────────────────────────────────────────────
+// Saga: una tira de carátulas pequeñas.
 .gs-saga {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 6.5rem;
-  gap: .75rem;
+  grid-auto-columns: 5.5rem;
+  gap: .7rem;
   margin: 0;
   padding: 0 0 .3rem;
   list-style: none;
@@ -254,7 +228,7 @@ dialog.gs-dialog.is-abajo .gs-asa {
 
 .gs-saga-item {
   display: grid;
-  gap: .35rem;
+  gap: .3rem;
   width: 100%;
   padding: 0;
   border: 0;
@@ -271,14 +245,42 @@ dialog.gs-dialog.is-abajo .gs-asa {
 .gs-saga-who { font-size: var(--fs-2xs); color: var(--text-muted); line-height: 1.3; }
 .gs-saga-item[aria-current="true"] .gs-saga-name { color: var(--fg-link); }
 
-// ─── Con ancho: carátula más grande y precio a la derecha de la cabecera ─────────────────────────────────────
-@container (min-width: 40rem) {
-  .gs-hero { grid-template-columns: 11rem minmax(0, 1fr); gap: .9rem 1.4rem; }
-  .gs-hero { grid-template-rows: auto 1fr; }
-  .gs-cover { grid-row: span 2; }
-  .gs-actions { grid-column: 2; align-self: start; }
-  .gs-actions .btn { flex: 0 0 auto; }
-  .gs-top:has(.gs-price) { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 1.2rem; align-items: start; }
-  .gs-top .gs-price { margin-top: 0; }
-  .gs-saga { grid-auto-columns: 7.5rem; }
+// ─── La barra de botones, fija abajo ─────────────────────────────────────────────────────────────────────────
+.gs-bar {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .75rem 1.6rem calc(.75rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, var(--text));
+}
+
+// Borrar, separado de los demás y a la derecha: lejos de la mano que va a mover o editar.
+.gs-bar .btn-danger { margin-inline-start: auto; }
+
+// En el móvil, con texto solo el primero (mover de lista, la acción principal); los demás, solo con el icono y su
+// nombre en `aria-label`. Con los cuatro rotulados no cabía ninguno entero.
+@media (max-width: 600px) {
+  .gs-bar { padding-inline: 1rem; flex-wrap: nowrap; }
+  .gs-bar .btn { justify-content: center; }
+  .gs-bar .btn:first-child { flex: 1 1 auto; min-width: 0; }
+  .gs-bar .btn:not(:first-child) { flex: 0 0 auto; }
+  .gs-bar .btn:not(:first-child) .gs-bar-label { display: none; }
+  .gs-bar .btn-danger { margin-inline-start: 0; }
+}
+
+// ─── Con ancho ───────────────────────────────────────────────────────────────────────────────────────────────
+// Desde 50 rem de panel, dos columnas: a la izquierda lo tuyo (carátula, nombre, precio si es un deseo y tus datos) y
+// a la derecha lo de tus amistades (amistades y saga). Así cabe entero sin bajar en una pantalla de portátil.
+@container (min-width: 50rem) {
+  .gs-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 0 1.8rem; align-items: start; }
+  .gs-main, .gs-side { display: flex; flex-direction: column; min-width: 0; }
+  .gs-head { grid-template-columns: 9.5rem minmax(0, 1fr); gap: 1.3rem; }
+  .gs-head-text { padding-right: 0; }
+  .gs-title { font-size: var(--fs-2xl); }
+  // La columna de la derecha empieza por debajo de la X.
+  .gs-side { padding-top: 2rem; }
+  .gs-side > .hub-detail-metadata:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .gs-saga { grid-auto-columns: 6rem; }
 }

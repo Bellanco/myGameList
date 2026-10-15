@@ -1,5 +1,6 @@
-// MAQUETA DESECHABLE de la ficha de juego (`docs/plan-ficha-de-juego-y-precios.md`), en tres formas para comparar:
-// lateral (por defecto), desde abajo y modal centrado. Ver `ficha-juego.html` para los parámetros.
+// MAQUETA DESECHABLE de la ficha de juego (`docs/plan-ficha-de-juego-y-precios.md`): un panel que entra por la
+// derecha, casi a toda pantalla, sin cabecera de modal, en columnas y con los botones fijos abajo. En el móvil, la
+// pantalla entera. Ver `ficha-juego.html` para los parámetros.
 //
 // Detrás va la tabla REAL (`GameTable`) con una biblioteca inventada. Tocar una fila ya no despliega el detalle:
 // abre la ficha, que lo sustituye. Abrirla añade `?juego=<clave>` a la URL con `pushState`, así que «atrás» la cierra
@@ -30,7 +31,9 @@ import { coverUrl } from '../../src/core/utils/coverUrl';
 import { gameTitleKey } from '../../src/core/utils/gameTitleKey';
 import { sharedSagaName } from '../../src/core/utils/gameSaga';
 import { starsFromGrade } from '../../src/core/utils/scoreScale';
-import { TAB_ACTIONS } from '../../src/core/constants/labels';
+import { TAB_ACTIONS, UI_MESSAGES } from '../../src/core/constants/labels';
+import { COMMON_ICONS } from '../../src/core/constants/icons';
+import { categoryToneStyle } from '../../src/core/constants/categoryTone';
 import { TAB_ICONS } from '../../src/core/constants/icons';
 import { APP_LOCALE } from '../../src/core/constants/locale';
 import { parsePaletteId } from '../../src/core/constants/palettes';
@@ -42,9 +45,6 @@ loadPaletteSkin(parsePaletteId(document.documentElement.dataset.palette));
 const params = new URLSearchParams(window.location.search);
 const lista: 'c' | 'd' = params.get('lista') === 'c' ? 'c' : 'd';
 const conSocial = params.get('social') !== '0';
-const FORMAS = ['lateral', 'abajo', 'modal'] as const;
-type Forma = (typeof FORMAS)[number];
-const forma: Forma = (FORMAS as readonly string[]).includes(params.get('forma') || '') ? (params.get('forma') as Forma) : 'lateral';
 // `?precio=0`: el servicio de precios no responde (sin red, ITAD caído o sin cupo). El bloque no se pinta.
 const conPrecio = params.get('precio') !== '0';
 const avisar = (que: string) => () => window.alert(`En la app: ${que}`);
@@ -63,8 +63,9 @@ const BIBLIOTECA: Record<'c' | 'd', GameItem[]> = {
       grade: 92,
       score: 5,
       hours: 46,
-      years: [2024],
+      years: [2024, 2018],
       replayable: true,
+      steamDeck: true,
       strengths: ['Exploración', 'Banda sonora', 'Jefes'],
       weaknesses: ['Mapa de pago'],
       review:
@@ -73,7 +74,7 @@ const BIBLIOTECA: Record<'c' | 'd', GameItem[]> = {
     juego(2, 'Hades', { genres: ['Roguelike', 'Acción'], grade: 95, score: 5, hours: 70, years: [2021], replayable: true, strengths: ['Combate', 'Narrativa'], review: 'El roguelike que convierte cada muerte en una conversación nueva. Las armas cambian la partida entera y los dioses tienen voz propia.' }),
     juego(3, 'Celeste', { genres: ['Plataformas'], grade: 90, score: 5, hours: 14, years: [2019], strengths: ['Control'], review: 'Precisión pura con un corazón enorme. La cara B de cada capítulo es otro juego.' }),
     juego(4, 'Outer Wilds', { genres: ['Aventura', 'Exploración'], grade: 97, score: 5, hours: 22, years: [2022], review: 'El mejor juego que no se puede volver a jugar. Todo está ahí desde el principio; lo que cambia eres tú.' }),
-    juego(5, 'Dark Souls 3', { genres: ['Acción', 'RPG'], grade: 85, score: 4, hours: 60, years: [2020], review: 'Más lineal que el primero, pero con los mejores jefes de la saga.' }),
+    juego(5, 'Dark Souls 3', { genres: ['Acción', 'RPG'], grade: 85, score: 4, hours: 60, years: [2020], strengths: ['Jefes', 'Ambientación'], weaknesses: ['Lineal'], review: 'Más lineal que el primero, pero con los mejores jefes de la saga.' }),
   ],
   d: [
     juego(11, 'Hollow Knight: Silksong', { platforms: ['PC', 'Switch', 'PS5'], genres: ['Metroidvania', 'Plataformas'], grade: 80, score: 4 }),
@@ -162,18 +163,18 @@ function PrecioBloque({ p }: { p: Precio }) {
   );
 }
 
+/** Sin cabecera de modal: el nombre va aquí, junto a la carátula. La X va en la esquina del panel. */
 function Cabecera({ g, tab, amistades }: { g: GameItem; tab: 'c' | 'd'; amistades: Amistad[] }) {
   const loTienen = amistades.filter((a) => a.tab !== 'd');
   const notas = loTienen.map((a) => a.nota).filter((n): n is number => typeof n === 'number');
   const media = notas.length >= 3 ? Math.round(notas.reduce((s, n) => s + n, 0) / notas.length) : null;
   return (
-    <div className="gs-hero">
+    <header className="gs-head">
       <div className="gs-cover">
         <GameCover name={g.name} src={coverUrl(g.name, ['PC'], 'normal', 'solo-cache')} src2x={coverUrl(g.name, ['PC'], 'medio', 'solo-cache')} />
       </div>
-      <div className="gs-hero-text">
-        <p className="gs-facts">{g.platforms.join(' · ')}</p>
-        {g.genres.length ? <p className="gs-facts">{g.genres.join(' · ')}</p> : null}
+      <div className="gs-head-text">
+        <h2 className="gs-title">{g.name}</h2>
         <div className="gs-pills">
           <span className={`gs-pill is-${tab}`}>
             <Icon name={TAB_ICONS[tab]} />
@@ -195,64 +196,130 @@ function Cabecera({ g, tab, amistades }: { g: GameItem; tab: 'c' | 'd'; amistade
           </dl>
         ) : null}
       </div>
-      {/* Las acciones del detalle de hoy, tal cual: mover según la lista, editar y borrar. Compartir, solo con reseña. */}
-      <div className="gs-actions">
-        {TAB_ACTIONS[tab].map((a) => (
-          <button key={a.target} className={`btn ${a.btnCls}`} type="button" onClick={avisar(`${a.label.toLowerCase()} (${tab} → ${a.target})`)}>
-            <Icon name={a.icon} />
-            {a.label}
-          </button>
-        ))}
-        <button className="btn btn-secondary" type="button" onClick={avisar('abre el formulario del juego')}>
-          <Icon name="edit" />
-          Editar
-        </button>
-        {tab === 'c' && g.review ? (
-          <button className="btn btn-secondary" type="button" onClick={avisar('abre «Compartir reseña»')}>
-            <Icon name="share" />
-            Compartir
-          </button>
-        ) : null}
-        <button className="btn btn-danger" type="button" onClick={avisar('pide confirmación y borra el juego')}>
-          <Icon name="trash" />
-          Borrar
-        </button>
-      </div>
+    </header>
+  );
+}
+
+// Los ayudantes del detalle de hoy (`GameTable.tsx:325-400`), copiados tal cual para la maqueta. En la app salen
+// de `GameTable` a un módulo compartido y los usan la tabla y la ficha.
+function chips(values: string[], className: string, tone = false) {
+  if (!values.length) return <span className="chip-none" aria-hidden="true">—</span>;
+  return (
+    <div className="chips">
+      {values.map((value) => (
+        <span key={value} className={`chip ${className}`} style={tone ? categoryToneStyle(value) : undefined} data-text={value}>
+          <span className="chip-text">{value}</span>
+        </span>
+      ))}
     </div>
   );
 }
 
-/** Lo que hoy enseña el detalle desplegado de la fila, ordenado como datos de la ficha. */
-function TusDatos({ g, tab }: { g: GameItem; tab: 'c' | 'd' }) {
-  const filas: Array<[string, ReactElement | string]> = [
-    [tab === 'd' ? 'Interés' : 'Nota', <ScoreDisplay key="nota" game={{ grade: g.grade, score: g.score }} />],
-  ];
-  if (g.years?.length) filas.push(['Completado en', g.years.join(', ')]);
-  if (g.hours) filas.push(['Horas', `${g.hours} h`]);
-  if (tab === 'c') filas.push(['Rejugable', g.replayable ? 'Sí' : 'No']);
-  if (g.strengths?.length) filas.push(['Puntos fuertes', g.strengths.join(' · ')]);
-  if (g.weaknesses?.length) filas.push(['Puntos débiles', g.weaknesses.join(' · ')]);
+function insignia(type: 'replayable' | 'retry', value: boolean) {
+  const label = type === 'replayable' ? UI_MESSAGES.table.replayBadge(value) : UI_MESSAGES.table.retryBadge(value);
+  const cls = type === 'replayable' ? (value ? 'badge-rejugar-activo' : 'badge-rejugar-inactivo') : value ? 'badge-opp-activo' : 'badge-opp-inactivo';
+  const icon = value ? (type === 'replayable' ? COMMON_ICONS.starOliveBranches : COMMON_ICONS.refresh) : COMMON_ICONS.lock;
   return (
-    <div className="hub-detail-metadata">
+    <span className={cls} role="img" aria-label={label} title={label}>
+      <Icon name={icon} />
+    </span>
+  );
+}
+
+/**
+ * TODO LO QUE ENSEÑA HOY EL DETALLE DE LA FILA, con su mismo marcado (`detail-content`, `detail-box`, chips e
+ * insignias) y las mismas reglas por lista: años y rejugar solo en completados, horas en completados y abandonados,
+ * puntos fuertes en c/v/e, débiles en c/e, motivos en v, reintentar en v. Así los temas que ya visten el detalle lo
+ * visten aquí igual.
+ */
+function TusDatos({ g, tab }: { g: GameItem; tab: TabId }) {
+  const D = UI_MESSAGES.detail;
+  const sinJugar = tab === 'p' || tab === 'd';
+  return (
+    <div className="hub-detail-metadata gs-sec-datos">
       <div className="hub-metadata-section">
         <strong>Tus datos</strong>
-        <dl className="gs-data">
-          {filas.map(([k, v]) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>{v}</dd>
+        <div className="detail-content gs-detail">
+          <div className="detail-box">
+            <span className="detail-label">{D.platforms}</span>
+            <div className="chips">
+              {g.platforms.map((v) => (
+                <span key={v} className="chip chip-plat" data-text={v}>
+                  <span className="chip-text">{v}</span>
+                </span>
+              ))}
+              {g.steamDeck ? (
+                <span className="chip chip-deck">
+                  <Icon name={COMMON_ICONS.steamDeck} />
+                  <span>{D.steamDeck}</span>
+                </span>
+              ) : null}
             </div>
-          ))}
-        </dl>
+          </div>
+          <div className="detail-box">
+            <span className="detail-label">{D.genres}</span>
+            <div>{chips(g.genres, 'chip-genre', true)}</div>
+          </div>
+          {tab === 'c' && g.years?.length ? (
+            <div className="detail-box">
+              <span className="detail-label">{D.yearsCompleted}</span>
+              <div>{chips([...g.years].sort((x, y) => y - x).map(String), 'chip-generic')}</div>
+            </div>
+          ) : null}
+          {(tab === 'c' || tab === 'v') && (g.hours ?? 0) > 0 ? (
+            <div className="detail-box">
+              <span className="detail-label">{D.playtime}</span>
+              <div>{D.hoursSuffix(String(g.hours).replace('.', ','))}</div>
+            </div>
+          ) : null}
+          {(tab === 'c' || tab === 'v' || tab === 'e') && g.strengths?.length ? (
+            <div className="detail-box detail-strong">
+              <span className="detail-label">{D.strengths}</span>
+              <div>{chips(g.strengths, 'chip-pf')}</div>
+            </div>
+          ) : null}
+          {(tab === 'c' || tab === 'e') && g.weaknesses?.length ? (
+            <div className="detail-box detail-weak">
+              <span className="detail-label">{D.weaknesses}</span>
+              <div>{chips(g.weaknesses, 'chip-pd')}</div>
+            </div>
+          ) : null}
+          {tab === 'v' && g.reasons?.length ? (
+            <div className="detail-box detail-weak">
+              <span className="detail-label">{D.weaknesses}</span>
+              <div>{chips(g.reasons, 'chip-pd')}</div>
+            </div>
+          ) : null}
+          {tab === 'c' || sinJugar || (tab === 'v' && g.scored) ? (
+            <div className="detail-box">
+              <span className="detail-label">{sinJugar ? D.interest : D.score}</span>
+              <div>
+                <ScoreDisplay game={g} />
+              </div>
+            </div>
+          ) : null}
+          {tab === 'c' ? (
+            <div className="detail-box">
+              <span className="detail-label">{D.replayability}</span>
+              <div>{insignia('replayable', Boolean(g.replayable))}</div>
+            </div>
+          ) : null}
+          {tab === 'v' ? (
+            <div className="detail-box">
+              <span className="detail-label">{D.retry}</span>
+              <div>{insignia('retry', Boolean(g.retry))}</div>
+            </div>
+          ) : null}
+        </div>
         {g.review ? (
-          <>
+          <div className="gs-review-box">
+            <span className="detail-label">{D.review}</span>
             <p className="hub-feed-review-text gs-review">{g.review}</p>
-            <div>
-              <button className="btn btn-secondary" type="button" onClick={avisar('abre tu reseña en /stats/resenas')}>
-                Leer tu reseña
-              </button>
-            </div>
-          </>
+            <a className="btn btn-open" href="#resena" onClick={avisar('abre tu reseña en /stats/resenas')} aria-label={D.reviewLinkAria(g.name)}>
+              <Icon name={COMMON_ICONS.arrowsToEye} />
+              <span>{D.reviewLink}</span>
+            </a>
+          </div>
         ) : null}
       </div>
     </div>
@@ -266,7 +333,7 @@ function Amistades({ amistades }: { amistades: Amistad[] }) {
   // Orden: con reseña primero y, dentro, por nota.
   const orden = [...loTienen].sort((a, b) => Number(Boolean(b.adelanto)) - Number(Boolean(a.adelanto)) || (b.nota ?? -1) - (a.nota ?? -1));
   return (
-    <div className="hub-detail-metadata">
+    <div className="hub-detail-metadata gs-sec-amigos">
       {orden.length ? (
         <div className="hub-metadata-section">
           <strong>Tus amistades</strong>
@@ -316,7 +383,7 @@ function Saga({ g, onOpen }: { g: GameItem; onOpen: (id: number) => void }) {
   const entregas = TODOS.filter((o) => o.id === g.id || sharedSagaName(g.name, o.name));
   if (entregas.length < 2) return null;
   return (
-    <div className="hub-detail-metadata">
+    <div className="hub-detail-metadata gs-sec-saga">
       <div className="hub-metadata-section">
         <strong>Saga</strong>
         <ul className="gs-saga">
@@ -339,6 +406,34 @@ function Saga({ g, onOpen }: { g: GameItem; onOpen: (id: number) => void }) {
   );
 }
 
+/** Los botones del detalle de hoy, fijos abajo: mover según la lista, editar, compartir (con reseña) y borrar. */
+function BarraDeAcciones({ g, tab }: { g: GameItem; tab: 'c' | 'd' }) {
+  return (
+    <footer className="gs-bar">
+      {TAB_ACTIONS[tab].map((a) => (
+        <button key={a.target} className={`btn ${a.btnCls}`} type="button" onClick={avisar(`${a.label.toLowerCase()} (${tab} → ${a.target})`)}>
+          <Icon name={a.icon} />
+          <span className="gs-bar-label">{a.label}</span>
+        </button>
+      ))}
+      <button className="btn btn-secondary" type="button" aria-label={`Editar ${g.name}`} onClick={avisar('abre el formulario del juego')}>
+        <Icon name="edit" />
+        <span className="gs-bar-label">Editar</span>
+      </button>
+      {tab === 'c' && g.review ? (
+        <button className="btn btn-secondary" type="button" aria-label={`Compartir la reseña de ${g.name}`} onClick={avisar('abre «Compartir reseña»')}>
+          <Icon name="share" />
+          <span className="gs-bar-label">Compartir</span>
+        </button>
+      ) : null}
+      <button className="btn btn-danger" type="button" aria-label={`Borrar ${g.name}`} onClick={avisar('pide confirmación y borra el juego')}>
+        <Icon name="trash" />
+        <span className="gs-bar-label">Borrar</span>
+      </button>
+    </footer>
+  );
+}
+
 function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () => void; onOpen: (id: number) => void }) {
   const open = id !== null;
   const dialogRef = useNativeDialog(open, onClose);
@@ -349,32 +444,33 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   return (
     <dialog
       ref={dialogRef}
-      className={`modal-dialog gs-dialog is-${forma}`}
+      className="modal-dialog gs-dialog"
       aria-label={g ? `Ficha de ${g.name}` : 'Ficha de juego'}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
       {open && g ? (
-        <div className="modal gs-modal">
-          <span className="gs-asa" aria-hidden="true" />
-          <div className="modal-hd">
-            <div className="modal-title">{g.name}</div>
-            <button className="btn-icon" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
-              <Icon name="close" />
-            </button>
-          </div>
-          <div className="modal-body gs-body">
-            <article className="gs-card" key={g.id}>
-              <div className="gs-top">
+        <div className="modal gs-panel">
+          <button className="btn-icon gs-close" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
+            <Icon name="close" />
+          </button>
+          <div className="gs-scroll" key={g.id}>
+            {/* Dos columnas con ancho: lo tuyo a la izquierda (el precio también: solo sale en Deseados, que es donde
+                tus datos son pocos) y lo de tus amistades a la derecha. En el móvil, una columna con el mismo orden. */}
+            <div className="gs-layout">
+              <div className="gs-main">
                 <Cabecera g={g} tab={tab} amistades={amistades} />
                 {precio ? <PrecioBloque p={precio} /> : null}
+                <TusDatos g={g} tab={tab} />
               </div>
-              <TusDatos g={g} tab={tab} />
-              <Amistades amistades={amistades} />
-              <Saga g={g} onOpen={onOpen} />
-            </article>
+              <div className="gs-side">
+                <Amistades amistades={amistades} />
+                <Saga g={g} onOpen={onOpen} />
+              </div>
+            </div>
           </div>
+          <BarraDeAcciones g={g} tab={tab} />
         </div>
       ) : null}
     </dialog>
@@ -463,11 +559,6 @@ function Barra() {
       <select aria-label="Lista" style={caja} value={lista} onChange={(e) => ir({ lista: e.target.value, juego: '' })}>
         <option value="d">Deseados (con precio)</option>
         <option value="c">Completados</option>
-      </select>
-      <select aria-label="Forma" style={caja} value={forma} onChange={(e) => ir({ forma: e.target.value })}>
-        <option value="lateral">Lateral (abajo en móvil)</option>
-        <option value="abajo">Desde abajo</option>
-        <option value="modal">Modal centrado</option>
       </select>
       <select aria-label="Precio" style={caja} value={conPrecio ? '1' : '0'} onChange={(e) => ir({ precio: e.target.value === '0' ? '0' : '' })}>
         <option value="1">Precio: responde</option>
