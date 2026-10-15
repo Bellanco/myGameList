@@ -5,6 +5,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+
+- **Perfiles se recorre sin pulsar «Mostrar más».** Las listas de amigos y de «Descubrir» cargan las siguientes filas
+  solas al acercarse al final, como el feed; la flecha del final sigue ahí para quien prefiera pulsarla. El número de
+  amigos sigue siendo el de todos aunque aún no se vean, y «Descubrir» ya no lleva número: su lista sale de los
+  perfiles recientes, con tope, así que decía cuántos cupieron y no cuánta gente hay.
+
 ## [1.7.7] - 2026-10-14
 
 ### Changed

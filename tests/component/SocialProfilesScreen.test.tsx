@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SocialProfilesScreen } from '../../src/view/components/socialhub/SocialProfilesScreen';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
@@ -57,7 +57,7 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
     expect(within(friends).queryByText('Bob')).not.toBeInTheDocument();
 
     // Sección Descubrir → contiene a Bob, no a Ada.
-    const others = screen.getByRole('group', { name: SOCIAL_UI.profiles.sectionGroupAria(SOCIAL_UI.profiles.othersTitle, 1) });
+    const others = screen.getByRole('group', { name: SOCIAL_UI.profiles.othersTitle });
     expect(within(others).getByText('Bob')).toBeInTheDocument();
     expect(within(others).queryByText('Ada')).not.toBeInTheDocument();
   });
@@ -74,7 +74,7 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
 
     const friends = screen.getByRole('group', { name: SOCIAL_UI.profiles.sectionGroupAria(SOCIAL_UI.profiles.friendsTitle, 1) });
     expect(within(friends).queryByText(SOCIAL_UI.friendship.friends)).not.toBeInTheDocument();
-    const others = screen.getByRole('group', { name: SOCIAL_UI.profiles.sectionGroupAria(SOCIAL_UI.profiles.othersTitle, 1) });
+    const others = screen.getByRole('group', { name: SOCIAL_UI.profiles.othersTitle });
     expect(within(others).getByLabelText(SOCIAL_UI.friendship.addAria('Bob'))).toBeInTheDocument();
   });
 
@@ -215,9 +215,62 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
       expect(screen.getByText('Perfil 0')).toBeInTheDocument();
       expect(screen.getByText('Perfil 5')).toBeInTheDocument();
       expect(screen.queryByText('Perfil 6')).not.toBeInTheDocument();
-      // El recuento de la sección refleja el TOTAL, no lo visible.
-      expect(screen.getByText('· 11')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: SOCIAL_UI.profiles.showMore(5) })).toBeInTheDocument();
+    });
+
+    // El recuento de AMIGOS es el de todos, no el de los renglones pintados (15-10-2026).
+    it('el número de amigos es el total aunque no se vean todos', () => {
+      render(
+        <SocialProfilesScreen {...baseProps} relationshipWith={() => 'friends'} filteredSocialDirectory={muchos} />,
+      );
+
+      expect(screen.queryByText('Perfil 6')).not.toBeInTheDocument();
+      expect(screen.getByText('· 11')).toBeInTheDocument();
+      expect(
+        screen.getByRole('group', { name: SOCIAL_UI.profiles.sectionGroupAria(SOCIAL_UI.profiles.friendsTitle, 11) }),
+      ).toBeInTheDocument();
+    });
+
+    // «Descubrir» sale de una consulta con tope: su número diría cuántos cupieron, no cuántos hay (15-10-2026).
+    it('«Descubrir» no lleva número', () => {
+      const { container } = render(
+        <SocialProfilesScreen {...baseProps} relationshipWith={() => 'none'} filteredSocialDirectory={muchos} />,
+      );
+
+      expect(screen.getByRole('group', { name: SOCIAL_UI.profiles.othersTitle })).toBeInTheDocument();
+      // La sección de amigos, vacía, sí dice su cero; la de descubrir, ninguno.
+      expect([...container.querySelectorAll('.hub-section-count')].map((el) => el.textContent)).toEqual(['· 0']);
+    });
+
+    // SCROLL INFINITO (15-10-2026): al acercarse el final, la página siguiente llega sola, sin pulsar.
+    it('al llegar el centinela a la vista añade otra página sin pulsar nada', () => {
+      const callbacks: IntersectionObserverCallback[] = [];
+      const Original = globalThis.IntersectionObserver;
+      globalThis.IntersectionObserver = class {
+        constructor(cb: IntersectionObserverCallback) {
+          callbacks.push(cb);
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+        takeRecords() {
+          return [];
+        }
+      } as unknown as typeof IntersectionObserver;
+      try {
+        render(
+          <SocialProfilesScreen {...baseProps} relationshipWith={() => 'friends'} filteredSocialDirectory={muchos} />,
+        );
+        expect(screen.queryByText('Perfil 10')).not.toBeInTheDocument();
+
+        act(() => {
+          callbacks.at(-1)?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+        });
+        expect(screen.getByText('Perfil 10')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Mostrar más/ })).not.toBeInTheDocument();
+      } finally {
+        globalThis.IntersectionObserver = Original;
+      }
     });
 
     it('"mostrar más" añade otra página y desaparece al llegar al final', async () => {

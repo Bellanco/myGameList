@@ -393,8 +393,9 @@ export const SOCIAL_UI = {
     },
     friendsTitle: 'Amigos',
     othersTitle: 'Descubrir',
-    // El recuento por sección se muestra porque con muchos amigos es la única forma de saber a qué te enfrentas
-    // antes de empezar a bajar: la rejilla, al no tener scroll propio, no da ninguna pista de su tamaño.
+    // El recuento de AMIGOS se muestra porque con muchos es la única forma de saber a qué te enfrentas antes de
+    // empezar a bajar: la rejilla, al no tener scroll propio, no da ninguna pista de su tamaño. «Descubrir» no lo
+    // lleva: su lista sale de una consulta con tope y el número diría cuántos cupieron, no cuántos hay.
     sectionLabel: (title: string, count: number) => `${title} · ${count}`,
     sectionGroupAria: (title: string, count: number) => `${title}: ${count} ${count === 1 ? 'perfil' : 'perfiles'}`,
     // Paginación: se muestra cuánto queda, no solo que hay más. "Mostrar más" a secas obliga a pulsar para
