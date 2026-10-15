@@ -19,6 +19,8 @@ export type AttentionItem =
   | { code: 'premios-closing'; severity: 'warn'; closesAt: number }
   | { code: 'premios-pending'; severity: 'warn' }
   | { code: 'todos-due'; severity: 'warn'; count: number }
+  | { code: 'accounts-expired'; severity: 'warn'; count: number }
+  | { code: 'accounts-expiring'; severity: 'info'; count: number }
   | { code: 'census-truncated'; severity: 'info'; count: number };
 
 export interface AttentionInput {
@@ -31,6 +33,8 @@ export interface AttentionInput {
   premios?: { stage: 'none' | 'open' | 'pending'; closesAt: number | null } | null;
   /** Pendientes sin hacer cuya fecha es hoy o ya pasó. */
   dueTodos?: number;
+  /** Cuentas de Auth caducadas y a punto de caducar (`accountRetention`). Sin la lectura de Auth, no llega. */
+  accounts?: { expired: number; expiring: number } | null;
 }
 
 /** A partir de qué parte del techo se avisa (aviso) y se alarma (grave). Se avisa ANTES de llegar: es lo útil. */
@@ -75,6 +79,8 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
   }
   if (input.premios?.stage === 'pending') items.push({ code: 'premios-pending', severity: 'warn' });
   if (input.dueTodos) items.push({ code: 'todos-due', severity: 'warn', count: input.dueTodos });
+  if (input.accounts?.expired) items.push({ code: 'accounts-expired', severity: 'warn', count: input.accounts.expired });
+  if (input.accounts?.expiring) items.push({ code: 'accounts-expiring', severity: 'info', count: input.accounts.expiring });
   if (input.truncated) items.push({ code: 'census-truncated', severity: 'info', count: users.length });
 
   // `sort` es estable: dentro de la misma gravedad se respeta el orden de arriba, que va de lo más a lo menos urgente.

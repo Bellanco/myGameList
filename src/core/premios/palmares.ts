@@ -22,16 +22,18 @@ export function isParticipation(entry: Pick<PalmaresEntry, 'rank'>): boolean {
  * donde ponerla.
  */
 export function palmaresRecipientsFrom(
-  leaderboard: Array<{ userId: string; rank: number }>,
-): Array<{ uid: string; rank: number; place?: number }> {
+  leaderboard: Array<{ userId: string; rank: number; profileId?: string }>,
+): Array<{ uid: string; rank: number; place?: number; profileId?: string }> {
   return leaderboard
     .filter((entry) => entry.userId)
-    .map((entry) =>
-      hasAward(entry.rank)
-        ? { uid: entry.userId, rank: entry.rank }
+    .map((entry) => {
+      // El seudónimo de su fila en el archivo: con él, borrar la cuenta encuentra SU fila sin fiarse del cliente.
+      const profileId = entry.profileId ? { profileId: entry.profileId } : {};
+      return hasAward(entry.rank)
+        ? { uid: entry.userId, rank: entry.rank, ...profileId }
         // La participación guarda además su puesto real: la medalla es la misma para todos, el puesto no.
-        : { uid: entry.userId, rank: PALMARES_PARTICIPATION_RANK, ...(validPlace(entry.rank) ? { place: entry.rank } : {}) },
-    );
+        : { uid: entry.userId, rank: PALMARES_PARTICIPATION_RANK, ...(validPlace(entry.rank) ? { place: entry.rank } : {}), ...profileId };
+    });
 }
 
 /** Un puesto de clasificación con sentido: entero y positivo. */

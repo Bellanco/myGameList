@@ -26,6 +26,12 @@ export interface PalmaresRecipient {
   rank: number;
   /** Puesto real en la clasificación, solo en las participaciones (ver `PalmaresEntry.place`). */
   place?: number;
+  /**
+   * Su seudónimo en el archivo de esa edición (el `profileId` de su fila). Lo escribe el administrador al publicar,
+   * y es lo que deja al borrado de una cuenta (`functions/_lib/accounts.ts`) encontrar SU fila sin fiarse de lo que
+   * el cliente escribe. Ausente en las ediciones publicadas antes de guardarlo.
+   */
+  profileId?: string;
 }
 
 /** El registro de una edición. */
@@ -51,7 +57,8 @@ function cleanRecipients(raw: unknown): PalmaresRecipient[] {
     if (!uid || !Number.isInteger(rank) || rank < PALMARES_PARTICIPATION_RANK) continue;
     // El puesto real solo acompaña a la participación: en un trofeo de puesto ya es el `rank`.
     const place = rank === PALMARES_PARTICIPATION_RANK && validPlace(entry?.place) ? Number(entry.place) : 0;
-    porUid.set(uid, place ? { uid, rank, place } : { uid, rank });
+    const profileId = typeof entry?.profileId === 'string' ? entry.profileId.slice(0, 128) : '';
+    porUid.set(uid, { uid, rank, ...(place ? { place } : {}), ...(profileId ? { profileId } : {}) });
   }
   return [...porUid.values()];
 }
@@ -267,8 +274,10 @@ export async function setSeasonPalmaresGranted(
     // Manda la lista más completa: si el registro ya sabía de alguien cuyo perfil hoy no lleva el trofeo (se
     // borró a mano, la escritura falló), perderlo aquí lo dejaría fuera al volver a encender.
     const conocidos = new Map<string, PalmaresRecipient>();
+    // Mezclando y no pisando: lo que sale de los perfiles no lleva el seudónimo, y perderlo aquí impediría a un
+    // borrado de cuenta encontrar su fila del archivo (ver `PalmaresRecipient.profileId`).
     for (const premiado of [...(registro?.recipients || []), ...retirados]) {
-      conocidos.set(premiado.uid, premiado);
+      conocidos.set(premiado.uid, { ...conocidos.get(premiado.uid), ...premiado });
     }
     await savePalmaresRecord(seasonId, false, [...conocidos.values()]);
     return retirados.length;

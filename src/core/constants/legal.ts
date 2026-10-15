@@ -97,6 +97,11 @@
 // En la misma versión, los documentos y la puerta pasan a LENGUAJE CLARO (de tú, frases cortas, sin contar cómo
 // funciona la app por dentro). Dicen lo mismo: eso por sí solo no la subiría (mismo criterio que la redacción formal
 // del 2026-10-05). Ver `legalContent.ts`.
+// 2026-10-15: PLAZOS DE CONSERVACIÓN de las cuentas sin uso (docs/plan-cuentas-inactivas.md): dos meses sin espacio
+// social, un año con él, y la baja se lleva también la cuenta de Google de Firebase Auth. Es guardar MENOS de lo
+// aceptado («mientras mantengas tu cuenta»), así que la versión NO sube (mismo criterio que el 2026-08-26). El correo
+// en el panel tampoco la sube: lo ve el responsable del tratamiento, que ya lo tenía en la consola de Firebase; no
+// entra ningún destinatario nuevo. Se dice igualmente, porque el documento enumera lo que ve la administración.
 export const LEGAL_VERSION = '2026-10-12b';
 
 /**

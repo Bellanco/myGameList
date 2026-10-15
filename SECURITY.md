@@ -183,6 +183,24 @@ inventárselo; el nombre del claim vive en dos sitios a propósito —`firestore
 - **Orden al desplegar un cambio de criterio**: primero el claim, después las reglas. Al revés, el panel se queda
   sin nadie dentro.
 
+### La cuenta de servicio del panel
+
+`/api/admin/accounts` y `/api/account` usan una **cuenta de servicio** (`functions/_lib/serviceAccount.ts`), la única
+credencial del borde que se salta las reglas de Firestore. Está acotada así (ver `docs/plan-cuentas-inactivas.md`):
+
+- **Solo dos roles en IAM**: *Firebase Authentication Admin* y *Cloud Datastore User*. Ni Owner ni Editor.
+- **Vive en el secreto `FIREBASE_ADMIN_SA`** de Pages, nunca en `wrangler.toml` ni en el repo. El token que se
+  obtiene con ella se guarda solo en la memoria del aislado, nunca en KV.
+- **Solo la piden dos endpoints**: el del panel, detrás de `requireAdmin`, y la baja de la propia cuenta, que solo
+  puede borrar el uid que viene dentro del ID token verificado. Los dos borran con la misma función (`purgeAccount`),
+  que se lleva todo lo que el servicio guarda de esa cuenta (ver el plan).
+- **El servidor vuelve a decidir qué está caducado** antes de borrar: el panel no puede pedir que se borre una cuenta
+  activa, ni la del administrador.
+- **Los mensajes de error no llevan cuerpos de Google** (pueden traer identificadores): solo el estado HTTP.
+
+Si la clave se filtra: borrarla en Google Cloud (Cuentas de servicio → Claves), crear otra y volver a subirla con
+`wrangler pages secret put`.
+
 ## Recomendaciones para el usuario
 
 1. Usa siempre **HTTPS**.

@@ -7,11 +7,13 @@ import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visi
 import { ADMIN_PANEL_UI, ADMIN_SHARES_UI, ADMIN_SHELL_UI } from '../../core/constants/adminLabels';
 import { copyText } from '../../core/utils/clipboard';
 import { clearAllAchievements } from '../../model/repository/firebaseAdminRepository';
+import { useAdminAccounts } from '../../viewmodel/useAdminAccounts';
 import { useAdminHealth } from '../../viewmodel/useAdminHealth';
 import { useAdminInsights } from '../../viewmodel/useAdminInsights';
 import { useAdminLog } from '../../viewmodel/useAdminLog';
 import { useAdminPanelData } from '../../viewmodel/useAdminPanelData';
 import { useAdminViewModel } from '../../viewmodel/useAdminViewModel';
+import { AdminAccountsScreen } from './admin/AdminAccountsScreen';
 import { AdminCapacityScreen } from './admin/AdminCapacityScreen';
 import { AdminCommunityScreen } from './admin/AdminCommunityScreen';
 import { AdminLogScreen } from './admin/AdminLogScreen';
@@ -71,6 +73,7 @@ export const AdminHub = memo(function AdminHub() {
   const data = useAdminPanelData(granted);
   const insights = useAdminInsights(vm.census, vm.loadedAt);
   const health = useAdminHealth(granted);
+  const accounts = useAdminAccounts(granted, record);
   useEffect(() => {
     if (granted) void loadLog();
   }, [granted, loadLog]);
@@ -138,8 +141,8 @@ export const AdminHub = memo(function AdminHub() {
   }, [vm.access]);
 
   const context = useMemo<AdminPanelContextValue>(
-    () => ({ vm, data, insights, health, log, notify, confirm: setPending, copyUid, runShareAction, openSearch }),
-    [vm, data, insights, health, log, notify, copyUid, runShareAction, openSearch],
+    () => ({ vm, data, insights, health, accounts, log, notify, confirm: setPending, copyUid, runShareAction, openSearch }),
+    [vm, data, insights, health, accounts, log, notify, copyUid, runShareAction, openSearch],
   );
 
   const counts = useMemo<Partial<Record<AdminScreen, { value: number; soft?: boolean }>>>(
@@ -147,8 +150,10 @@ export const AdminHub = memo(function AdminHub() {
       // La portada se marca en rojo con lo grave y lo vencido: es lo que pide entrar hoy.
       today: { value: (insights.totals?.severe || 0) + insights.dueTodos },
       users: { value: vm.census?.totals.flagged || 0, soft: true },
+      // Rojo con las caducadas (hay que borrarlas), gris con las que caducan pronto (solo avisar).
+      accounts: accounts.expired.length > 0 ? { value: accounts.expired.length } : { value: accounts.expiring.length, soft: true },
     }),
-    [vm.census, insights.totals, insights.dueTodos],
+    [vm.census, insights.totals, insights.dueTodos, accounts.expired.length, accounts.expiring.length],
   );
 
   if (vm.access === 'checking') {
@@ -176,6 +181,7 @@ export const AdminHub = memo(function AdminHub() {
               <Route index element={<AdminTodayScreen />} />
               <Route path="usuarios" element={<AdminUsersScreen />} />
               <Route path="usuarios/:userId" element={<AdminUsersScreen />} />
+              <Route path="cuentas" element={<AdminAccountsScreen />} />
               <Route path="comunidad" element={<AdminCommunityScreen />} />
               <Route path="capacidad" element={<AdminCapacityScreen />} />
               <Route path="registro" element={<AdminLogScreen />} />

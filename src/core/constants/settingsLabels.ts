@@ -45,7 +45,7 @@ export const SETTINGS_UI = {
   danger: {
     title: 'Zona de riesgo',
     deleteTitle: 'Borrar mi cuenta',
-    deleteBody: 'Elimina tu perfil social, tus amistades y la configuración guardada en la nube, y borra los datos de este dispositivo (listas locales, sesión y token). No se puede deshacer.',
+    deleteBody: 'Elimina tu perfil social, tus amistades, la configuración guardada en la nube, tus enlaces públicos, tu participación en los premios y tu cuenta de Google en el inicio de sesión, y borra los datos de este dispositivo (listas locales, sesión y token). No se puede deshacer.',
     deleteGistsNote: 'Tus gists de GitHub no se tocan al borrar la cuenta: viven en tu cuenta y solo tú puedes borrarlos. (La única excepción, ajena a este borrado, es la retirada del canal social antiguo que la app migró a no listado.)',
     deleteGistsLink: 'Ver mis Gists',
     deleteGistsUrl: 'https://gist.github.com',

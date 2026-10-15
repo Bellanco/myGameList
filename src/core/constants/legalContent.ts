@@ -116,7 +116,8 @@ const PRIVACY: LegalDocument = {
   // Fecha PROPIA del documento y no `LEGAL_VERSION`: ver la nota de `TERMS`. Qué cambios han reabierto la aceptación
   // y cuáles no, con su porqué, está junto a `LEGAL_VERSION` en `legal.ts`.
   // 2026-10-12: lenguaje claro (ver la cabecera), sin cambio de contenido; y los «me gusta» (`legal.ts`).
-  updated: '2026-10-12',
+  // 2026-10-15: plazos de conservación de las cuentas sin uso y el correo en el panel (ver `legal.ts`).
+  updated: '2026-10-15',
   intro:
     'Aquí te contamos qué datos tuyos usa myGameList, para qué, quién los ve y qué puedes hacer con ellos, según el Reglamento General de Protección de Datos (RGPD) y la ley española (LOPDGDD).',
   sections: [
@@ -134,7 +135,7 @@ const PRIVACY: LegalDocument = {
         'En Google (Firebase), si activas el espacio social: tu identificador de usuario; tu nombre de perfil (o el de tu cuenta de Google, si no eliges otro); tu foto de Google, salvo que la quites; tus amistades; una categoría de perfil de uso interno que asigna el administrador; la fecha de alta; cuándo usaste la app por última vez; tus preferencias, y tus logros con su fecha.',
         'En Google (Firebase), en una parte que solo puedes leer tú: los identificadores de tus gists y tu token de GitHub cifrado.',
         'En Cloudflare, si compartes una reseña o tu resumen anual con un enlace público: una copia de lo que compartes, mientras el enlace siga activo. Se borra cuando caduca, cuando lo retiras o cuando borras tu cuenta. No incluye tu correo ni tus identificadores.',
-        'En Google (Firebase), si votas en los premios: tu papeleta, con tu voto en cada categoría, el nombre que eliges para la clasificación, el nombre de tu cuenta de Google, la fecha y cuántas veces la corriges. Solo la podéis ver tú y el administrador. Al publicarse la edición, la papeleta se retira y se guarda una lista de quién participó (tu identificador de usuario), que solo ve el administrador y se borra cuando empieza la edición siguiente.',
+        'En Google (Firebase), si votas en los premios: tu papeleta, con tu voto en cada categoría, el nombre que eliges para la clasificación, el nombre de tu cuenta de Google, la fecha y cuántas veces la corriges. Solo la podéis ver tú y el administrador. Al publicarse la edición, la papeleta se retira y se guarda una lista de quién participó (tu identificador de usuario), que solo ve el administrador y se borra cuando empieza la edición siguiente o cuando borras tu cuenta.',
         'Si votas en los premios sin tener perfil social, se crea un perfil mínimo con tu nombre, tu foto de Google y un seudónimo. No aparece en el directorio ni publica nada: solo sirve para unir tu puesto en la clasificación con tu perfil cuando lo completes.',
         'Si quedas en un puesto premiado, tu perfil recibe un trofeo (edición, premio, puesto y fecha). Lo concede el administrador y no puedes quitarlo tú.',
         'Si aceptas la analítica: datos de uso y errores en Google Analytics, con un identificador aleatorio.',
@@ -148,8 +149,8 @@ const PRIVACY: LegalDocument = {
         'Los «me gusta» que das los ven, con tu nombre de perfil, tus amigos que también pueden ver esa reseña o publicación. Si quitas un «me gusta» o dejas de ser amigo de su autor, desaparece.',
         'Quien tenga el enlace de uno de tus gists puede verlo, porque un gist secreto no es privado. Por eso esos enlaces no aparecen en tu perfil, y la app solo se los da a tus amigos.',
         'Cualquiera que tenga un enlace público que hayas creado (de una reseña o de tu resumen anual), hasta que caduque o lo retires.',
-        'En los premios, el archivo de cada edición publicada es público: muestra el nombre que elegiste para la clasificación, tus puntos y tu puesto, pero no tu correo, tu foto ni tu identificador. Quienes votaron en la misma edición ven también tus votos, con ese mismo nombre, hasta que empiece la edición siguiente o hasta que el administrador los borre. Después, de tu papeleta solo queda la clasificación.',
-        'El administrador puede consultar los perfiles, asignar su categoría y desactivar o borrar un espacio social. No puede leer tu token ni los identificadores de tus gists.',
+        'En los premios, el archivo de cada edición publicada es público: muestra el nombre que elegiste para la clasificación, tus puntos y tu puesto, pero no tu correo, tu foto ni tu identificador. Quienes votaron en la misma edición ven también tus votos, con ese mismo nombre, hasta que empiece la edición siguiente o hasta que el administrador los borre. Después, de tu papeleta solo queda la clasificación. Si borras tu cuenta, tu fila desaparece de la clasificación y de los votos.',
+        'El administrador puede consultar los perfiles y el correo de tu cuenta de Google, asignar tu categoría, desactivar o borrar un espacio social y borrar las cuentas que llevan tiempo sin usarse. No puede leer tu token ni los identificadores de tus gists.',
       ],
       paragraphs: [
         'Si ocultas una lista, tus amigos no la ven ni reciben avisos de ella. Tus logros sí cuentan todos tus juegos, también los de listas ocultas, pero solo muestran el nivel, nunca qué juegos.',
@@ -179,7 +180,8 @@ const PRIVACY: LegalDocument = {
     {
       heading: 'Cuánto tiempo',
       paragraphs: [
-        'Mientras mantengas tu cuenta. Si la borras desde la app, se eliminan tu perfil, tus amistades, tu configuración en la nube y tus enlaces públicos, y se borran los datos de ese dispositivo. Tus gists no se tocan, porque son tuyos: puedes borrarlos en GitHub.',
+        'Mientras mantengas tu cuenta. Si la borras desde la app, se elimina todo lo que guardamos de ti: tu perfil, tus amistades, tu configuración en la nube, tus enlaces públicos, tu rastro en los premios (tu papeleta, tu fila en la clasificación y en los votos de cada edición, y tu identificador en sus registros), lo que el registro de administración apuntó sobre ti y tu cuenta de Google en nuestro servicio de inicio de sesión, y se borran los datos de ese dispositivo. Tus gists no se tocan, porque son tuyos: puedes borrarlos en GitHub.',
+        'Si dejas de usar la app, borramos tu cuenta de la misma forma: a los dos meses sin abrirla con la sesión iniciada si no llegaste a crear tu espacio social, y al año si lo tienes o has votado en los premios. Tus listas siguen en tus gists y en tus dispositivos; si vuelves, puedes empezar de nuevo con la misma cuenta de Google.',
       ],
     },
     {

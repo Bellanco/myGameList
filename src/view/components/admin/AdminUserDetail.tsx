@@ -87,7 +87,8 @@ function describePhoto(user: AdminUserRow): { label: string; hint: string; kind:
  * final lo que no arregla nada y destruye algo. Se cierra con Escape, con el botón o pulsando fuera.
  */
 export const AdminUserDetail = memo(function AdminUserDetail({ user, onClose }: { user: AdminUserRow; onClose: () => void }) {
-  const { vm, data, confirm, runShareAction, copyUid } = useAdminPanel();
+  const { vm, data, confirm, runShareAction, copyUid, accounts } = useAdminPanel();
+  const email = accounts.byUid.get(user.uid)?.email || '';
   const name = displayNameOf(user);
   const target = { uid: user.uid, name: user.displayName.trim() || user.knownAs.trim() };
   const busy = vm.busyId === user.id;
@@ -443,6 +444,8 @@ export const AdminUserDetail = memo(function AdminUserDetail({ user, onClose }: 
         <section className="adm-section" aria-label={D.sections.data}>
           <h4>{D.sections.data}</h4>
           <dl className="adm-rows">
+            {/* De Firebase Auth, no del perfil (que no lo lleva: lo lee cualquiera con sesión). Sin la lectura de Auth, no sale. */}
+            {email ? <div><dt>{D.email}</dt><dd>{email}</dd></div> : null}
             <div><dt>{A.field.friends}</dt><dd>{user.friends}</dd></div>
             {user.pendingOut > 0 ? <div><dt>{A.field.pendingOut}</dt><dd>{user.pendingOut}</dd></div> : null}
             {user.pendingIn > 0 ? <div><dt>{A.field.pendingIn}</dt><dd>{user.pendingIn}</dd></div> : null}

@@ -5,6 +5,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.9] - 2026-10-15
+
+### Added
+
+- **Cuentas en el panel de administración.** La nueva pantalla Cuentas enseña todas las cuentas de Google que han
+  entrado en la app, también las que no llegaron a crear su espacio social (hasta ahora no salían en ningún sitio),
+  con su último uso y cuándo caducan. Al desplegar una fila salen su correo y su identificador, y el correo sale
+  también en la ficha de Usuarios. Hoy avisa de las caducadas y de las que caducan en menos de 30 días.
+- **Las cuentas sin uso se borran.** Sin espacio social, a los dos meses sin abrir la app con la sesión iniciada;
+  con él, o si votaste en los premios, al año. Las borra el administrador desde Cuentas, con confirmación, y se lleva
+  lo mismo que la baja. Los gists no se tocan. La política de privacidad lo dice en «Cuánto tiempo».
+
+### Fixed
+
+- **Borrar tu cuenta no deja nada.** Además de tu perfil, tus amistades, tus enlaces y tu configuración, se borran
+  tu cuenta de Google en el inicio de sesión (antes tu correo, tu nombre y tu foto se quedaban en Firebase Auth), tu
+  fila en la clasificación y en los votos de cada edición de los premios, tu identificador en sus registros y lo que
+  el registro de administración apuntó sobre ti.
+
 ### Changed
 
 - **Nueva cara al compartir y al instalar.** El icono son los dos aros de siempre, ahora entrelazados y con relieve.

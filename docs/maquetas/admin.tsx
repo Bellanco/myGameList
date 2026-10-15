@@ -30,6 +30,9 @@ import type { AdminShareRow } from '../../src/model/repository/shareAdminReposit
 import type { useAdminViewModel } from '../../src/viewmodel/useAdminViewModel';
 import type { AdminInsights } from '../../src/viewmodel/useAdminInsights';
 import type { AdminHealthState, HealthMeterView } from '../../src/viewmodel/useAdminHealth';
+import { sortAccounts, type AdminAccountsState, type AdminAccountView } from '../../src/viewmodel/useAdminAccounts';
+import type { AdminAccount } from '../../src/model/repository/adminAccountsRepository';
+import { judgeRetention, retentionFactsOf } from '../../src/core/admin/accountRetention';
 import type { AdminLogState } from '../../src/viewmodel/useAdminLog';
 import type { AdminPanelData } from '../../src/viewmodel/useAdminPanelData';
 import { AdminPanelContext, type AdminConfirmRequest, type AdminPanelContextValue, type AdminToast } from '../../src/view/components/admin/AdminPanelContext';
@@ -39,6 +42,7 @@ import { AdminUsersScreen } from '../../src/view/components/admin/AdminUsersScre
 import { AdminCommunityScreen } from '../../src/view/components/admin/AdminCommunityScreen';
 import { AdminCapacityScreen } from '../../src/view/components/admin/AdminCapacityScreen';
 import { AdminLogScreen } from '../../src/view/components/admin/AdminLogScreen';
+import { AdminAccountsScreen } from '../../src/view/components/admin/AdminAccountsScreen';
 import { AdminConfirmDialog } from '../../src/view/components/admin/AdminConfirmDialog';
 import { AdminToastView } from '../../src/view/components/admin/AdminToastView';
 import { AdminSearch } from '../../src/view/components/admin/AdminSearch';
@@ -50,6 +54,7 @@ const params = new URLSearchParams(window.location.search);
 const PANTALLAS: Record<string, string> = {
   hoy: ADMIN_PATHS.today,
   usuarios: ADMIN_PATHS.users,
+  cuentas: ADMIN_PATHS.accounts,
   comunidad: ADMIN_PATHS.community,
   capacidad: ADMIN_PATHS.capacity,
   registro: ADMIN_PATHS.log,
@@ -224,6 +229,80 @@ const MEDIDORES: HealthMeterView[] = [
 
 type Vm = ReturnType<typeof useAdminViewModel>;
 
+/**
+ * Las cuentas de Firebase Auth: las de los perfiles inventados (con su último uso) y unas pocas que solo entraron
+ * con Google, para que salgan los cuatro estados — caducada, a punto, activa y protegida.
+ */
+const CUENTAS: AdminAccount[] = (() => {
+  const conPerfil = USUARIOS.map((user): AdminAccount => ({
+    uid: user.uid,
+    email: `${user.displayName.toLowerCase().replace(/[^a-z]/g, '')}@ejemplo.com`,
+    displayName: user.displayName,
+    photoURL: '',
+    createdAt: user.createdAt,
+    authLastUsedAt: user.updatedAt,
+    profile: user.socialEnabled ? 'social' : 'suspended',
+    profileUpdatedAt: user.updatedAt,
+    hasBallot: user.uid === 'uid-5',
+    premiosParticipant: false,
+    admin: user.uid === 'uid-1',
+    disabled: false,
+  }));
+  const soloGoogle = (uid: string, displayName: string, dias: number, extra: Partial<AdminAccount> = {}): AdminAccount => ({
+    uid,
+    email: `${uid}@ejemplo.com`,
+    displayName,
+    photoURL: '',
+    createdAt: AHORA - (dias + 30) * DIA,
+    authLastUsedAt: AHORA - dias * DIA,
+    profile: null,
+    profileUpdatedAt: 0,
+    hasBallot: false,
+    premiosParticipant: false,
+    admin: false,
+    disabled: false,
+    ...extra,
+  });
+  return [
+    ...conPerfil,
+    // Un perfil que lleva más de un año parado.
+    { ...soloGoogle('uid-viejo', 'Rocío', 400), profile: 'social', profileUpdatedAt: AHORA - 400 * DIA },
+    soloGoogle('uid-g1', 'Gonzalo', 75),
+    soloGoogle('uid-g2', 'Inés', 92),
+    soloGoogle('uid-g3', 'Mateo', 45),
+    soloGoogle('uid-g4', 'Lidia', 3),
+    soloGoogle('uid-g5', 'Teo', 120, { premiosParticipant: true }),
+  ];
+})();
+
+function useFakeAccounts(notify: (toast: AdminToast) => void): AdminAccountsState {
+  const [cuentas, setCuentas] = useState(CUENTAS);
+  const census = useMemo(() => ({ fetchedAt: AHORA, accounts: cuentas, orphanProfiles: 1 }), [cuentas]);
+  const accounts = useMemo<AdminAccountView[]>(
+    () => sortAccounts(cuentas.map((account) => ({ ...account, verdict: judgeRetention(retentionFactsOf(account), AHORA) }))),
+    [cuentas],
+  );
+  const expired = accounts.filter((account) => account.verdict.state === 'expired');
+  return {
+    status: 'ok',
+    failure: '',
+    census,
+    accounts,
+    byUid: new Map(accounts.map((account) => [account.uid, account])),
+    expired,
+    expiring: accounts.filter((account) => account.verdict.state === 'expiring'),
+    loading: false,
+    purging: false,
+    refresh: async () => {},
+    purge: async (targets) => {
+      const fuera = new Set(targets.map((account) => account.uid));
+      setCuentas((list) => list.filter((account) => !fuera.has(account.uid)));
+      notify({ text: 'Borradas (maqueta).', kind: 'ok' });
+      return { deleted: targets.length, skipped: 0, failed: 0 };
+    },
+  };
+}
+
 function useFakePanel(notify: (toast: AdminToast) => void): Omit<AdminPanelContextValue, 'notify' | 'confirm' | 'openSearch'> {
   const [users, setUsers] = useState(USUARIOS);
   const [entries, setEntries] = useState(ENTRADAS);
@@ -354,7 +433,9 @@ function useFakePanel(notify: (toast: AdminToast) => void): Omit<AdminPanelConte
   const copyUid = async () => ok('Identificador copiado.');
   const runShareAction = async (action: () => Promise<string>) => ok(await action().catch(() => 'Hecho (maqueta).'));
 
-  return { vm, data, insights, health, log, copyUid, runShareAction };
+  const accounts = useFakeAccounts(notify);
+
+  return { vm, data, insights, health, accounts, log, copyUid, runShareAction };
 }
 
 // ─── El marco: el mismo que pinta `AdminHub` ─────────────────────────────────────────────────────────────────
@@ -371,6 +452,7 @@ function Panel() {
   const counts = {
     today: { value: (fake.insights.totals?.severe || 0) + fake.insights.dueTodos },
     users: { value: fake.vm.census?.totals.flagged || 0, soft: true },
+    accounts: { value: fake.accounts.expired.length },
   };
 
   return (
@@ -382,6 +464,7 @@ function Panel() {
             <Route path="/admin" element={<AdminTodayScreen />} />
             <Route path="/admin/usuarios" element={<AdminUsersScreen />} />
             <Route path="/admin/usuarios/:userId" element={<AdminUsersScreen />} />
+            <Route path="/admin/cuentas" element={<AdminAccountsScreen />} />
             <Route path="/admin/comunidad" element={<AdminCommunityScreen />} />
             <Route path="/admin/capacidad" element={<AdminCapacityScreen />} />
             <Route path="/admin/registro" element={<AdminLogScreen />} />

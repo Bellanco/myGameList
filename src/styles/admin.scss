@@ -1276,6 +1276,17 @@
   .adm-table tbody tr:hover td { background: none; }
 }
 
+/* ─── Cuentas de Firebase Auth (docs/plan-cuentas-inactivas.md) ──────────────────────────────────────── */
+/* La fila no abre nada al pulsarla entera: solo el nombre, que despliega el correo y el identificador. */
+.adm-accounts tbody tr { cursor: default; }
+.adm-accounts tbody tr:not(.is-open):hover td { background: none; }
+.adm-expiry { font-size: var(--fs-xs); white-space: nowrap; }
+.adm-expiry.is-expired { color: var(--adm-bad); font-weight: 700; }
+.adm-expiry.is-expiring { color: var(--adm-warn); font-weight: 600; }
+.adm-expiry.is-protected { color: var(--text-muted); }
+.adm-account-more td { background: var(--surface-soft); }
+.adm-account-more code { font-size: var(--fs-xs); word-break: break-all; }
+
 /* ─── Ficha lateral ────────────────────────────────────────────────────────────────────────────────────── */
 .adm-scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .35); }
 .adm-drawer {

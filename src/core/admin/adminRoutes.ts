@@ -10,6 +10,7 @@
 export const ADMIN_PATHS = {
   today: '/admin',
   users: '/admin/usuarios',
+  accounts: '/admin/cuentas',
   community: '/admin/comunidad',
   capacity: '/admin/capacidad',
   log: '/admin/registro',
@@ -27,6 +28,7 @@ export type AdminScreen = keyof typeof ADMIN_PATHS;
 export const ADMIN_MENU: ReadonlyArray<{ screen: AdminScreen; group: 1 | 2 | 3 }> = [
   { screen: 'today', group: 1 },
   { screen: 'users', group: 1 },
+  { screen: 'accounts', group: 1 },
   { screen: 'community', group: 1 },
   { screen: 'capacity', group: 1 },
   { screen: 'log', group: 1 },

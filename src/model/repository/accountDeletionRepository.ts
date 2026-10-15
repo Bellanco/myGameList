@@ -115,6 +115,28 @@ async function deleteRemoteData(uid: string, outcome: RemoteDeletionOutcome): Pr
     return;
   }
 
+  // 0) LA BAJA COMPLETA, EN EL SERVIDOR (docs/plan-cuentas-inactivas.md): se lleva todo, también lo que el cliente no
+  //    puede borrar —su uid en los registros de los premios, su fila en el archivo de cada edición, lo que apunta el
+  //    registro del panel— y la cuenta de Google de Firebase Auth. Va PRIMERO porque necesita leer el perfil (su
+  //    `profileId` es lo que encuentra sus filas en el archivo): después de los pasos de abajo ya no estaría.
+  //    Los pasos de abajo quedan para cuando el servidor no puede hacerla (sin cuenta de servicio, o en desarrollo),
+  //    y para rematar lo que pueda si la hizo a medias: borrar lo ya borrado no falla.
+  try {
+    const { deleteMyAccountOnServer } = await import('./accountAuthRepository');
+    if ((await deleteMyAccountOnServer()) === 'deleted') {
+      forgetCaches(uid);
+      return;
+    }
+    failures.push('cuenta de Google y registros de premios: el servidor no puede borrarlos ahora');
+  } catch (error) {
+    if ((error as { unavailable?: unknown })?.unavailable === true) {
+      // Sin tocar nada más: el reintento hará la baja completa en el servidor.
+      outcome.serviceDown = true;
+      return;
+    }
+    failures.push(`servidor: ${describe(error)}`);
+  }
+
   // 1) Amistades: un doc por par. Se borran todas (aceptadas y pendientes en ambos sentidos) porque el doc
   //    contiene también la identidad denormalizada del usuario que se va.
   //
@@ -207,7 +229,12 @@ async function deleteRemoteData(uid: string, outcome: RemoteDeletionOutcome): Pr
     }
   });
 
-  // 3) Cachés en memoria que aún apuntan a lo borrado.
+  // 4) Cachés en memoria que aún apuntan a lo borrado.
+  forgetCaches(uid);
+}
+
+/** Las cachés en memoria que aún apuntan a la cuenta borrada. */
+function forgetCaches(uid: string): void {
   invalidateOwnProfileCache(uid);
   invalidateMyFriendshipsCache(uid);
   invalidateSocialDirectoryCache();

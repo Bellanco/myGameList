@@ -19,6 +19,11 @@ const signOutMock = vi.fn(async () => {});
 const closeSharedDatabaseMock = vi.fn(async () => {});
 const clearSyncConfigMock = vi.fn();
 const removeAllMySharesMock = vi.fn(async () => 0);
+// La baja completa en el servidor. Por defecto, NO configurada: así los casos de abajo prueban el camino de reserva
+// del cliente, que es el que tiene la lógica. El camino normal (el servidor lo borra todo) tiene sus propios casos.
+const deleteMyAccountOnServerMock = vi.fn(async (): Promise<'deleted' | 'not-configured'> => 'not-configured');
+/** El fallo que deja anotado el camino de reserva: lo que solo el servidor puede borrar se ha quedado. */
+const SERVER_LEFT = expect.stringContaining('el servidor no puede borrarlos');
 
 vi.mock('firebase/firestore/lite', () => ({
   deleteDoc: (...args: unknown[]) => deleteDocMock(...(args as [])),
@@ -58,6 +63,10 @@ vi.mock('../../src/model/repository/shareRepository', () => ({
   removeAllMyShares: (...args: unknown[]) => removeAllMySharesMock(...(args as [])),
 }));
 
+vi.mock('../../src/model/repository/accountAuthRepository', () => ({
+  deleteMyAccountOnServer: (...args: unknown[]) => deleteMyAccountOnServerMock(...(args as [])),
+}));
+
 vi.mock('../../src/model/repository/gistConfigRepository', () => ({
   clearSyncConfig: (...args: unknown[]) => clearSyncConfigMock(...(args as [])),
 }));
@@ -73,6 +82,7 @@ beforeEach(() => {
   deletedDatabases.length = 0;
   localStorage.clear();
   removeAllMySharesMock.mockResolvedValue(0);
+  deleteMyAccountOnServerMock.mockResolvedValue('not-configured');
   getMyFriendshipsMock.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
   deleteDocMock.mockResolvedValue(undefined);
 
@@ -122,7 +132,7 @@ describe('deleteOwnAccount · borrado de amistades por pasadas', () => {
     const result = await deleteOwnAccount('uid-1');
 
     expect(deleteFriendshipMock).toHaveBeenCalledTimes(3);
-    expect(result.remoteComplete).toBe(true);
+    expect(result.failures).toEqual([SERVER_LEFT]);
   });
 
   // `deleteFriendship` trata permission-denied como éxito idempotente, así que un doc que las reglas no dejen
@@ -160,7 +170,9 @@ describe('deleteOwnAccount', () => {
 
     const result = await deleteOwnAccount('uid-1');
 
-    expect(result.remoteComplete).toBe(true);
+    // Sin el servidor, lo que solo él puede borrar (registros de premios, cuenta de Google) se queda, y se dice.
+    expect(result.remoteComplete).toBe(false);
+    expect(result.failures).toEqual([SERVER_LEFT]);
     // Los enlaces públicos se retiran ANTES de borrar el perfil: después, la Function ya no podría resolver
     // identidad ni rango, y las reseñas se quedarían publicadas hasta caducar solas.
     expect(removeAllMySharesMock).toHaveBeenCalled();
@@ -193,7 +205,7 @@ describe('deleteOwnAccount', () => {
     const result = await deleteOwnAccount('uid-1');
 
     expect(result.remoteComplete).toBe(false);
-    expect(result.failures).toEqual([expect.stringContaining('depósitos de amistad: 2')]);
+    expect(result.failures).toEqual([SERVER_LEFT, expect.stringContaining('depósitos de amistad: 2')]);
     expect(deleteDocMock).toHaveBeenCalledTimes(4);
     expect(signOutMock).toHaveBeenCalled();
   });
@@ -205,7 +217,7 @@ describe('deleteOwnAccount', () => {
     const result = await deleteOwnAccount('uid-1');
 
     expect(result.remoteComplete).toBe(false);
-    expect(result.failures).toHaveLength(1);
+    expect(result.failures).toHaveLength(2);
     expect(deleteDocMock).toHaveBeenCalledTimes(4); // los otros tres se intentan igualmente
     expect(signOutMock).toHaveBeenCalled();
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
@@ -218,7 +230,7 @@ describe('deleteOwnAccount', () => {
     const result = await deleteOwnAccount('uid-1');
 
     expect(result.remoteComplete).toBe(false);
-    expect(result.failures[0]).toContain('amistades');
+    expect(result.failures[1]).toContain('amistades');
     expect(deleteDocMock).toHaveBeenCalledTimes(4);
   });
 
@@ -253,6 +265,43 @@ describe('deleteOwnAccount', () => {
     expect(result.retryLater).toBe(true);
     expect(signOutMock).not.toHaveBeenCalled();
     expect(localStorage.getItem(STORAGE_KEY)).toBe('{}');
+  });
+
+  it('con el servidor configurado, la baja completa la hace él y el cliente no repite nada', async () => {
+    deleteMyAccountOnServerMock.mockResolvedValueOnce('deleted');
+    localStorage.setItem(STORAGE_KEY, '{}');
+
+    const result = await deleteOwnAccount('uid-1');
+
+    expect(result).toEqual({ remoteComplete: true, failures: [] });
+    expect(getMyFriendshipsMock).not.toHaveBeenCalled();
+    expect(deleteDocMock).not.toHaveBeenCalled();
+    expect(signOutMock).toHaveBeenCalled();
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('si el servidor no atiende, no toca nada más ni limpia lo local, y pide reintentar', async () => {
+    deleteMyAccountOnServerMock.mockRejectedValueOnce(Object.assign(new Error('respuesta 503'), { unavailable: true }));
+    localStorage.setItem(STORAGE_KEY, '{}');
+
+    const result = await deleteOwnAccount('uid-1');
+
+    expect(result.retryLater).toBe(true);
+    expect(getMyFriendshipsMock).not.toHaveBeenCalled();
+    expect(deleteDocMock).not.toHaveBeenCalled();
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('{}');
+  });
+
+  it('si el servidor la deja a medias, se informa y el cliente remata lo que puede', async () => {
+    deleteMyAccountOnServerMock.mockRejectedValueOnce(new Error('documentos: Google respondió 403'));
+
+    const result = await deleteOwnAccount('uid-1');
+
+    expect(result.remoteComplete).toBe(false);
+    expect(result.failures).toEqual([expect.stringContaining('servidor: documentos')]);
+    expect(deleteDocMock).toHaveBeenCalledTimes(4);
+    expect(signOutMock).toHaveBeenCalled();
   });
 
   it('sin red no empieza: ni borra nada remoto ni nada local', async () => {
