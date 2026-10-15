@@ -1,10 +1,11 @@
 # Plan: ficha de juego y precios de IsThereAnyDeal
 
-> **Estado (15-10-2026): plan aparcado, nada implementado.** Sale de la idea C2 de
-> `docs/investigacion-interaccion-social.md`, de una integración nueva con IsThereAnyDeal (ITAD) para la lista de
-> deseos y de traer a Deseados la lista de seguimiento de ITAD. Escrito leyendo `develop` tras `8bfd3b2d` y la
-> documentación de la API de ITAD (v2.11.0) ese mismo día. **Lo que falta para cerrarlo está en «Pendiente para
-> cerrar el plan», al final.** Diseño de la ficha: `docs/maquetas/ficha-juego.html` (con el servidor de desarrollo).
+> **Estado (15-10-2026): plan cerrado y aparcado, nada implementado.** Todas las decisiones de producto están tomadas
+> (tablas de decisiones de cada fase); antes de programar solo faltan los datos de «Pendiente para cerrar el plan»,
+> al final (la clave y las credenciales de ITAD, el dominio y unas mediciones). Sale de la idea C2 de
+> `docs/investigacion-interaccion-social.md`, de una integración con IsThereAnyDeal (ITAD) para la lista de deseos y
+> de traer a Deseados la lista de seguimiento de ITAD. Escrito leyendo `develop` tras `8bfd3b2d` y la documentación de
+> la API de ITAD (v2.11.0). Diseño de la ficha: `docs/maquetas/ficha-juego.html` (con el servidor de desarrollo).
 >
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
 > Las decisiones de la Fase 0 de cada parte son del usuario y van antes de escribir código.
@@ -71,16 +72,9 @@ aciertan siempre con su precio porque llegan con su id.
 | F0.5 | **La saga entra, para todos** (15-10-2026). Sale de `sharedSagaName` (ver «Qué enseña la ficha», 4): tus entregas siempre, también sin social; las de tus amistades, con social y según lo que llegue de ellas (F3 en bronce; el índice F4 desde plata) |
 | F0.7 | **Las amistades llevan a su perfil, con el juego abierto** (15-10-2026). Tocar una amistad en la ficha lleva a su perfil con ese juego abierto: sus datos y su reseña. Y en su perfil, tocar un juego de sus listas lo abre ahí, con sus datos |
 | F0.8 | **De los estilos del detalle antiguo, solo se borra lo de la fila desplegada** (15-10-2026): el filo de color de Arcade (`.detail-row.open`) y la animación de cierre de Persona (`tr.detail-row.is-leaving`). Lo de las cajas, las etiquetas y los chips (`detail-box`, `detail-label`, `.detail-content .chip` en Persona, Arcade y Cyberpunk) **se queda**: la ficha usa ese mismo marcado y así cada tema la viste igual |
+| F0.9 | **Saltar de una ficha a otra no suma pasos a «atrás»** (15-10-2026): se **reemplaza** el `?juego=`, así que «atrás» siempre vuelve a la lista |
+| F0.16 | **Nada más de la ficha depende del rango** (15-10-2026): solo el índice de bibliotecas (F4) |
 | F0.10 | **La ficha abre siempre, con o sin red.** Lo tuyo (datos, acciones, saga de tu biblioteca) sale siempre. Lo que viene de fuera (amistades, índice, precios, carátulas) es opcional: si no llega, por falta de conexión, un servicio caído o un cupo agotado, **esa sección no se pinta**, sin error ni hueco. Vale para todas las piezas de fuera. Ver «Sin conexión y servicios caídos» |
-
-**Propuestas pendientes de confirmar:**
-
-| # | Pregunta | Propuesta |
-|---|---|---|
-| P0.9 | ¿La casilla «Avisarme cuando baje» viene marcada? | **No:** como el interruptor de ITAD, apagada hasta que se marca |
-| P0.10 | ¿Cómo se sabe que un juego está en un bundle? | `/games/prices/v3` no lo trae. Comprobar en P0 si `/games/overview/v2` da los bundles activos (la documentación cita `bundled`): sería **una llamada más por refresco**, para todos los juegos a la vez. Si no, `/games/bundles/v2` va de uno en uno y no compensa: el aviso de bundle se quedaría fuera |
-| F0.16 | ¿Algo más de la ficha depende del rango? | **No:** solo el índice de bibliotecas (F4), ya decidido |
-| F0.9 | Saltar de una ficha a otra (la saga, una amistad), ¿suma pasos al historial? | **No:** se **reemplaza** el `?juego=`, así que «atrás» siempre vuelve a la lista y no recorre las fichas vistas |
 
 ## Qué enseña la ficha
 
@@ -418,12 +412,9 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 | P0.4 | **La preferencia se sincroniza entre dispositivos** (15-10-2026): campo nuevo en `FirestorePublicConfig` y en el `hasOnly` de `publicConfig` en `firestore.rules`, con su despliegue de reglas y `npm run test:rules`, como `covers` |
 | P0.5 | **Aviso de bajada: desde plata, con casilla propia y llevando a la ficha** (15-10-2026). Solo avisa de tres cosas: **un mínimo histórico nuevo, un descuento de al menos el 75 % o que el juego entre en un bundle**. La cápsula y la campana abren la ficha del juego. Bajo el interruptor «IsThereAnyDeal», una casilla «Avisarme cuando baje» que solo ven plata, oro y mithril. Sin la casilla marcada, no hay aviso ni refresco en segundo plano |
 | P0.6 | **Las tiendas, elegibles desde administración** (15-10-2026). En `/admin`, la lista de tiendas de ITAD (`/service/shops/v1`) con una casilla cada una; por defecto, todas. Se guarda en KV, como el aviso del administrador (memoria `avisos-admin-decisiones`), y `/api/precios` la pasa a ITAD como `shops=`. Una escritura de KV por cambio; leerla, una lectura por petición, de las 100.000 diarias |
+| P0.9 | **La casilla «Avisarme cuando baje» viene apagada** (15-10-2026), como el interruptor de ITAD |
+| P0.10 | **El aviso de bundle se queda** (comprobado en la especificación de ITAD, 15-10-2026). `/games/prices/v3` no trae bundles, pero `POST /games/overview/v2` devuelve los **bundles activos que contienen alguno de los juegos consultados**, y en cada uno, por tramos (`tiers[].games[]`), los juegos con su id: así se sabe cuál de tus deseos está en cuál. Cuesta **una llamada más por refresco** (hasta 200 juegos a la vez), solo para quien tiene la casilla de aviso marcada (desde plata), y pasa por la misma caché del borde |
 | P0.7 | **Precios para todos los rangos, desde bronce. El refresco depende del rango:** bronce 18 h, plata 12 h, oro 6 h y mithril 15 min. Ver «Límites por rango» |
-
-**Propuestas pendientes de confirmar:**
-
-| # | Pregunta | Propuesta |
-|---|---|---|
 
 **Preparación (la hace el usuario):** registrar la app en ITAD, guardar la clave como secreto de Pages
 (`npx wrangler pages secret put ITAD_API_KEY`) y en `.dev.vars` (con la entrada comentada en `.dev.vars.example`).
@@ -441,6 +432,8 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 - `functions/_lib/itad.ts`, puro salvo el `fetch`:
   - `buscarIds(titulos)`;
   - `leerPrecios(ids, pais)` contra `/games/prices/v3`;
+  - `leerBundles(ids, pais)` contra `/games/overview/v2`, solo si quien pide tiene el aviso activado (P0.10): de su
+    respuesta solo se usa `bundles[]`, cruzado con los ids de `tiers[].games[]`;
   - normalizar la respuesta a `{ titulo, itadId, mejor: { tienda, precio, normal, descuento, hasta, url },
     otras: [{ tienda, precio, descuento, url }] (las dos siguientes más baratas), minimos: { historico: { precio, fecha },
     anio, tresMeses }, urlFicha }` (F0.15).
@@ -790,12 +783,7 @@ fase y se borra de aquí.
 
 ### Decisiones del usuario
 
-**Ficha de juego:**
-- F0.9: que pasar de una ficha a otra no sume pasos a «atrás».
-- F0.16: que nada más de la ficha dependa del rango.
-
-**Precios:**
-- P0.9: que la casilla «Avisarme cuando baje» venga apagada.
+Ninguna: todas cerradas el 15-10-2026. Lo que queda son datos.
 
 ### Datos que hay que conseguir
 
@@ -808,7 +796,6 @@ fase y se borra de aquí.
   `type`) y si ITAD recuerda el consentimiento.
 - **Medición P0:** el porcentaje de acierto de `/lookup/id/title/v1` con los nombres reales de unas listas de deseos.
   Decide si P6 (corregir el emparejamiento) sube de prioridad.
-- **Comprobación P0 (P0.10):** si `/games/overview/v2` trae los bundles activos de cada juego.
 - **Medición P0:** si `caches.default` guarda y devuelve en las Pages Functions del dominio real. Si no, la caché de
   precios va solo en el cliente.
 - **En F3, mirando el código:** si el directorio cacheado (`peekCachedSocialDirectory`) trae la visibilidad y el
