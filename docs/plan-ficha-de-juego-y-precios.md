@@ -43,7 +43,7 @@ aciertan siempre con su precio porque llegan con su id.
 | La caché `profileCache` guarda el gist ajeno 24 h, con ETag, y se invalida si cambia `gamesGistId` | `indexedDbRepository.ts:486-551`, `foreignProfileRepository.ts:21` | El índice se construye sobre esa caché: no hace falta un almacén nuevo |
 | Solo se lee la biblioteca de una amistad (`'friends'`) y se filtra con su visibilidad | `useForeignProfileGames.ts:11-13, 133`; `core/utils/profileVisibility.ts:36` | La ficha no puede enseñar nada que el perfil de esa amistad no enseñe ya |
 | Las Functions no usan la Cache API; cachean en KV y con `Cache-Control` | `functions/cover.ts:44, 414-417` | KV tiene 1.000 escrituras al día **para toda la cuenta**: los precios no pueden escribir en KV por usuario |
-| Los usuarios sin sesión de Google no tienen ID token; `/cover` está abierto y limitado por IP | `functions/_lib/context.ts:18-52`, `cover.ts:116-138` | Decisión P0.2: precios abiertos como `/cover` o solo con sesión |
+| Los usuarios sin sesión de Google no tienen ID token; `/cover` está abierto y limitado por IP | `functions/_lib/context.ts:18-52`, `cover.ts:116-138` | Decidido (P0.2): precios solo con espacio social, con `requireUser` y el rango |
 | El cliente solo habla con su propio origen salvo GitHub y Firebase; la CSP no incluye ITAD | `public/_headers:2`, `tests/e2e/smoke.test.ts:65-91` | Todo pasa por `/api/precios`. La CSP no cambia |
 | Arranque crítico: 187,7 de 190 kB | `docs/investigacion-interaccion-social.md` (§A1) | Modal, proxy y formato de precios, todo en chunks perezosos. Al arranque solo van el helper de la clave y la lectura de `?juego=` |
 | No hay formato de moneda en `src/` | solo `APP_LOCALE = 'es-ES'` (`core/constants/locale.ts:10`) | Helper nuevo `core/utils/money.ts` |
@@ -264,12 +264,20 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 - **Uso comercial:** permitido si la app es pública.
 - **Clave:** se obtiene registrando la app en `isthereanydeal.com/apps/my/`.
 
-## Fase P0 · Decisiones y preparación (abiertas)
+## Fase P0 · Decisiones y preparación
+
+**Cerradas por el usuario (15-10-2026):**
+
+| # | Decisión |
+|---|---|
+| P0.1 | **Un solo interruptor, «IsThereAnyDeal», en Ajustes, apagado por defecto.** Enciende toda la integración: los precios (P2–P5) y el botón «Traer de IsThereAnyDeal» (P7). Apagado, no se pide nada a ITAD. Es el precedente de las carátulas, que permitió no subir `LEGAL_VERSION` con IGDB (`5c58166a`) |
+| P0.2 | **Solo con espacio social.** Sin social, el interruptor no aparece. Así el borde siempre sabe quién pide (`requireUser`) y aplica su rango; no hace falta limitar por IP |
+| P0.7 | **El refresco de precios depende del rango:** bronce 24 h, plata 12 h, oro 6 h y mithril 15 min. Ver «Límites por rango» |
+
+**Propuestas pendientes de confirmar:**
 
 | # | Pregunta | Propuesta |
 |---|---|---|
-| P0.1 | ¿Encendido por defecto o interruptor en Ajustes? | **Interruptor apagado por defecto**, como las carátulas. Es el precedente que permitió no subir `LEGAL_VERSION` con IGDB (`5c58166a`) |
-| P0.2 | ¿Quién puede usarlo? | **Cualquiera con el interruptor**, limitado por IP como `/cover`. Pedir sesión de Google dejaría fuera a quien no usa el social, que es justo quien más usa Deseados como lista de la compra |
 | P0.3 | ¿País y moneda? | **España/EUR fijo** en la primera entrega. La preferencia de región, más adelante (P8) |
 | P0.4 | ¿La preferencia se sincroniza entre dispositivos? | **No, al principio.** Sincronizarla exige ampliar `FirestorePublicConfig` y el `hasOnly` de `firestore.rules`, con despliegue de reglas. Se puede añadir después, como `covers` |
 | P0.5 | ¿Aviso de bajada de precio? | **Sí, al abrir la app:** una cápsula del carril y la campana, solo con un mínimo histórico nuevo o una bajada ≥ 50 % desde la última vez. Sin push: Pages no tiene cron (investigación §B6) |
@@ -284,7 +292,7 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
   del ~5 %, P6 sube de prioridad.
 - **Cache API en el dominio desplegado.** Comprobar que `caches.default` guarda y devuelve en las Pages Functions
   del dominio real: en `*.workers.dev` es una no-operación, y en este repo nadie la usa todavía. Si no funciona,
-  P1 cachea solo en el cliente y el tope por IP baja.
+  P1 cachea solo en el cliente y los plazos de refresco por rango pasan a ser lo único que protege la clave.
 
 ## Fase P1 · Proxy `/api/precios` · M
 
@@ -294,20 +302,25 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
   - normalizar la respuesta a `{ titulo, itadId, precio, normal, descuento, tienda, url, minimo: { precio, fecha }, urlFicha }`.
 - **Timeout** de 5 s (`AbortSignal.timeout`, como `serviceAccount.ts:28`). Un reintento con espera ante `429`/`5xx`,
   respetando `Retry-After`.
-- `functions/api/precios.ts`, `POST`:
+- `functions/api/precios.ts`, `POST`, con `requireUser` (P0.2):
+  - lee el rango del perfil, como la cuota de compartir (`functions/_lib/quota.ts`): una lectura de Firestore por
+    petición;
   - **Entrada:** `{ titulos: string[] }`, ≤ 100 (el tope de Deseados, `WISHLIST_MAX_GAMES`), cada uno ≤ `MAX_NOMBRE`.
   - **Salida:** `{ juegos: Record<titulo, Precio | null> }`.
   - Sin datos personales en la petición a ITAD: solo títulos, y salen desde el borde, así que ITAD no ve la IP de
     quien pide.
 - **Caché en el borde, sin KV** (P0, sujeto a la medición), con un valor por juego:
   - título normalizado → id de ITAD: 30 días; un `null`, 7 días (como el `MISS_TTL` de las carátulas);
-  - id → precio: 3 horas.
+  - id → precio, **con la hora a la que se pidió**. Cada petición acepta lo cacheado si es más reciente que el plazo
+    de su rango (P0.7): para bronce vale un precio de hace 20 h y para mithril no, y ese caso sí se vuelve a pedir.
 
   Dos usuarios que desean el mismo juego comparten la consulta. Cada petición del cliente cuesta como mucho
-  2 llamadas a ITAD, y solo por lo que no esté en caché.
-- **Límites:**
-  - por IP y hora, con el mismo mecanismo que `/cover` (`cover.ts:116-138, 199-242`), p. ej. 20 peticiones por hora;
-  - un tope global por minuto en memoria del aislado, muy por debajo de 1.000 cada 5 minutos.
+  2 llamadas a ITAD, y solo por lo que no esté en caché o esté más viejo que su plazo.
+- **Límites por usuario, no por IP:**
+  - el plazo de su rango: si pide antes de tiempo, el borde contesta con lo cacheado sin preguntar a ITAD;
+  - un tope de peticiones por usuario y hora, en memoria del aislado, por si un cliente se porta mal;
+  - un tope global por minuto en memoria del aislado, muy por debajo de 1.000 cada 5 minutos. No es global de
+    verdad (Cloudflare reparte entre aislados), así que lo que de verdad protege la clave son la caché y los plazos.
 
   Al pasarse, `429` con `Retry-After`, y el cliente se queda con lo que tiene.
 - **Errores:**
@@ -327,14 +340,18 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 - `model/repository/pricesRepository.ts`:
   - `fetchWishlistPrices(titulos)` contra `/api/precios`;
   - caché local en un almacén nuevo `priceCache` de IndexedDB (`DB_VERSION` 5 → 6, con un bloque en
-    `ensureStores`, `idbConnectionRepository.ts:32-83`), TTL de 6 h por juego.
+    `ensureStores`, `idbConnectionRepository.ts:32-83`), con el plazo del rango por juego (P0.7).
 
   Abrir Deseados pide solo lo caducado o lo que no tiene precio.
 - Se guarda también el último precio visto de cada juego, para detectar bajadas (P4).
-- `pricesPreference` con `createPreferenceStore`, sin `cloudField` (P0.4), y la clave en `storageKeys.ts`.
+- `itadPreference` con `createPreferenceStore`, sin `cloudField` (P0.4), y la clave en `storageKeys.ts`. Apagada por
+  defecto (P0.1).
 - `core/utils/money.ts`: `formatPrice(amount, currency)` con `Intl.NumberFormat(APP_LOCALE, { style: 'currency' })`.
-- Interruptor en Ajustes › Diseño, junto a carátulas y deseos (`AppearanceToggles.tsx:164-205`). Se oculta si la
-  lista de deseos está oculta.
+- **El interruptor «IsThereAnyDeal»** va en Ajustes › Integración (`SettingsHub`), junto a la importación de
+  Playnite: es una integración, no una opción de diseño. Debajo, cuando está encendido, sale «Traer de
+  IsThereAnyDeal» (P7.2, si el rango lo permite).
+  - Solo aparece con espacio social (P0.2).
+  - Si la lista de deseos está oculta, los precios no se piden aunque esté encendido.
 
 ## Fase P3 · Precios en Deseados · M
 
@@ -465,7 +482,7 @@ ITAD) no entra en esta fase.
   - sin configuración: `501`;
   - ITAD caído: `503`;
   - código caducado o usado: `400`, con un mensaje para volver a intentarlo.
-- Limitada por IP, como `/api/precios`. Sin KV.
+- Limitada por usuario, como `/api/precios`, y por las importaciones al día de su rango. Sin KV.
 - Gemelo de desarrollo en `vite.config.ts`, como `localGithubOAuthApi`.
 - **Tests:**
   - el token no aparece en la respuesta ni en ningún `console`;
@@ -475,7 +492,8 @@ ITAD) no entra en esta fase.
 ### P7.2 · Conectar y volver · S
 
 - Ajustes › Integración (`SettingsHub`), junto a la importación de Playnite, con el botón «Traer de IsThereAnyDeal».
-  Solo aparece con espacio social (D9) y si el rango lo permite (D8a).
+  Solo aparece con espacio social (D9), con el interruptor «IsThereAnyDeal» encendido (P0.1) y si el rango lo
+  permite (D8a).
 - El cliente:
   - genera el `verifier` de PKCE y el `state`, y los guarda en `sessionStorage` solo hasta la vuelta;
   - lleva a `oauth/authorize?scope=wait_read…`.
@@ -535,6 +553,35 @@ No se guarda ningún token y la acción es a mano, así que, con el precedente d
 
 ---
 
+## Límites por rango
+
+Ningún límite se explica en pantalla ni nombra el rango (memoria `rangos-ocultos-al-usuario`): o se nota sin decirlo,
+como un refresco más espaciado, o la opción no aparece. Van en `core/constants/tiers.ts`, como las escaleras que ya
+hay (`PROFILE_TIER_SHARE_MAX_ACTIVE`, `PROFILE_TIER_FEED_TTL_MS`).
+
+**Dónde se aplican:**
+- **En el borde, siempre:** lo que gasta algo compartido. Precios e importación gastan de la clave de ITAD, que es
+  una sola para toda la app (1.000 peticiones cada 5 min).
+- **Solo en el cliente:** lo que gasta del propio usuario. El índice de amistades gasta de su token de GitHub; si
+  alguien se lo salta, solo se perjudica a sí mismo.
+
+| Capacidad | Sin social | Bronce | Plata | Oro | Mithril | Estado |
+|---|---|---|---|---|---|---|
+| Ficha: tus datos, saga y precio | Sí (sin precio) | Sí | Sí | Sí | Sí | Propuesta |
+| Ficha: reseñas y avisos de tus amistades (F3) | — | Sí | Sí | Sí | Sí | Propuesta |
+| Ficha: índice completo de sus bibliotecas (F4), cada | — | No | 24 h | 12 h | 1 h | Propuesta. ¿Doblar también, como los precios? |
+| Interruptor «IsThereAnyDeal» | **No aparece** | Sí | Sí | Sí | Sí | **Decidido** (P0.1, P0.2) |
+| Precios: refresco cada | — | **24 h** | **12 h** | **6 h** | **15 min** | **Decidido** (P0.7) |
+| Precios: aviso de bajada al abrir (P4) | — | No | Sí | Sí | Sí | Propuesta |
+| Precios: desglose por tienda (`prices/v3`) | — | No | No | Sí | Sí | Propuesta, opcional |
+| Importar de ITAD | **No** | ¿? | Sí | Sí | Sí | **Decidido** que depende del rango (D8); cifras pendientes |
+| Importar: DLC y paquetes | — | No | No | Sí | Sí | Decidido que depende (D8b); cifras propuestas |
+| Importar: juegos por importación | — | 25 | 50 | 100 | 100 | Decidido que depende (D8c); cifras propuestas |
+| Importar: importaciones al día | — | 1 | 1 | 3 | Sin tope | Propuesta |
+
+Con mithril a 15 minutos, la caché del borde no puede tener un plazo fijo más largo: por eso guarda la hora de
+cada precio y es cada petición la que decide si le vale (P1).
+
 ## Texto legal
 
 - **Ficha:** nada nuevo. Enseña lo que el perfil de cada amistad ya enseña, con la misma visibilidad.
@@ -550,9 +597,9 @@ No se guarda ningún token y la acción es a mano, así que, con el precedente d
 
 | | Ficha | Precios |
 |---|---|---|
-| Firestore | 0 | 0 |
-| KV | 0 | 0 (salvo el contador por IP, compartido con `/cover`) |
-| Functions | 0 | 1 petición por refresco de Deseados (como mucho cada 6 h por usuario) |
+| Firestore | 0 | 1 lectura por petición (el rango). Como mucho, una al día por usuario de bronce; mithril, hasta 96 |
+| KV | 0 | 0 |
+| Functions | 0 | 1 petición por refresco de Deseados, según el plazo del rango |
 | GitHub | ≤ 1 lectura por amistad y día (casi siempre 304) | 0 |
 | ITAD | — | ≤ 2 llamadas por petición, solo por lo no cacheado |
 | Arranque crítico | `gameSheetPath` + `?juego=` (a medir), menos el detalle que sale de `GameTable` | 0 |
@@ -614,8 +661,8 @@ fase y se borra de aquí.
 - Si algo de la ficha depende también del rango (hoy no se ha planteado).
 
 **Precios:**
-- P0.1: interruptor apagado por defecto, o encendido.
-- P0.2: abierto a todos con límite por IP, o solo con sesión. Y si **depende del rango**, como la importación.
+- Las cifras que siguen como propuesta en «Límites por rango»: el índice F4 (¿se dobla también?), el aviso de
+  bajada, el desglose por tienda, si bronce puede importar de ITAD, y los topes de importación.
 - P0.3: España/EUR fijo, o elegible.
 - P0.4: preferencia solo local, o sincronizada (esta pide desplegar reglas de Firestore).
 - P0.5: aviso de bajada en la app, y su umbral (propuesta: mínimo histórico nuevo o ≥ 50 %).
@@ -647,5 +694,5 @@ fase y se borra de aquí.
 - **En F3, mirando el código:** si el directorio cacheado (`peekCachedSocialDirectory`) trae la visibilidad y el
   estado de amistad de cada perfil. Si no, la ficha solo enseña lo del canal social.
 - **Medir el arranque crítico** con la ruta y `gameSheetPath` añadidas (hoy, 187,7 de 190 kB).
-- **Límites por IP de `/api/precios` y `/api/itad/token`:** fijar las cifras con la medición de `/cover` delante.
+- **El tope por usuario y hora de `/api/precios` y `/api/itad/token`** (el de respaldo, en memoria del aislado).
 
