@@ -60,26 +60,46 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
 .gs-panel { position: relative; }
 .gs-close { position: absolute; top: .5rem; right: .5rem; z-index: 2; }
 
-// ─── El reparto: una columna en el móvil, dos con ancho ──────────────────────────────────────────────────────
-.gs-layout { display: flex; flex-direction: column; }
-.gs-main, .gs-side { display: contents; }
-.gs-head { order: 1; }
-.gs-main > .gs-price { order: 2; margin-top: .9rem; }
-.gs-sec-datos { order: 3; }
-.gs-sec-amigos { order: 4; }
-.gs-sec-saga { order: 5; }
+// ─── El reparto: la cabecera a todo el ancho y, debajo, el cuerpo ────────────────────────────────────────────
+// El cuerpo (tus datos, tus amistades, lo quieren y la saga) va en columnas CSS: con ancho, dos, y el navegador las
+// EQUILIBRA solo, así que no queda una llena y otra vacía como con un reparto fijo («lo tuyo / lo de tus amistades»).
+// Ninguna sección se parte entre dos columnas.
+.gs-cuerpo { margin-top: .9rem; }
+// El margen va abajo y no arriba: en columnas, el de arriba se pierde al saltar de columna y las dos no empezarían
+// a la misma altura.
+.gs-cuerpo > * { break-inside: avoid; margin-top: 0; margin-bottom: .9rem; }
+// Ninguna sección se parte, tampoco la de amistades: partida, la segunda columna empezaba con una persona suelta y
+// sin título. Si así no cabe, el panel se ensancha (lo mide `FichaModal`).
 
 // ─── Cabecera: carátula, nombre, tu lista y las cifras de tus amistades ───────────────────────────────────────
+// Móvil: junto a la carátula, solo el título y tu lista; chips, cifras y precio, debajo a todo el ancho.
 .gs-head {
   display: grid;
   grid-template-columns: 6.5rem minmax(0, 1fr);
-  gap: 1rem;
+  gap: .7rem 1rem;
   align-items: start;
 }
 
+.gs-head > .gs-cover { grid-column: 1; grid-row: 1; }
+.gs-head > .gs-head-text { grid-column: 2; grid-row: 1; }
+.gs-head > .gs-head-numbers { grid-column: 1 / -1; }
+
+.gs-resumen { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
+
 .gs-cover { border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--e2); }
+
+// El precio es parte de la cabecera: en el móvil y en el panel estrecho, a todo el ancho bajo la carátula y el texto;
+// con ancho, en su propia columna a la derecha (ver la container query de 46 rem), para no apretar el texto.
+.gs-head-lado { grid-column: 1 / -1; min-width: 0; }
+// La saga como lado de la cabecera solo existe con ancho; en estrecho va al final del cuerpo.
+.gs-sec-saga.is-cabecera { display: none; }
+.gs-head-lado:has(> .gs-sec-saga.is-cabecera) { display: none; }
+
+.gs-linea { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; }
+.gs-desde { font-size: var(--fs-xs); color: var(--text-muted); }
+
 // Sitio para la X, que va encima.
-.gs-head-text { display: flex; flex-direction: column; gap: .45rem; min-width: 0; padding-right: 2.4rem; }
+.gs-head-text { display: flex; flex-direction: column; gap: .4rem; min-width: 0; padding-right: 2.4rem; }
 
 .gs-title {
   margin: 0;
@@ -129,17 +149,21 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
 }
 
 // ─── Precio (IsThereAnyDeal) ─────────────────────────────────────────────────────────────────────────────────
+// Repartido en diagonal: lo que más pesa arriba a la izquierda (precio) y el sello arriba a la derecha; abajo, el
+// botón a la izquierda y el crédito a la derecha. Entre medias, los tres mínimos en fila y las otras tiendas.
 .gs-price {
-  display: grid;
-  gap: .4rem;
-  padding: .75rem .9rem;
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  padding: .85rem 1rem;
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--success) 9%, var(--surface));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 35%, transparent);
 }
 
+.gs-price-arriba { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .3rem .8rem; }
 .gs-price-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .6rem; }
-.gs-price-now { font-size: var(--fs-2xl); font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.gs-price-now { font-size: var(--fs-2xl); font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1; }
 .gs-price-regular { font-size: var(--fs-sm); color: var(--text-muted); text-decoration: line-through; }
 
 .gs-price-cut {
@@ -151,19 +175,61 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
   background: var(--success);
 }
 
+// El sello, arriba a la derecha.
 .gs-price-low {
-  font-size: var(--fs-xs);
+  padding: .15rem .5rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .05em;
   color: color-mix(in srgb, var(--success) 75%, var(--text));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 50%, transparent);
+  white-space: nowrap;
 }
 
-.gs-price-meta { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); }
-.gs-price-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
+.gs-price-donde { margin: 0; font-size: var(--fs-sm); color: var(--text); }
+.gs-price-donde span { color: var(--text-muted); }
+
+// Los tres mínimos, en tres columnas iguales, entre dos filetes.
+.gs-price-minimos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .5rem;
+  margin: 0;
+  padding: .5rem 0;
+  border-block: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
+
+  div { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+  dt { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+  dd { margin: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+  dd small { display: block; font-size: var(--fs-2xs); font-weight: 400; color: var(--text-muted); }
+}
+
+// Las otras tiendas, en renglones con el precio a la derecha.
+.gs-price-otras {
+  display: grid;
+  gap: .2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+
+  li { display: flex; justify-content: space-between; gap: .8rem; color: var(--text-muted); }
+}
+
+.gs-price-otras-precio { color: var(--text); font-variant-numeric: tabular-nums; }
+.gs-price-otras-precio small { color: color-mix(in srgb, var(--success) 75%, var(--text)); }
+
+// Abajo: el botón a la izquierda y el crédito a la derecha, aunque el recuadro se estire.
+.gs-price-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; margin-top: auto; padding-top: .15rem; }
 .gs-price-credit { font-size: var(--fs-2xs); color: var(--text-muted); }
 
+// ─── Tus datos ───────────────────────────────────────────────────────────────────────────────────────────────
 .gs-detail.detail-content { padding: 0; gap: .8rem 1rem; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); }
+
+// Plataformas y géneros: un renglón a todo el ancho cada uno, sin etiqueta (se dan por supuestos), chips seguidos.
+.gs-detail .detail-box.gs-fila { grid-column: 1 / -1; }
 
 .gs-review-box { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; margin-top: .2rem; }
 
@@ -303,22 +369,30 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
 }
 
 // En el panel estrecho (unos 34 rem de contenido), la carátula algo mayor que en el móvil.
+// Con sitio, todo vuelve junto a la carátula: título, chips y cifras en su columna; el precio, debajo a todo el ancho.
 @container (min-width: 32rem) {
-  .gs-head { grid-template-columns: 8rem minmax(0, 1fr); gap: 1.2rem; }
+  .gs-head { grid-template-columns: 8rem minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 1rem 1.3rem; }
+  .gs-head > .gs-cover { grid-row: 1 / span 2; }
+  .gs-head > .gs-head-numbers { grid-column: 2; align-self: start; margin-top: .5rem; }
+  .gs-head > .gs-head-lado { margin-top: .45rem; }
 }
 
 // ─── Con ancho ───────────────────────────────────────────────────────────────────────────────────────────────
-// Desde 46 rem de panel, dos columnas: a la izquierda lo tuyo (carátula, nombre, precio si es un deseo y tus datos) y
-// a la derecha lo de tus amistades (amistades y saga). Así cabe entero sin bajar en una pantalla de portátil.
+// Desde 46 rem de panel: la cabecera en tres columnas (carátula, información y, si es un deseo, el precio) y el
+// cuerpo en dos columnas equilibradas.
 @container (min-width: 46rem) {
-  // La izquierda algo más ancha: es la que más pesa (tus datos y la reseña), y así sus cajas caben de tres en tres.
-  .gs-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 0 1.8rem; align-items: start; }
-  .gs-main, .gs-side { display: flex; flex-direction: column; min-width: 0; }
-  .gs-head { grid-template-columns: 9.5rem minmax(0, 1fr); gap: 1.3rem; }
+  .gs-head { grid-template-columns: 10rem minmax(0, 1fr); gap: 1rem 1.6rem; padding-right: 2.6rem; }
+  // Información y lado (precio o saga) se reparten a partes iguales lo que deja la carátula: con más ancho, el precio
+  // es más bajo (los mínimos en una línea, los botones en una fila) y no alarga la cabecera.
+  .gs-head:has(> .gs-head-lado) { grid-template-columns: 10rem minmax(14rem, 1fr) minmax(16rem, 1fr); }
+  // El lado ocupa toda la altura de la cabecera, y el recuadro del precio con él.
+  .gs-head > .gs-head-lado { grid-column: 3; grid-row: 1 / span 2; align-self: stretch; margin-top: 0; display: flex; flex-direction: column; }
+  .gs-head-lado > .gs-price { flex: 1 1 auto; }
+  .gs-head-lado:has(> .gs-sec-saga.is-cabecera) { display: block; }
+  .gs-sec-saga.is-cabecera { display: block; margin: 0; padding-top: 0; border-top: 0; }
+  .gs-sec-saga.is-solo-estrecho { display: none; }
   .gs-head-text { padding-right: 0; }
   .gs-title { font-size: var(--fs-2xl); }
-  // La columna de la derecha empieza por debajo de la X.
-  .gs-side { padding-top: 2.2rem; }
-  .gs-side > .hub-detail-metadata:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .gs-cuerpo { columns: 2; column-gap: 2rem; }
   .gs-saga { grid-auto-columns: 6rem; }
 }

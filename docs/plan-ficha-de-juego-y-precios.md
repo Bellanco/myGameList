@@ -61,7 +61,9 @@ aciertan siempre con su precio porque llegan con su id.
 | F0.1 | **Por encima, no como pantalla** (modal o panel: la forma es F0.11). Se abre sobre la pantalla en la que estás y pone `?juego=<clave>` en la URL. «Atrás» lo cierra, y recargar o compartir la URL lo vuelve a abrir. Sin ruta nueva ni línea en `_redirects`. Funciona sin social: tus datos, la saga y el precio |
 | F0.6 | **Sustituye al detalle desplegado de la fila.** Tocar una fila o una caja del mosaico abre la ficha; el doble clic sigue abriendo la edición. Una sola vista por juego, se abra desde donde se abra |
 | F0.11 | **Panel lateral** (15-10-2026). Entra por la derecha, **siempre a todo el alto**, y el **ancho se mide para que el espacio en blanco sea siempre el mínimo**: el más estrecho de tres (una columna en 600 px, dos en 880 px, dos en 1.240 px) en el que todo cabe sin scroll. En el móvil, la pantalla entera. **Sin cabecera de modal:** el nombre va junto a la carátula y solo queda la X en la esquina. **Aprovechar el espacio para evitar el scroll:** dos columnas con ancho. **Los botones, fijos en una barra abajo.** Pulsar fuera cierra |
-| F0.12 | **«Tus datos» lleva todo lo que llevaba el detalle** (15-10-2026): plataformas y Steam Deck, géneros, años, horas, puntos fuertes y débiles (o motivos), nota o interés, rejugar o reintentar y el enlace a la reseña, con el mismo marcado y las mismas reglas por lista |
+| F0.12 | **La ficha lleva todo lo que llevaba el detalle** (15-10-2026): plataformas y Steam Deck, géneros, años, horas, puntos fuertes y débiles (o motivos), nota o interés, rejugar o reintentar y el análisis, con el mismo marcado y **las mismas reglas por lista**. La nota o el interés suben a la cifras de la cabecera: en completados, nota; en próximos y deseos, interés; en abandonados, solo si se puntuó (`scored`); en curso, nunca (ahí vale 0) |
+| F0.14 | **Cabecera con aire y sin títulos obvios** (15-10-2026). En la cabecera, sin chips: tu lista y desde cuándo (`enteredAt`), un resumen de una línea (la primera plataforma, el primer género y, en completados, el último año) y la fila de cifras. Las listas enteras de plataformas y géneros, como chips, en el cuerpo, en dos renglones **sin etiqueta**. Fuera los títulos «Tus datos», «Plataformas» y «Géneros»: se dan por supuestos |
+| F0.15 | **El recuadro del precio, completo y repartido en diagonal** (15-10-2026): precio, descuento y precio normal arriba a la izquierda; el sello «Mínimo histórico» arriba a la derecha; dónde y hasta cuándo; los tres mínimos (histórico con su fecha, último año y últimos 3 meses) en una fila; las dos tiendas siguientes más baratas; «Ver en *tienda*» abajo a la izquierda y el crédito de ITAD abajo a la derecha. Ocupa todo el alto de su columna |
 | F0.13 | **Las notas, en la escala de quien mira** (15-10-2026). La media de tus amistades sale como cifra («91 · 3 notas») solo con la nota 0–100; con estrellas, en estrellas («★★★★★ · 3 notas»). Las notas de cada amistad y las tuyas, con `ScoreDisplay` (aro o estrellas), como en el resto de la app |
 | F0.10 | **La ficha abre siempre, con o sin red.** Lo tuyo (datos, acciones, saga de tu biblioteca) sale siempre. Lo que viene de fuera (amistades, índice, precios, carátulas) es opcional: si no llega, por falta de conexión, un servicio caído o un cupo agotado, **esa sección no se pinta**, sin error ni hueco. Vale para todas las piezas de fuera. Ver «Sin conexión y servicios caídos» |
 
@@ -79,17 +81,18 @@ aciertan siempre con su precio porque llegan con su id.
 
 ## Qué enseña la ficha
 
-1. **Cabecera:** carátula (`GameCover`, con `refEntradaDeImagen`), nombre, y la unión de plataformas, géneros y años
-   de todas las entradas visibles.
-2. **Tus datos (F0.12):** todo lo que hoy enseña el detalle de la fila (`GameTable.tsx:1414-1505`), con su mismo
-   marcado (`detail-content`, `detail-box`, chips e insignias) y sus mismas reglas por lista:
-   - plataformas, con Steam Deck, y géneros, en todas;
+1. **Cabecera (F0.14):** carátula (`GameCover`, con `refEntradaDeImagen`), nombre, tu lista y desde cuándo, un
+   resumen de una línea (primera plataforma, primer género y último año) y las cifras: tu nota o interés, la media de
+   tus amistades y cuántas lo tienen. A la derecha, con ancho, el precio si es un deseo y si no la saga.
+2. **Tus datos (F0.12), sin título:** todo lo que hoy enseña el detalle de la fila (`GameTable.tsx:1414-1505`), con su
+   mismo marcado (`detail-content`, `detail-box`, chips e insignias) y sus mismas reglas por lista:
+   - plataformas, con Steam Deck, y géneros, en todas, en dos renglones de chips sin etiqueta;
    - años y rejugar, en completados;
    - horas, en completados y abandonados;
    - puntos fuertes, en c/v/e; débiles, en c/e; motivos, en v;
    - reintentar, en v;
-   - nota o interés (`ScoreDisplay`);
-   - la reseña, recortada a cuatro renglones, con «Ver análisis» a `statsReviewPath`.
+   - el análisis, en su propio bloque (para que las columnas lo puedan repartir), recortado a cuatro renglones, con
+     «Ver análisis» a `statsReviewPath`.
 
    Respeta las mismas columnas ocultas (`visibility`).
    **Acciones, las mismas del detalle:** los movimientos de `TAB_ACTIONS` con sus colores, «Editar», «Compartir» (con
@@ -119,80 +122,84 @@ con «Añadir a deseados».
 ## Diseño (maqueta del 15-10-2026)
 
 `docs/maquetas/ficha-juego.html` con el servidor de desarrollo (`npx vite --port 8001`).
-- **Detrás va la tabla real** (`GameTable`) con una biblioteca inventada. Tocar una fila abre la ficha.
+- **Detrás va la tabla real** (`GameTable`) con una biblioteca inventada que reproduce los extremos de una biblioteca
+  real (ver «Lo que enseñó una biblioteca real»). Tocar una fila abre la ficha.
 - **La URL hace lo que haría la app:** abrir pone `?juego=`, y «atrás», Esc, la X o pulsar fuera lo cierran.
-- **La barra de abajo a la derecha** cambia de lista (Deseados con precio, Completados), la escala de la nota
-  (estrellas o 0–100), el precio («sin servicio» lo quita), con o sin social, y el tema y el modo.
+- **La barra de abajo a la derecha** cambia de lista (Completados, Abandonados, En curso, Deseados), la escala de
+  la nota (estrellas o 0–100), el precio («sin servicio» lo quita), con o sin social, y el tema y el modo.
 - **Piezas reales:** `useNativeDialog`, `.modal`, `GameTable`, el marcado del detalle (`detail-content`,
-  `detail-box`, chips e insignias), `HubPersonRow`, `HubAvatar`, `GameCover`, `StarRating` y `ScoreDisplay`. Lo único
+  `detail-box`, chips e insignias), `HubPersonRow`, `HubAvatar`, `GameCover`, `StarRating` y `ScoreRing`. Lo único
   propio es `ficha-juego.scss`, que sería `src/styles/gameSheet.scss`.
 
 **El panel (F0.11):**
-- **Siempre a todo el alto; el ancho se mide para que el espacio en blanco sea el mínimo** (decisión del usuario,
-  15-10-2026, tras ver *Celeste* y *Outer Wilds* con media ficha vacía). Se prueba de más estrecho a más ancho y se
-  queda en el primero en el que todo cabe sin scroll:
+- **Siempre a todo el alto, y el ancho se mide para que el espacio en blanco sea el mínimo.** Se prueba de más
+  estrecho a más ancho y se queda en el primero en el que todo cabe sin scroll:
 
   | Paso | Ancho | Reparto |
   |---|---|---|
-  | 0 | 600 px | Una columna: cabecera, precio, tus datos, amistades y saga |
-  | 1 | 880 px | Dos columnas: lo tuyo y lo de tus amistades |
-  | 2 | 1.240 px | Dos columnas. Es el tope: si tampoco cabe, el cuerpo hace scroll |
+  | 0 | 600 px | Una columna |
+  | 1 | 880 px | Cabecera en tres columnas y cuerpo en dos |
+  | 2 | 1.240 px | Igual, más ancho. Es el tope: si tampoco cabe, el cuerpo hace scroll |
 
   **Los anchos dejan siempre unos 80 px de la lista a la vista** (`calc(100vw - 5rem)`), por donde se pulsa para
-  cerrar. Se cambió del 80 % de la ventana tras ver *Hollow Knight* con scroll en una ventana de 1.000 px: el 80 %
-  dejaba el panel en 800 px, ahí no cabían dos columnas y todo iba en una (1.185 px de contenido para 832 de alto).
-  Las dos columnas entran desde 46 rem de contenido, con la izquierda algo más ancha (1,3 : 1), porque es la que
-  más pesa: así las cajas de «Tus datos» caben de tres en tres.
-
-  Solo se pasa del paso 0 si hay algo que llevar a la segunda columna (amistades o saga). Con una sola amistad, o
-  solo con la saga, casi siempre cabe en una.
+  cerrar. Solo se pasa del paso 0 si el cuerpo tiene más de una sección que repartir.
 - **Cómo se mide:** después de `showModal`, sobre el cuerpo (`scrollHeight` frente a `clientHeight`).
   - Se repite cada vez que el contenido cambia de tamaño (`ResizeObserver`): la letra que llega tarde, una carátula,
     las amistades que llegan después. Ese caso **solo ensancha**, así que no puede entrar en bucle.
   - Cambiar el tamaño de la ventana vuelve a empezar por el paso 0.
   - En el móvil no se mide: siempre es la pantalla entera.
-  - El panel entra deslizándose desde fuera, así que los cambios de ancho al abrir no llegan a verse. Si las
-    amistades llegan con el panel ya abierto, se ensancha con una transición.
+  - El panel entra deslizándose desde fuera, así que los cambios de ancho al abrir no llegan a verse.
 
   El velo es ligero (40 %), para seguir viendo la lista.
 - **Móvil (≤ 600 px):** la pantalla entera, también desde la derecha. Se cierra con la X, «atrás» o Esc.
 - **Sin cabecera de modal:** el nombre va en la ficha, junto a la carátula. La X queda en la esquina, fuera del
   scroll.
-- **Botones anclados abajo, sin barra** (decisión del usuario, 15-10-2026):
-  - **Sin barra:** flotan sobre el final del cuerpo, sin fondo, sin borde y sin relleno de barra. Se gana unos 21 px
-    de alto útil (de 704 a 725 a 1280 × 800).
-  - **El cuerpo les reserva justo su alto** (`--gs-botones`, medido con un `ResizeObserver` sobre los botones), así
-    que lo último nunca queda debajo, con cualquier tema y también en el móvil, donde las dianas son de 48 px.
-  - **Al hacer scroll,** lo que pasa por detrás se desvanece con una máscara, que vale igual en todos los temas.
-  - **Qué botones:** mover según la lista, «Editar», «Compartir» con reseña y «Borrar», separado a la derecha.
-  - **En el móvil y en el panel estrecho,** solo el primero lleva texto, en una línea; los demás, icono con su nombre
-    en `aria-label`. Rotulados, en 600 px pasaban a dos filas.
-- **A la izquierda, lo tuyo:** carátula y nombre con tu lista y las cifras de tus amistades; debajo, el precio si es
-  un deseo; luego «Tus datos». El precio va aquí porque solo sale en Deseados, que es donde tus datos son pocos.
-- **A la derecha, lo de tus amistades:** «Tus amistades» (renglones de persona más prietos), «Lo quieren» y
-  «Saga».
-- **En el móvil, una columna:** cabecera, precio, tus datos, amistades y saga, en ese orden. Las columnas se
-  disuelven (`display: contents`) y el orden lo pone `order`.
+- **Botones anclados abajo, sin barra:**
+  - flotan sobre el final del cuerpo, sin fondo ni borde;
+  - el cuerpo les reserva justo su alto (`--gs-botones`, medido con un `ResizeObserver`);
+  - lo que pasa por detrás al hacer scroll se desvanece con una máscara, igual en todos los temas;
+  - mover según la lista, «Editar», «Compartir» con reseña y «Borrar», separado a la derecha;
+  - en el móvil y en el panel estrecho solo el primero lleva texto, en una línea.
 
-**Medido** con la regla de los tres pasos (lo que sobra = contenido − visible del cuerpo), sin errores de consola y
-sin desborde horizontal:
+**La cabecera (F0.14, F0.15):**
+- **Columnas:**
+  - en el móvil, junto a la carátula solo van el título, tu lista y el resumen; las cifras, debajo a todo el ancho;
+  - desde 32 rem, todo junto a la carátula;
+  - desde 46 rem, una tercera columna a la derecha: **el precio si es un deseo y, si no, la saga**, que cabe a la
+    altura de la carátula (sin eso quedaba vacía). Información y lado se reparten a partes iguales lo que deja la
+    carátula: con más ancho, el precio es más bajo y no alarga la cabecera.
+- **Sin chips:** el resumen de una línea («Steam · Metroidvania · 2024») y las cifras, con aire. Los chips arriba
+  dejaban todo demasiado junto, sobre todo con nombres de 49 caracteres.
+- **El precio, repartido en diagonal** y estirado a todo el alto de su columna (F0.15).
 
-| Caso | Ventana | Paso elegido | Sobra |
-|---|---|---|---|
-| *Hollow Knight*, cyberpunk (el caso de las capturas) | 1000 × 900 | 880 px, dos columnas | 0 |
-| *Hollow Knight* | 1100 × 800 | 880 px, dos columnas | 0 |
-| *Hollow Knight* | 1280 × 720 | 1.200 px, dos columnas | 0 |
-| *Hollow Knight* | 1280 × 800 | 880 px, dos columnas | 0 |
-| *Hollow Knight*, cyberpunk | 1512 × 857 | 880 px, dos columnas | 0 |
-| *Hollow Knight*, witcher | 1440 × 900 | 880 px, dos columnas | 0 |
-| *Silksong* (deseo, precio y seis amistades) | 1280 × 800 | 880 px, dos columnas | 0 |
-| *Hades* (dos amistades y saga) | 1512 × 857 | 880 px, dos columnas | 0 |
-| *Outer Wilds* (una amistad) | 1512 × 857 | 600 px, una columna | 0 |
-| *Celeste* (sin amistades ni saga) | 1000 × 700 | 600 px, una columna | 0 |
-| *Hollow Knight*, ventana muy baja | 1000 × 530 | 920 px, dos columnas | 256: no cabe por alto |
-| *Silksong*, nota 0–100 | 390 × 844 | pantalla entera | scroll en el móvil, con la barra fija |
+**El cuerpo:**
+- **En columnas CSS** (`columns: 2` con ancho): tus datos, el análisis, tus amistades, lo quieren y la saga (en
+  estrecho; con ancho va arriba). El navegador las equilibra solas.
+- **Ninguna sección se parte:** partida, la de amistades dejaba una persona suelta y sin título al principio de la
+  segunda columna. Si así no cabe, el panel se ensancha.
+- **El margen de cada sección va abajo y no arriba:** en columnas, el de arriba se pierde al saltar de columna y las
+  dos no empezarían a la misma altura.
 
-Se borra al implementar F2/F6.
+**Medido** con 10 juegos (los extremos de la biblioteca real incluidos) en 1000 × 900 (cyberpunk), 1280 × 800 y
+1512 × 857. Resultado: **0 px de scroll en los 30 casos**, sin desborde horizontal y sin errores de consola. En
+390 × 844 hay scroll donde hay mucho contenido, con los botones fijos. Se borra al implementar F2/F6.
+
+## Lo que enseñó una biblioteca real (`myGames.json`, 302 juegos, 15-10-2026)
+
+Analizada con un script que solo saca recuentos y longitudes; no se copió ninguna reseña.
+
+| Hallazgo | Ejemplo | Qué decidió |
+|---|---|---|
+| Las plataformas son **tiendas**: 18 distintas, hasta 3 por juego más Steam Deck | Steam, Epic, GOG, Ubisoft Connect, Sega Mega Drive | Plataformas en un renglón de chips propio. D4 (ITAD → `PC`) no encaja: ver P7 |
+| Géneros de hasta 26 caracteres, hasta 2 por juego | «Coleccionista de criaturas» | El otro renglón de chips |
+| Nombres de hasta 49 caracteres | *Like a Dragon Gaiden: The Man Who Erased His Name* | Título en dos líneas con `text-wrap: balance` y sin chips al lado |
+| Hasta 5 puntos fuertes, 3 débiles y 3 motivos; hasta 5 años | *Portal*: 2015 a 2026 | Cajas de `detail-box` que crecen hacia abajo; nada se recorta |
+| Horas de 0,3 a 900 | *Football Manager 2018* | Decimales con coma, como el detalle |
+| Reseñas de hasta 2.381 caracteres | — | El análisis, recortado a cuatro renglones |
+| En curso con nota 0 | *Persona 5 Strikers* | «Tu nota» sigue las reglas del detalle (F0.12): en curso no sale |
+| 70 abandonados puntuados (`scored`) | — | En abandonados, la nota solo si `scored` |
+| 28 juegos con `score` y sin `grade` | — | Nota de `resolveGrade` (×20) |
+| Datos guardados que el detalle de hoy no enseña | 2 abandonados con débiles que duplican sus motivos; 1 en curso con motivos | Se mantienen las mismas reglas: la ficha no enseña más que el detalle |
 
 ## Sin conexión y servicios caídos
 
@@ -380,8 +387,8 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 | Lo que se usa | Endpoint | Notas |
 |---|---|---|
 | Título → id de ITAD | `POST /lookup/id/title/v1` (array de títulos) | Devuelve el id o `null` por título |
-| Precio actual y mínimo | `POST /games/overview/v2?country=ES` (1–200 ids) | Clave de API. Devuelve el mejor precio (tienda, precio, normal, `cut`, `url`), `lowest` (el mínimo histórico, con fecha) y la URL de la ficha en ITAD |
-| Alternativa más completa | `POST /games/prices/v3?country=ES&deals=true` | Precio por tienda y `historyLow` (`all`, `y1`, `m3`). Solo si hace falta el desglose |
+| Precios y mínimos (**el que se usa**, F0.15) | `POST /games/prices/v3?country=ES` (1–200 ids) | Clave de API. Por juego: las ofertas de cada tienda (precio, normal, `cut`, `expiry`, `url`) y `historyLow` (`all`, `y1`, `m3`). Da todo lo que pinta el recuadro |
+| Resumen más ligero (descartado) | `POST /games/overview/v2?country=ES` | Solo el mejor precio y el mínimo histórico: no alcanza para «hasta cuándo», los otros mínimos ni las otras tiendas |
 | Elegir otro emparejamiento | `GET /games/search/v1?title=` | Solo para la Fase P6 |
 
 **Condiciones de uso que afectan al diseño:**
@@ -429,8 +436,10 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 
 - `functions/_lib/itad.ts`, puro salvo el `fetch`:
   - `buscarIds(titulos)`;
-  - `leerResumen(ids, pais)`;
-  - normalizar la respuesta a `{ titulo, itadId, precio, normal, descuento, tienda, url, minimo: { precio, fecha }, urlFicha }`.
+  - `leerPrecios(ids, pais)` contra `/games/prices/v3`;
+  - normalizar la respuesta a `{ titulo, itadId, mejor: { tienda, precio, normal, descuento, hasta, url },
+    otras: [{ tienda, precio, descuento, url }] (las dos siguientes más baratas), minimos: { historico: { precio, fecha },
+    anio, tresMeses }, urlFicha }` (F0.15).
 - **Timeout** de 5 s (`AbortSignal.timeout`, como `serviceAccount.ts:28`). Un reintento con espera ante `429`/`5xx`,
   respetando `Retry-After`.
 - `functions/api/precios.ts`, `POST`, con `requireUser` (P0.2):
@@ -490,8 +499,8 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
   - en escritorio, una columna «Precio» tras «Interés», con «11,99 € · −60 %» y una marca «Mínimo» si el precio
     iguala el histórico;
   - en la tarjeta de móvil, la misma línea bajo el nombre.
-- **Detalle de la fila** (`detail-box`, `:1414-1470`): tienda, precio normal, descuento, mínimo histórico con su
-  fecha, «Ver en *tienda*» (la `url` de ITAD, `rel="noopener"`, sin tocar) y «Ver en IsThereAnyDeal».
+- **En la ficha** (que sustituye al detalle de la fila, F0.6), el recuadro completo de F0.15. Las `url` de ITAD, tal
+  cual y con `rel="noopener"`.
 - **Emparejamiento visible:** si el título de ITAD no coincide con el tuyo (comparado con `gameTitleKey`), se muestra
   «Precio de: *título de ITAD*», para que un emparejamiento equivocado se vea.
 - **Sin precio:** sin red, sin emparejamiento o con el `429`, la celda se queda vacía. No sale «—» ni un error
@@ -585,7 +594,7 @@ ITAD) no entra en esta fase.
 | # | Pregunta | Propuesta |
 |---|---|---|
 | D2 | ¿Cómo se evita llenar el feed? | **El sello `enteredAt.d` toma la fecha `added` de ITAD.** Lo apuntado allí hace más de 30 días queda fuera de la ventana del feed y no se anuncia; lo reciente sí, porque es verdad. Sin `added`, la fecha de hoy menos 31 días. `_ts` (el reloj del CRDT) sí es el de ahora |
-| D4 | ¿Qué plataforma se pone? | **`PC`.** ITAD sigue tiendas de PC y la plataforma desempata la carátula. Se puede cambiar en la bandeja |
+| D4 | ¿Qué plataforma se pone? | **Revisado con una biblioteca real:** las plataformas se usan como **tiendas** (Steam, Epic, GOG…), no «PC». Propuesta: la tienda del mejor precio en ITAD si se conoce y, si no, vacía para elegirla en la bandeja. Pendiente de decidir |
 | D5 | ¿En qué orden se llena el tope? | **Por `added`, del más reciente al más antiguo.** Lo que no quepa en Deseados (100) tampoco se marca |
 | D6 | ¿Volver a importar? | **A mano, con el mismo botón.** Es idempotente. Lo borrado en ITAD **no** se borra aquí |
 | D7 | ¿Se guarda el id de ITAD para los precios? | **Sí, en local** (`gameTitleKey → UUID` en la caché de precios). No va al gist |
@@ -704,7 +713,7 @@ hay (`PROFILE_TIER_SHARE_MAX_ACTIVE`, `PROFILE_TIER_FEED_TTL_MS`).
 | Interruptor «IsThereAnyDeal» | **No aparece** | Sí | Sí | Sí | Sí | **Decidido** (P0.1, P0.2) |
 | Precios: refresco cada | — | **18 h** | **12 h** | **6 h** | **15 min** | **Decidido** (P0.7) |
 | Precios: aviso de bajada al abrir (P4) | — | No | Sí | Sí | Sí | Propuesta |
-| Precios: desglose por tienda (`prices/v3`) | — | No | No | Sí | Sí | Propuesta, opcional |
+| Precios: otras tiendas y mínimos de 1 año y 3 meses en el recuadro | — | Sí | Sí | Sí | Sí | La maqueta lo enseña a todos (F0.15). Pendiente: ¿o solo desde oro? |
 | Importar de ITAD | **No** | ¿? | Sí | Sí | Sí | **Decidido** que depende del rango (D8); cifras pendientes |
 | Importar: DLC y paquetes | — | No | No | Sí | Sí | Decidido que depende (D8b); cifras propuestas |
 | Importar: juegos por importación | — | 25 | 50 | 100 | 100 | Decidido que depende (D8c); cifras propuestas |
@@ -785,6 +794,7 @@ fase y se borra de aquí.
 - F0.7: qué abre una fila en el perfil de una amistad (propuesta: la ficha con su bloque arriba).
 - F0.8: borrar los estilos del detalle de los skins de Persona, Arcade y Cyberpunk.
 - F0.9: que pasar de una ficha a otra no sume pasos a «atrás».
+- Si las otras tiendas y los mínimos de 1 año y 3 meses del recuadro de precio son para todos o solo desde oro.
 - F0.2: si se enseña la media de notas de las amistades, y con qué mínimo (propuesta: 3).
 - F0.3: si el buscador ⌘K abre la ficha en vez de llevar a la lista.
 - F0.4: si sale la sección «Lo quieren» (los Deseados de tus amistades).

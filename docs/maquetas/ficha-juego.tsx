@@ -43,7 +43,9 @@ import type { GameItem, TabId } from '../../src/model/types/game';
 loadPaletteSkin(parsePaletteId(document.documentElement.dataset.palette));
 
 const params = new URLSearchParams(window.location.search);
-const lista: 'c' | 'd' = params.get('lista') === 'c' ? 'c' : 'd';
+type Lista = 'c' | 'v' | 'e' | 'd';
+const LISTAS: readonly Lista[] = ['c', 'v', 'e', 'd'];
+const lista: Lista = (LISTAS as readonly string[]).includes(params.get('lista') || '') ? (params.get('lista') as Lista) : 'd';
 const conSocial = params.get('social') !== '0';
 // `?precio=0`: el servicio de precios no responde (sin red, ITAD caído o sin cupo). El bloque no se pinta.
 const conPrecio = params.get('precio') !== '0';
@@ -64,7 +66,21 @@ function juego(id: number, name: string, extra: Partial<GameItem> = {}): GameIte
   return { id, _ts: AHORA, name, platforms: ['PC'], genres: [], steamDeck: false, review: '', ...extra };
 }
 
-const BIBLIOTECA: Record<'c' | 'd', GameItem[]> = {
+// Reseña larga para los casos extremos (las reales llegan a 2.381 caracteres). Inventada: la maqueta va al repo.
+const RESENA_LARGA = Array.from({ length: 14 }, (_, i) =>
+  [
+    'Empieza despacio y engancha a la tercera hora, cuando el sistema de combate termina de enseñar sus cartas.',
+    'La historia no es lo mejor, pero los personajes secundarios sostienen los tramos más flojos.',
+    'Hay picos de dificultad que obligan a repetir demasiado, y ahí es donde más se nota la falta de puntos de control.',
+    'El apartado artístico aguanta muy bien el paso del tiempo.',
+  ][i % 4],
+).join(' ');
+
+// LOS CASOS EXTREMOS DE UNA BIBLIOTECA REAL (los 302 juegos de `myGames.json`, 15-10-2026): plataformas que son
+// tiendas (hasta 3, más Steam Deck), géneros de hasta 26 caracteres, nombres de hasta 49, 5 puntos fuertes, 3 débiles,
+// 5 años, 900 horas, abandonados con motivos y nota (`scored`), en curso sin nota. Los nombres son los de los juegos;
+// lo demás, inventado.
+const BIBLIOTECA: Record<Lista, GameItem[]> = {
   c: [
     juego(1, 'Hollow Knight', {
       platforms: ['PC', 'Switch'],
@@ -75,6 +91,7 @@ const BIBLIOTECA: Record<'c' | 'd', GameItem[]> = {
       years: [2024, 2018],
       replayable: true,
       steamDeck: true,
+      enteredAt: { c: new Date(2024, 0, 20).getTime() },
       strengths: ['Exploración', 'Banda sonora', 'Jefes'],
       weaknesses: ['Mapa de pago'],
       review:
@@ -84,15 +101,50 @@ const BIBLIOTECA: Record<'c' | 'd', GameItem[]> = {
     juego(3, 'Celeste', { genres: ['Plataformas'], grade: 90, score: 5, hours: 14, years: [2019], strengths: ['Control'], review: 'Precisión pura con un corazón enorme. La cara B de cada capítulo es otro juego.' }),
     juego(4, 'Outer Wilds', { genres: ['Aventura', 'Exploración'], grade: 97, score: 5, hours: 22, years: [2022], review: 'El mejor juego que no se puede volver a jugar. Todo está ahí desde el principio; lo que cambia eres tú.' }),
     juego(5, 'Dark Souls 3', { genres: ['Acción', 'RPG'], grade: 85, score: 4, hours: 60, years: [2020], strengths: ['Jefes', 'Ambientación'], weaknesses: ['Lineal'], review: 'Más lineal que el primero, pero con los mejores jefes de la saga.' }),
+    juego(6, 'Portal', {
+      platforms: ['Steam', 'GOG', 'Epic'],
+      steamDeck: true,
+      genres: ['Puzles', 'Coleccionista de criaturas'],
+      grade: 94,
+      score: 5,
+      hours: 12.5,
+      years: [2015, 2017, 2023, 2025, 2026],
+      replayable: true,
+      strengths: ['Jugabilidad', 'Historia', 'Ambientación', 'Diseño artístico', 'Protagonista'],
+      weaknesses: ['Duración', 'Curva de dificultad', 'Movimiento del personaje'],
+      review: RESENA_LARGA,
+      enteredAt: { c: new Date(2015, 5, 2).getTime() },
+    }),
+    juego(7, 'Football Manager 2018', { platforms: ['Steam'], genres: ['Simulador de gestión'], score: 4, hours: 900, years: [2018], strengths: ['Jugabilidad'], weaknesses: ['Repetitividad'] }),
+  ],
+  v: [
+    juego(21, 'Brütal Legend', {
+      platforms: ['Steam', 'Amazon', 'itch.io'],
+      steamDeck: true,
+      genres: ['Tower Defense', 'Hack & Slash'],
+      strengths: ['Ambientación', 'Banda Sonora'],
+      reasons: ['Repetitividad', 'Jugabilidad', 'Minijuegos'],
+      scored: true,
+      grade: 29,
+      score: 1,
+      hours: 9.3,
+      retry: true,
+      review: RESENA_LARGA.slice(0, 1100),
+    }),
+    juego(22, 'Warhammer 40,000: Boltgun - Words of Vengeance', { platforms: ['Steam'], genres: ['FPS'], reasons: ['Frustración'], hours: 0.3, retry: false }),
+  ],
+  e: [
+    juego(31, 'Persona 5 Strikers', { platforms: ['Steam'], genres: ['Musou'], strengths: ['Personajes', 'Diseño artístico', 'Música'], weaknesses: ['Cámara', 'Repetitividad', 'Frustración'], score: 0 }),
   ],
   d: [
-    juego(11, 'Hollow Knight: Silksong', { platforms: ['PC', 'Switch', 'PS5'], genres: ['Metroidvania', 'Plataformas'], grade: 80, score: 4 }),
+    juego(11, 'Hollow Knight: Silksong', { platforms: ['PC', 'Switch', 'PS5'], genres: ['Metroidvania', 'Plataformas'], grade: 80, score: 4, enteredAt: { d: new Date(2026, 2, 10).getTime() } }),
     juego(12, 'Hades 2', { genres: ['Roguelike', 'Acción'], grade: 75, score: 4 }),
     juego(13, "Baldur's Gate 3", { genres: ['RPG'], grade: 70, score: 4 }),
+    juego(14, 'Like a Dragon Gaiden: The Man Who Erased His Name', { platforms: ['Steam', 'Ubisoft Connect', 'Sega Mega Drive'], steamDeck: true, genres: ['Hack & Slash', 'Estrategia en tiempo real'], grade: 17, score: 1, enteredAt: { d: new Date(2025, 10, 3).getTime() } }),
   ],
 };
-const TODOS = [...BIBLIOTECA.c, ...BIBLIOTECA.d];
-const listaDe = (id: number): 'c' | 'd' => (BIBLIOTECA.c.some((g) => g.id === id) ? 'c' : 'd');
+const TODOS = LISTAS.flatMap((t) => BIBLIOTECA[t]);
+const listaDe = (id: number): Lista => LISTAS.find((t) => BIBLIOTECA[t].some((g) => g.id === id)) ?? 'd';
 const clave = (name: string) => gameTitleKey(name).replace(/ /g, '-');
 
 // ─── Lo que llega de fuera: amistades y precios ──────────────────────────────────────────────────────────────
@@ -104,13 +156,19 @@ interface Amistad {
   adelanto?: string;
 }
 
+// Lo que da `/games/prices/v3` de ITAD: las ofertas por tienda (precio, normal, descuento y hasta cuándo) y los
+// mínimos (de siempre, del último año y de los últimos 3 meses).
 interface Precio {
   ahora: number;
   normal: number;
   descuento: number;
   tienda: string;
+  hasta?: string;
   minimo: number;
   minimoCuando: string;
+  minimoAnio?: number;
+  minimo3m?: number;
+  otras: Array<{ tienda: string; precio: number; descuento: number }>;
 }
 
 const AMISTADES: Record<string, Amistad[]> = {
@@ -137,29 +195,87 @@ const AMISTADES: Record<string, Amistad[]> = {
 };
 
 const PRECIOS: Record<string, Precio> = {
-  'Hollow Knight: Silksong': { ahora: 15.99, normal: 19.99, descuento: 20, tienda: 'GOG', minimo: 15.99, minimoCuando: 'jun. 2026' },
-  'Hades 2': { ahora: 22.49, normal: 29.99, descuento: 25, tienda: 'Steam', minimo: 19.49, minimoCuando: 'ago. 2026' },
-  "Baldur's Gate 3": { ahora: 59.99, normal: 59.99, descuento: 0, tienda: 'Steam', minimo: 41.99, minimoCuando: 'nov. 2025' },
+  'Hollow Knight: Silksong': {
+    ahora: 15.99, normal: 19.99, descuento: 20, tienda: 'GOG', hasta: '22 de octubre',
+    minimo: 15.99, minimoCuando: 'jun. 2026', minimoAnio: 15.99, minimo3m: 15.99,
+    otras: [{ tienda: 'Steam', precio: 17.99, descuento: 10 }, { tienda: 'Epic', precio: 19.99, descuento: 0 }],
+  },
+  'Hades 2': {
+    ahora: 22.49, normal: 29.99, descuento: 25, tienda: 'Steam', hasta: '30 de octubre',
+    minimo: 19.49, minimoCuando: 'ago. 2026', minimoAnio: 19.49, minimo3m: 19.49,
+    otras: [{ tienda: 'GOG', precio: 23.99, descuento: 20 }, { tienda: 'Epic', precio: 29.99, descuento: 0 }],
+  },
+  "Baldur's Gate 3": {
+    ahora: 59.99, normal: 59.99, descuento: 0, tienda: 'Steam',
+    minimo: 41.99, minimoCuando: 'nov. 2025', minimoAnio: 47.99, minimo3m: 53.99,
+    otras: [{ tienda: 'GOG', precio: 59.99, descuento: 0 }],
+  },
+  'Like a Dragon Gaiden: The Man Who Erased His Name': {
+    ahora: 12.49, normal: 49.99, descuento: 75, tienda: 'Steam', hasta: '19 de octubre',
+    minimo: 9.99, minimoCuando: 'mar. 2026', minimoAnio: 9.99, minimo3m: 14.99,
+    otras: [{ tienda: 'Fanatical', precio: 13.29, descuento: 73 }, { tienda: 'Microsoft Store', precio: 49.99, descuento: 0 }],
+  },
 };
 
 const LISTA: Record<TabId, string> = { c: 'Completado', v: 'Abandonado', e: 'En curso', p: 'En próximos', d: 'En tus deseos' };
+const TITULO_LISTA: Record<Lista, string> = { c: 'Completados', v: 'Abandonados', e: 'En curso', d: 'Deseados' };
 const euros = new Intl.NumberFormat(APP_LOCALE, { style: 'currency', currency: 'EUR' });
+const mesYAnio = new Intl.DateTimeFormat(APP_LOCALE, { month: 'long', year: 'numeric' });
 
 // ─── Piezas de la ficha ──────────────────────────────────────────────────────────────────────────────────────
+/**
+ * EL RECUADRO DEL PRECIO, REPARTIDO EN DIAGONAL: arriba a la izquierda lo que más pesa (el precio, el descuento y dónde),
+ * arriba a la derecha el sello de mínimo; en medio, los tres mínimos en fila y las otras tiendas; abajo a la izquierda
+ * el botón de la tienda y abajo a la derecha el crédito de ITAD. Se estira hasta el alto de la cabecera.
+ */
 function PrecioBloque({ p }: { p: Precio }) {
   const enMinimo = p.ahora <= p.minimo;
+  const minimos: Array<[string, number | undefined, string?]> = [
+    ['Histórico', p.minimo, p.minimoCuando],
+    ['Último año', p.minimoAnio],
+    ['3 meses', p.minimo3m],
+  ];
   return (
     <section className="gs-price" aria-label="Precio">
-      <div className="gs-price-main">
-        <span className="gs-price-now">{euros.format(p.ahora)}</span>
-        {p.descuento > 0 ? <span className="gs-price-cut">−{p.descuento} %</span> : null}
-        {p.descuento > 0 ? <span className="gs-price-regular">{euros.format(p.normal)}</span> : null}
+      <div className="gs-price-arriba">
+        <div className="gs-price-main">
+          <span className="gs-price-now">{euros.format(p.ahora)}</span>
+          {p.descuento > 0 ? <span className="gs-price-cut">−{p.descuento} %</span> : null}
+          {p.descuento > 0 ? <span className="gs-price-regular">{euros.format(p.normal)}</span> : null}
+        </div>
+        {enMinimo ? <span className="gs-price-low">Mínimo histórico</span> : null}
       </div>
-      {enMinimo ? <span className="gs-price-low">Mínimo histórico</span> : null}
-      <p className="gs-price-meta">
-        {p.descuento > 0 ? `Mejor precio en ${p.tienda}.` : `Sin oferta ahora. Precio en ${p.tienda}.`}{' '}
-        {enMinimo ? `Igual que en ${p.minimoCuando}.` : `Mínimo: ${euros.format(p.minimo)} (${p.minimoCuando}).`}
+      <p className="gs-price-donde">
+        {p.descuento > 0 ? `En ${p.tienda}` : `Sin oferta ahora · ${p.tienda}`}
+        {p.hasta ? <span> · hasta el {p.hasta}</span> : null}
       </p>
+      <dl className="gs-price-minimos">
+        {minimos.map(([etiqueta, valor, cuando]) =>
+          typeof valor === 'number' ? (
+            <div key={etiqueta}>
+              <dt>{etiqueta}</dt>
+              <dd>
+                {euros.format(valor)}
+                {cuando ? <small>{cuando}</small> : null}
+              </dd>
+            </div>
+          ) : null,
+        )}
+      </dl>
+      {/* Las otras tiendas, para comparar sin salir: las dos siguientes más baratas. */}
+      {p.otras.length ? (
+        <ul className="gs-price-otras">
+          {p.otras.slice(0, 2).map((o) => (
+            <li key={o.tienda}>
+              <span>{o.tienda}</span>
+              <span className="gs-price-otras-precio">
+                {euros.format(o.precio)}
+                {o.descuento > 0 ? <small> −{o.descuento} %</small> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <div className="gs-price-actions">
         <a className="btn btn-primary" href="#tienda" onClick={avisar(`abre ${p.tienda} con el enlace de IsThereAnyDeal`)}>
           Ver en {p.tienda}
@@ -172,11 +288,21 @@ function PrecioBloque({ p }: { p: Precio }) {
   );
 }
 
-/** Sin cabecera de modal: el nombre va aquí, junto a la carátula. La X va en la esquina del panel. */
-function Cabecera({ g, tab, amistades }: { g: GameItem; tab: 'c' | 'd'; amistades: Amistad[] }) {
+/**
+ * Sin cabecera de modal: el nombre va aquí, junto a la carátula, y la X en la esquina del panel.
+ *
+ * LA CABECERA, CON AIRE: el nombre, tu lista y desde cuándo, un resumen de una línea (la primera plataforma, el primer
+ * género y, en completados, el último año) y una fila de cifras (tu nota o tu interés, la media de tus amistades y
+ * cuántas lo tienen). A la derecha, con ancho, el precio si es un deseo y si no la saga. Las listas enteras de
+ * plataformas y géneros, como chips, en «Tus datos» (con chips aquí arriba quedaba todo demasiado junto).
+ */
+function Cabecera({ g, tab, amistades, lado }: { g: GameItem; tab: Lista; amistades: Amistad[]; lado?: ReactElement | null }) {
   const loTienen = amistades.filter((a) => a.tab !== 'd');
   const notas = loTienen.map((a) => a.nota).filter((n): n is number => typeof n === 'number');
   const media = notas.length >= 3 ? Math.round(notas.reduce((s, n) => s + n, 0) / notas.length) : null;
+  const desde = g.enteredAt?.[tab];
+  const ultimoAnio = tab === 'c' && g.years?.length ? Math.max(...g.years) : null;
+  const resumen = [g.platforms[0], g.genres[0], ultimoAnio].filter(Boolean).join(' · ');
   return (
     <header className="gs-head">
       <div className="gs-cover">
@@ -184,30 +310,44 @@ function Cabecera({ g, tab, amistades }: { g: GameItem; tab: 'c' | 'd'; amistade
       </div>
       <div className="gs-head-text">
         <h2 className="gs-title">{g.name}</h2>
-        <div className="gs-pills">
+        <div className="gs-linea">
           <span className={`gs-pill is-${tab}`}>
             <Icon name={TAB_ICONS[tab]} />
             {LISTA[tab]}
           </span>
+          {desde ? <span className="gs-desde">desde {mesYAnio.format(desde)}</span> : null}
         </div>
-        {conSocial && loTienen.length ? (
-          <dl className="gs-numbers">
-            {media !== null ? (
-              <div>
-                <dt>Media de tus amistades</dt>
-                {/* En la escala de quien mira: la cifra con la nota 0–100 y las estrellas con estrellas. */}
-                <dd className="gs-media">
-                  {escala === 'grade' ? media : <StarRating value={starsFromGrade(media)} />} <small>· {notas.length} notas</small>
-                </dd>
-              </div>
-            ) : null}
+        {/* Un resumen de una línea, sin chips: lo primero de cada cosa. Las listas enteras, en «Tus datos». */}
+        {resumen ? <p className="gs-resumen">{resumen}</p> : null}
+      </div>
+      <dl className="gs-numbers gs-head-numbers">
+          {/* Las MISMAS reglas que el detalle de hoy: nota en completados, interés en próximos y deseos, en
+              abandonados solo si se puntuó (`scored`), y en curso nunca (ahí la nota vale 0 y no dice nada). */}
+          {tab === 'c' || tab === 'd' || (tab === 'v' && g.scored) ? (
+            <div>
+              <dt>{tab === 'd' ? 'Tu interés' : 'Tu nota'}</dt>
+              <dd className="gs-media">
+                <Nota game={g} />
+              </dd>
+            </div>
+          ) : null}
+          {conSocial && media !== null ? (
+            <div>
+              <dt>Media de tus amistades</dt>
+              {/* En la escala de quien mira: la cifra con la nota 0–100 y las estrellas con estrellas. */}
+              <dd className="gs-media">
+                {escala === 'grade' ? media : <StarRating value={starsFromGrade(media)} />} <small>· {notas.length} notas</small>
+              </dd>
+            </div>
+          ) : null}
+          {conSocial && loTienen.length ? (
             <div>
               <dt>Lo tienen</dt>
               <dd>{loTienen.length} <small>{loTienen.length === 1 ? 'amistad' : 'amistades'}</small></dd>
             </div>
-          </dl>
-        ) : null}
-      </div>
+          ) : null}
+      </dl>
+      {lado ? <div className="gs-head-lado">{lado}</div> : null}
     </header>
   );
 }
@@ -246,15 +386,15 @@ function insignia(type: 'replayable' | 'retry', value: boolean) {
  */
 function TusDatos({ g, tab }: { g: GameItem; tab: TabId }) {
   const D = UI_MESSAGES.detail;
-  const sinJugar = tab === 'p' || tab === 'd';
   return (
     <div className="hub-detail-metadata gs-sec-datos">
       <div className="hub-metadata-section">
-        <strong>Tus datos</strong>
+        {/* Sin «Tus datos», «Plataformas» ni «Géneros»: se dan por supuestos. Los chips hablan solos. */}
         <div className="detail-content gs-detail">
-          <div className="detail-box">
-            <span className="detail-label">{D.platforms}</span>
-            <div className="chips">
+          {/* Plataformas y géneros, cada uno en un renglón a todo el ancho con la etiqueta delante: en cajas de una
+              columna, con nombres de tienda largos, quedaba un chip por línea. */}
+          <div className="detail-box gs-fila">
+            <div className="chips" aria-label={D.platforms}>
               {g.platforms.map((v) => (
                 <span key={v} className="chip chip-plat" data-text={v}>
                   <span className="chip-text">{v}</span>
@@ -268,8 +408,7 @@ function TusDatos({ g, tab }: { g: GameItem; tab: TabId }) {
               ) : null}
             </div>
           </div>
-          <div className="detail-box">
-            <span className="detail-label">{D.genres}</span>
+          <div className="detail-box gs-fila" aria-label={D.genres}>
             <div>{chips(g.genres, 'chip-genre', true)}</div>
           </div>
           {tab === 'c' && g.years?.length ? (
@@ -302,14 +441,6 @@ function TusDatos({ g, tab }: { g: GameItem; tab: TabId }) {
               <div>{chips(g.reasons, 'chip-pd')}</div>
             </div>
           ) : null}
-          {tab === 'c' || sinJugar || (tab === 'v' && g.scored) ? (
-            <div className="detail-box">
-              <span className="detail-label">{sinJugar ? D.interest : D.score}</span>
-              <div>
-                <Nota game={g} />
-              </div>
-            </div>
-          ) : null}
           {tab === 'c' ? (
             <div className="detail-box">
               <span className="detail-label">{D.replayability}</span>
@@ -323,16 +454,24 @@ function TusDatos({ g, tab }: { g: GameItem; tab: TabId }) {
             </div>
           ) : null}
         </div>
-        {g.review ? (
-          <div className="gs-review-box">
-            <span className="detail-label">{D.review}</span>
-            <p className="hub-feed-review-text gs-review">{g.review}</p>
-            <a className="btn btn-open" href="#resena" onClick={avisar('abre tu reseña en /stats/resenas')} aria-label={D.reviewLinkAria(g.name)}>
-              <Icon name={COMMON_ICONS.arrowsToEye} />
-              <span>{D.reviewLink}</span>
-            </a>
-          </div>
-        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** El análisis, en su propio bloque: así las columnas del cuerpo lo pueden repartir aparte de los datos. */
+function Analisis({ g }: { g: GameItem }) {
+  const D = UI_MESSAGES.detail;
+  if (!g.review) return null;
+  return (
+    <div className="hub-detail-metadata gs-sec-analisis">
+      <div className="hub-metadata-section gs-review-box">
+        <span className="detail-label">{D.review}</span>
+        <p className="hub-feed-review-text gs-review">{g.review}</p>
+        <a className="btn btn-open" href="#resena" onClick={avisar('abre tu reseña en /stats/resenas')} aria-label={D.reviewLinkAria(g.name)}>
+          <Icon name={COMMON_ICONS.arrowsToEye} />
+          <span>{D.reviewLink}</span>
+        </a>
       </div>
     </div>
   );
@@ -345,8 +484,9 @@ function Amistades({ amistades }: { amistades: Amistad[] }) {
   // Orden: con reseña primero y, dentro, por nota.
   const orden = [...loTienen].sort((a, b) => Number(Boolean(b.adelanto)) - Number(Boolean(a.adelanto)) || (b.nota ?? -1) - (a.nota ?? -1));
   return (
-    <div className="hub-detail-metadata gs-sec-amigos">
+    <>
       {orden.length ? (
+        <div className="hub-detail-metadata">
         <div className="hub-metadata-section">
           <strong>Tus amistades</strong>
           <ul className="gs-friends">
@@ -372,8 +512,10 @@ function Amistades({ amistades }: { amistades: Amistad[] }) {
             ))}
           </ul>
         </div>
+        </div>
       ) : null}
       {loQuieren.length ? (
+        <div className="hub-detail-metadata">
         <div className="hub-metadata-section">
           <strong>Lo quieren</strong>
           <ul className="gs-wanters">
@@ -385,23 +527,24 @@ function Amistades({ amistades }: { amistades: Amistad[] }) {
             ))}
           </ul>
         </div>
+        </div>
       ) : null}
-    </div>
+    </>
   );
 }
 
-function Saga({ g, onOpen }: { g: GameItem; onOpen: (id: number) => void }) {
+function Saga({ g, onOpen, className = '' }: { g: GameItem; onOpen: (id: number) => void; className?: string }) {
   // La saga, con la regla real (`sharedSagaName`) sobre tu biblioteca. En la app se suman las de tus amistades.
   const entregas = TODOS.filter((o) => o.id === g.id || sharedSagaName(g.name, o.name));
   if (entregas.length < 2) return null;
   return (
-    <div className="hub-detail-metadata gs-sec-saga">
+    <div className={`hub-detail-metadata gs-sec-saga ${className}`.trim()}>
       <div className="hub-metadata-section">
         <strong>Saga</strong>
         <ul className="gs-saga">
           {entregas.map((s) => {
             const amistades = (AMISTADES[s.name] || []).filter((a) => a.tab !== 'd').length;
-            const tuya = `Tú: ${listaDe(s.id) === 'c' ? 'Completado' : 'en deseos'}`;
+            const tuya = `Tú: ${LISTA[listaDe(s.id)].replace('En tus deseos', 'en deseos')}`;
             return (
               <li key={s.id}>
                 <button className="gs-saga-item" type="button" aria-current={s.id === g.id ? 'true' : undefined} onClick={() => onOpen(s.id)}>
@@ -419,7 +562,7 @@ function Saga({ g, onOpen }: { g: GameItem; onOpen: (id: number) => void }) {
 }
 
 /** Los botones del detalle de hoy, fijos abajo: mover según la lista, editar, compartir (con reseña) y borrar. */
-function BarraDeAcciones({ g, tab, ref }: { g: GameItem; tab: 'c' | 'd'; ref?: Ref<HTMLElement> }) {
+function BarraDeAcciones({ g, tab, ref }: { g: GameItem; tab: Lista; ref?: Ref<HTMLElement> }) {
   return (
     <footer className="gs-bar" ref={ref}>
       {TAB_ACTIONS[tab].map((a) => (
@@ -459,7 +602,7 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   //   1 · dos columnas, 880 px;
   //   2 · dos columnas, 1.240 px (el tope; si tampoco cabe, aquí hace scroll el cuerpo).
   // Los dos anchos dejan siempre unos 80 px de la lista a la vista.
-  // Solo se pasa de 0 si hay algo que llevar a la segunda columna (amistades o saga). Se mide después de `showModal`
+  // Solo se pasa de 0 si el cuerpo tiene más de una sección que repartir. Se mide después de `showModal`
   // (el efecto de `useNativeDialog` va antes que este) y otra vez cada vez que el contenido cambia de tamaño
   // (`ResizeObserver`: la letra que llega tarde, una carátula, las amistades que llegan después). Ese caso SOLO
   // ensancha, así que no puede entrar en bucle. Cambiar el tamaño de la ventana sí vuelve a empezar por el más
@@ -471,7 +614,6 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   const [medida, setMedida] = useState<{ id: number; etapa: number } | null>(null);
   const [pasada, setPasada] = useState(0);
   const etapa = g !== null && medida?.id === g.id ? medida.etapa : 0;
-  const hayLado = amistades.length > 0 || (g ? TODOS.some((o) => o.id !== g.id && sharedSagaName(g.name, o.name)) : false);
 
   useEffect(() => {
     const alCambiar = () => {
@@ -506,9 +648,11 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   useEffect(() => {
     const el = scrollRef.current;
     // En el móvil el panel es siempre la pantalla entera: no hay ancho que elegir.
-    if (!open || !g || etapa >= 2 || !hayLado || !el || window.matchMedia('(max-width: 600px)').matches) return;
-    if (el.scrollHeight > el.clientHeight + 1) setMedida({ id: g.id, etapa: etapa + 1 });
-  }, [open, g, etapa, hayLado, pasada]);
+    if (!open || !g || etapa >= 2 || !el || window.matchMedia('(max-width: 600px)').matches) return;
+    // Solo ensancha si hay más de una sección en el cuerpo: con una sola, dos columnas no ganarían altura.
+    const secciones = el.querySelector('.gs-cuerpo')?.children.length ?? 0;
+    if (secciones > 1 && el.scrollHeight > el.clientHeight + 1) setMedida({ id: g.id, etapa: etapa + 1 });
+  }, [open, g, etapa, pasada]);
 
   return (
     <dialog
@@ -525,18 +669,22 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
             <Icon name="close" />
           </button>
           <div className="gs-scroll" key={g.id} ref={scrollRef}>
-            {/* Dos columnas con ancho: lo tuyo a la izquierda (el precio también: solo sale en Deseados, que es donde
-                tus datos son pocos) y lo de tus amistades a la derecha. En el móvil, una columna con el mismo orden. */}
-            <div className="gs-layout" ref={layoutRef}>
-              <div className="gs-main">
-                <Cabecera g={g} tab={tab} amistades={amistades} />
-                {precio ? <PrecioBloque p={precio} /> : null}
+            <div className="gs-contenido" ref={layoutRef}>
+              {/* El lado derecho de la cabecera, con ancho: el precio si es un deseo y, si no, la saga, que cabe a la
+                  altura de la carátula. Sin eso quedaba vacío. En el panel estrecho y en el móvil, la saga va al final
+                  del cuerpo (por eso se pinta dos veces y cada una se esconde donde no toca). */}
+              <Cabecera
+                g={g}
+                tab={tab}
+                amistades={amistades}
+                lado={precio ? <PrecioBloque p={precio} /> : <Saga g={g} onOpen={onOpen} className="is-cabecera" />}
+              />
+              {/* Columnas CSS con ancho: el navegador reparte las secciones y las deja a la misma altura. */}
+              <div className="gs-cuerpo">
                 <TusDatos g={g} tab={tab} />
-              </div>
-              {/* En el panel estrecho esta columna se disuelve (`display: contents`) y va debajo, por `order`. */}
-              <div className="gs-side">
+                <Analisis g={g} />
                 <Amistades amistades={amistades} />
-                <Saga g={g} onOpen={onOpen} />
+                <Saga g={g} onOpen={onOpen} className={precio ? '' : 'is-solo-estrecho'} />
               </div>
             </div>
           </div>
@@ -629,6 +777,8 @@ function Barra() {
       <select aria-label="Lista" style={caja} value={lista} onChange={(e) => ir({ lista: e.target.value, juego: '' })}>
         <option value="d">Deseados (con precio)</option>
         <option value="c">Completados</option>
+        <option value="v">Abandonados</option>
+        <option value="e">En curso</option>
       </select>
       <select aria-label="Nota" style={caja} value={escala} onChange={(e) => ir({ nota: e.target.value === 'grade' ? '100' : '' })}>
         <option value="stars">Nota: estrellas</option>
@@ -657,7 +807,7 @@ createRoot(document.getElementById('root') as HTMLElement).render(
     <IconSprite />
     <IconSpriteRest />
     <main id="contenido" className="main">
-      <h1 className="sr-only">{lista === 'd' ? 'Deseados' : 'Completados'}</h1>
+      <h1 className="sr-only">{TITULO_LISTA[lista]}</h1>
       <Pantalla />
     </main>
     {params.get('barra') !== '0' ? <Barra /> : null}
