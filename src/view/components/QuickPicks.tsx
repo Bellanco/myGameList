@@ -10,7 +10,8 @@ import { FORM_UI } from '../../core/constants/formLabels';
  * siempre al campo: lo escrito se vacía al elegir y lo natural es seguir tecleando la siguiente.
  *
  * FUERA DEL ORDEN DEL TABULADOR: Tab salta de campo a campo, no por cada sugerencia. Se llega a ellas con ↓ desde
- * el campo; dentro, ← → las recorren y ↑ vuelve al campo.
+ * el campo; dentro, ← → las recorren y ↑ vuelve al campo. La fila lleva también `tabIndex={-1}`: es un contenedor
+ * con desplazamiento y, sin nada enfocable dentro, Chrome lo mete él mismo en el tabulador (una parada en blanco).
  *
  * `glow` ilumina cada sugerencia según lo cerca que esté lo escrito de su nombre (de 0 a 1, en `--pick-glow`).
  */
@@ -88,7 +89,8 @@ export const QuickPicks = memo(function QuickPicks({
   };
 
   return (
-    <div className="quick-picks" role="group" aria-label={label} ref={groupRef} onKeyDown={onGroupKeyDown}>
+    <div className="quick-picks" role="group" aria-label={label} ref={groupRef} tabIndex={-1}
+      onKeyDown={onGroupKeyDown}>
       {free.map((option, index) => (
         <button
           key={option}

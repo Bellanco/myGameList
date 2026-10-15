@@ -20,7 +20,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 - **El tabulador va de campo a campo al añadir o editar un juego.** Ya no se detiene en cada sugerencia de debajo
   de plataformas, géneros o años. Para elegir una con el teclado, pulsa ↓ desde el campo, recórrelas con ← → y
-  vuelve con ↑.
+  vuelve con ↑. Con la nota de 0 a 100, el tabulador va directo a la casilla del número, no a la barra. Desde
+  ella, ↑ ↓ suben o bajan un punto, y RePág/AvPág, diez.
 
 ## [1.7.9] - 2026-10-15
 
