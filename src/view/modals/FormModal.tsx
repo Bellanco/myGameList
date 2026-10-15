@@ -314,6 +314,20 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
     clearFieldError('years');
   };
 
+  /**
+   * Lo escrito en los años, avisando AL MOMENTO: un año tiene siempre cuatro cifras, así que con la cuarta ya se sabe si
+   * vale y no hace falta esperar al Enter ni al Guardar («4210» lo dice en cuanto se escribe el 0). Mientras se
+   * escribe —menos de cuatro cifras— no se marca nada: «20» va camino de «2020».
+   */
+  const changeYearText = (value: string) => {
+    setPendingValue('years', value);
+    if (/^\d{4}$/.test(value.trim()) && !isValidYearValue(value.trim())) {
+      setFieldErrors((prev) => ({ ...prev, years: yearInvalidMessage() }));
+    } else {
+      clearFieldError('years');
+    }
+  };
+
   const removeTextTag = (key: TextTagField, value: string | number) => {
     const asString = String(value);
     setLocalDraft({
@@ -668,7 +682,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                   placeholder={FORM_UI.yearsPlaceholder}
                   values={draft.years}
                   pendingValue={pending.years}
-                  onPendingValueChange={(value) => setPendingValue('years', value)}
+                  onPendingValueChange={changeYearText}
                   onAdd={(values) => addYearTags(values)}
                   onRemove={(value) => {
                     setLocalDraft({ ...draft, years: draft.years.filter((entry) => entry !== Number(value)) });
@@ -677,6 +691,8 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                   hint={tagHint(yearsFull, GAME_LIMITS.tagCount.years)}
                   errorMessage={fieldErrors.years}
                   full={yearsFull}
+                  digitsOnly
+                  maxLength={4}
                 />
                 <QuickPicks options={yearsFull ? [] : [currentYear, currentYear - 1]} taken={draft.years} label={FORM_UI.quickPicks.years}
                   fieldId="draft-years" onPick={(value) => addYearTags([value])} />

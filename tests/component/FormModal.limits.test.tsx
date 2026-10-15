@@ -87,6 +87,39 @@ describe('FormModal — topes', () => {
     expect(onSave.mock.calls[0][0].genres).toEqual(full);
   });
 
+  it('en los años solo entran cifras, cuatro como mucho', async () => {
+    const user = userEvent.setup();
+    const { onSave, save } = renderForm({ years: [] });
+    const years = screen.getByLabelText('Años completado');
+    expect(years).toHaveAttribute('inputmode', 'numeric');
+
+    await user.type(years, '2o2a1-x');
+    expect(years).toHaveValue('221');
+    await user.clear(years);
+    await user.type(years, '202456');
+    expect(years).toHaveValue('2024');
+
+    // Pegado con letras: las cifras sí, y los separadores siguen repartiendo.
+    await user.clear(years);
+    fireEvent.change(years, { target: { value: 'año 2020, abc2021, ' } });
+    save();
+    expect(onSave.mock.calls[0][0].years).toEqual([2020, 2021]);
+  });
+
+  it('un año imposible se avisa al escribir la cuarta cifra, sin esperar al Enter', async () => {
+    const user = userEvent.setup();
+    renderForm({ years: [] });
+    const years = screen.getByLabelText('Años completado');
+    await user.type(years, '421');
+    expect(screen.queryByText(/Escribe un año entre/)).toBeNull();
+    await user.type(years, '0');
+    expect(screen.getByText(/Escribe un año entre 1970 y \d{4}\./)).toBeInTheDocument();
+    expect(years).toHaveAttribute('aria-invalid', 'true');
+    // Corregirlo quita el aviso.
+    await user.type(years, '{Backspace}');
+    expect(screen.queryByText(/Escribe un año entre/)).toBeNull();
+  });
+
   it('los años, desde 1970', async () => {
     const user = userEvent.setup();
     renderForm();

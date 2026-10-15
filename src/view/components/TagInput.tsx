@@ -34,6 +34,11 @@ interface TagInputProps {
   maxLength?: number;
   /** La lista ha llegado a su tope: el campo no admite más (se puede quitar alguna) y el `hint` dice por qué. */
   full?: boolean;
+  /**
+   * Solo cifras (los años): lo demás no llega al campo, ni tecleado ni pegado. Los separadores sí, para poder escribir
+   * o pegar varios («2020, 2021»), y el móvil saca el teclado numérico.
+   */
+  digitsOnly?: boolean;
 }
 
 /** `true` si lo escrito termina en separador ("Acción, ") → no queda nada a medias que dejar en el campo. */
@@ -56,6 +61,7 @@ export function TagInput({
   inputId,
   maxLength,
   full = false,
+  digitsOnly = false,
 }: TagInputProps) {
   const generatedId = useId();
   const fieldId = inputId || `tag-input-${generatedId}`;
@@ -106,6 +112,7 @@ export function TagInput({
           readOnly={full}
           placeholder={full ? undefined : placeholder}
           enterKeyHint="done"
+          inputMode={digitsOnly ? 'numeric' : undefined}
           autoComplete="off"
           aria-invalid={errorMessage ? true : undefined}
           aria-describedby={errorMessage || hint ? messageId : undefined}
@@ -118,7 +125,8 @@ export function TagInput({
           onChange={(event) => {
             // Tras cerrar una etiqueta con un separador se suele teclear un espacio ("Acción, RPG"): no se
             // arrastra al principio de la siguiente.
-            const val = pendingValue === '' ? event.target.value.replace(/^\s+/, '') : event.target.value;
+            const typed = digitsOnly ? event.target.value.replace(/[^\d,;\s]/g, '') : event.target.value;
+            const val = pendingValue === '' ? typed.replace(/^\s+/, '') : typed;
             // Comas, punto y coma, tabuladores y saltos de línea cierran etiqueta: escribir "Acción, RPG" crea
             // dos chips y pegar una lista entera las reparte. Lo escrito tras el último separador sigue en el
             // campo para poder terminarlo (salvo que el texto acabe justo en el separador).

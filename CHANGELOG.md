@@ -21,6 +21,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   y cada punto fuerte, débil o motivo hasta 50; el análisis hasta 22.500 (antes 25.000); como mucho 6 plataformas, 5
   géneros, 10 puntos fuertes, 10 débiles, 10 motivos y 20 años; años desde 1970 y horas hasta 9999. Al llegar, el
   campo lo dice debajo. Solo frenan lo que se escribe: lo que ya tenías, la sincronización y Playnite no se recortan.
+- **En «Años completado» solo se pueden escribir cifras**, cuatro por año (en el móvil sale el teclado numérico), y
+  si el año no vale el aviso lo dice claro: «Escribe un año entre 1970 y 2026».
 - **Las horas se escriben y se ven con coma decimal** («12,5»). Si se escribe un punto se convierte en coma al
   momento y ya no da error; como mucho, una coma y dos decimales.
 - **Pasar el ratón por una reseña del feed dice adónde lleva** («Ir al detalle de Hades») en vez de enseñar el texto

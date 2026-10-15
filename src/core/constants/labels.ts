@@ -104,7 +104,7 @@ export const DIALOG_MESSAGES = {
  * la página queda detrás del `<dialog>` y no llega a verse mientras el formulario está abierto.
  */
 export const VALIDATION_MESSAGES = {
-  yearInvalid: (minYear: number, maxYear: number) => `Escribe el año con 4 cifras, entre ${minYear} y ${maxYear} (ej: ${maxYear}).`,
+  yearInvalid: (minYear: number, maxYear: number) => `Escribe un año entre ${minYear} y ${maxYear}.`,
   fieldsInvalid: 'Revisa los campos marcados antes de guardar.',
   tagExists: 'Ya existe. Pulsa Guardar otra vez para fusionar.',
   duplicateName: (name: string, list: string) => `Ya tienes "${name}" en ${list}.`,
