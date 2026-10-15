@@ -46,13 +46,14 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 1.1rem 1.6rem .8rem;
+  padding-top: 1.1rem;
+  padding-inline: 1.6rem;
   container-type: inline-size;
   scrollbar-width: thin;
 }
 
 @media (max-width: 600px) {
-  .gs-scroll { padding: 1rem 1rem .9rem; }
+  .gs-scroll { padding-top: 1rem; padding-inline: 1rem; }
 }
 
 // La X, en la esquina del panel: fuera del scroll, siempre a mano.
@@ -255,28 +256,49 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
 .gs-saga-who { font-size: var(--fs-2xs); color: var(--text-muted); line-height: 1.3; }
 .gs-saga-item[aria-current="true"] .gs-saga-name { color: var(--fg-link); }
 
-// ─── La barra de botones, fija abajo ─────────────────────────────────────────────────────────────────────────
+// ─── Los botones, anclados abajo y sin barra ─────────────────────────────────────────────────────────────────
+// Flotan sobre el final del cuerpo: sin fondo, sin borde y sin el relleno de una barra (decisión del usuario,
+// 15-10-2026). El cuerpo les reserva justo su alto (`--gs-botones`, que mide `FichaModal`) para que lo último no quede
+// debajo, y lo que pasa
+// por detrás al hacer scroll se desvanece con una máscara, que vale igual en todos los temas (un degradado de color
+// tendría que adivinar el fondo de cada skin).
+.gs-panel { --gs-botones: 3.6rem; } // valor de partida hasta que se mide
+
+.gs-scroll {
+  padding-bottom: var(--gs-botones);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--gs-botones) - .5rem), transparent calc(100% - .75rem));
+}
+
 .gs-bar {
-  flex: none;
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   gap: .5rem;
-  padding: .75rem 1.6rem calc(.75rem + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 92%, var(--text));
+  padding: 0 1.6rem calc(.6rem + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
 }
+
+.gs-bar .btn { pointer-events: auto; }
 
 // Borrar, separado de los demás y a la derecha: lejos de la mano que va a mover o editar.
 .gs-bar .btn-danger { margin-inline-start: auto; }
 
-// En el móvil, con texto solo el primero (mover de lista, la acción principal); los demás, solo con el icono y su
-// nombre en `aria-label`. Con los cuatro rotulados no cabía ninguno entero.
+// En el móvil y en el panel estrecho, con texto solo el primero (mover de lista, la acción principal); los demás,
+// solo con el icono y su nombre en `aria-label`. Con los cuatro rotulados no cabían en una fila: en el móvil se
+// cortaban y en el panel de 600 px pasaban a dos filas.
+.gs-panel.is-estrecho .gs-bar { flex-wrap: nowrap; }
+.gs-panel.is-estrecho .gs-bar .btn:not(:first-child) .gs-bar-label { display: none; }
+
 @media (max-width: 600px) {
   .gs-bar { padding-inline: 1rem; flex-wrap: nowrap; }
   .gs-bar .btn { justify-content: center; }
   .gs-bar .btn:first-child { flex: 1 1 auto; min-width: 0; }
   .gs-bar .btn:not(:first-child) { flex: 0 0 auto; }
   .gs-bar .btn:not(:first-child) .gs-bar-label { display: none; }
+  .gs-bar .btn:first-child .gs-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .gs-bar .btn-danger { margin-inline-start: 0; }
 }
 

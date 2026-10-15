@@ -158,11 +158,15 @@ con «Añadir a deseados».
 - **Móvil (≤ 600 px):** la pantalla entera, también desde la derecha. Se cierra con la X, «atrás» o Esc.
 - **Sin cabecera de modal:** el nombre va en la ficha, junto a la carátula. La X queda en la esquina, fuera del
   scroll.
-- **Botones fijos abajo:** una barra con los botones del detalle (mover según la lista, «Editar», «Compartir» con
-  reseña y «Borrar», separado a la derecha). En el móvil solo el primero lleva texto; los demás, icono con su
-  nombre en `aria-label`.
-
-**El reparto (contenedor ≥ 50 rem):**
+- **Botones anclados abajo, sin barra** (decisión del usuario, 15-10-2026):
+  - **Sin barra:** flotan sobre el final del cuerpo, sin fondo, sin borde y sin relleno de barra. Se gana unos 21 px
+    de alto útil (de 704 a 725 a 1280 × 800).
+  - **El cuerpo les reserva justo su alto** (`--gs-botones`, medido con un `ResizeObserver` sobre los botones), así
+    que lo último nunca queda debajo, con cualquier tema y también en el móvil, donde las dianas son de 48 px.
+  - **Al hacer scroll,** lo que pasa por detrás se desvanece con una máscara, que vale igual en todos los temas.
+  - **Qué botones:** mover según la lista, «Editar», «Compartir» con reseña y «Borrar», separado a la derecha.
+  - **En el móvil y en el panel estrecho,** solo el primero lleva texto, en una línea; los demás, icono con su nombre
+    en `aria-label`. Rotulados, en 600 px pasaban a dos filas.
 - **A la izquierda, lo tuyo:** carátula y nombre con tu lista y las cifras de tus amistades; debajo, el precio si es
   un deseo; luego «Tus datos». El precio va aquí porque solo sale en Deseados, que es donde tus datos son pocos.
 - **A la derecha, lo de tus amistades:** «Tus amistades» (renglones de persona más prietos), «Lo quieren» y

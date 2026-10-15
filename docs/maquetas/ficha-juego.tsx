@@ -11,7 +11,7 @@
 //
 // Carátulas: la ficha las pide en `solo-cache` al gemelo `localCoverApi`, que sirve lo ya resuelto en
 // `.covers.local.json`. Sin ese fichero sale la portada de casa, que también vale para ver la composición.
-import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement, type Ref } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import '../../src/styles/index.scss';
@@ -419,9 +419,9 @@ function Saga({ g, onOpen }: { g: GameItem; onOpen: (id: number) => void }) {
 }
 
 /** Los botones del detalle de hoy, fijos abajo: mover según la lista, editar, compartir (con reseña) y borrar. */
-function BarraDeAcciones({ g, tab }: { g: GameItem; tab: 'c' | 'd' }) {
+function BarraDeAcciones({ g, tab, ref }: { g: GameItem; tab: 'c' | 'd'; ref?: Ref<HTMLElement> }) {
   return (
-    <footer className="gs-bar">
+    <footer className="gs-bar" ref={ref}>
       {TAB_ACTIONS[tab].map((a) => (
         <button key={a.target} className={`btn ${a.btnCls}`} type="button" onClick={avisar(`${a.label.toLowerCase()} (${tab} → ${a.target})`)}>
           <Icon name={a.icon} />
@@ -466,6 +466,8 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   // estrecho. El panel entra deslizándose desde fuera, así que los cambios de ancho no llegan a verse.
   const scrollRef = useRef<HTMLDivElement>(null);
   const layoutRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const barraRef = useRef<HTMLElement>(null);
   const [medida, setMedida] = useState<{ id: number; etapa: number } | null>(null);
   const [pasada, setPasada] = useState(0);
   const etapa = g !== null && medida?.id === g.id ? medida.etapa : 0;
@@ -479,6 +481,19 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
     window.addEventListener('resize', alCambiar);
     return () => window.removeEventListener('resize', alCambiar);
   }, []);
+
+  // EL HUECO DE LOS BOTONES SE MIDE: el cuerpo reserva abajo justo lo que ocupan (más un respiro), sea cual sea el
+  // tema, el tamaño de letra o si en el móvil las dianas son de 48 px. Fijo, se quedaba corto y tapaban lo último.
+  useEffect(() => {
+    const barra = barraRef.current;
+    const panel = panelRef.current;
+    if (!open || !barra || !panel) return;
+    const observador = new ResizeObserver(() => {
+      panel.style.setProperty('--gs-botones', `${Math.ceil(barra.getBoundingClientRect().height) + 8}px`);
+    });
+    observador.observe(barra);
+    return () => observador.disconnect();
+  }, [open, g]);
 
   useEffect(() => {
     const el = layoutRef.current;
@@ -505,7 +520,7 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
       }}
     >
       {open && g ? (
-        <div className={`modal gs-panel ${['is-estrecho', 'is-medio', 'is-ancho'][etapa]}`}>
+        <div ref={panelRef} className={`modal gs-panel ${['is-estrecho', 'is-medio', 'is-ancho'][etapa]}`}>
           <button className="btn-icon gs-close" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
             <Icon name="close" />
           </button>
@@ -525,7 +540,7 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
               </div>
             </div>
           </div>
-          <BarraDeAcciones g={g} tab={tab} />
+          <BarraDeAcciones g={g} tab={tab} ref={barraRef} />
         </div>
       ) : null}
     </dialog>
