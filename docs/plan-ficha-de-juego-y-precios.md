@@ -579,6 +579,13 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
     tráfico de España entra por Madrid). El cupo de ITAD sigue protegido por los plazos de rango;
   - no admite `stale-while-revalidate` y no guarda respuestas con `Set-Cookie`.
 
+  **Para todos los rangos, no solo desde plata (decisión del usuario, 16-10-2026):** la caché no da nada a quien la
+  usa, solo AHORRA llamadas a ITAD con la clave, que es de toda la app; quitársela a bronce le haría gastar más cupo
+  sin darle nada mejor. Lo que distingue a los rangos es la frescura que aceptan (bronce, un precio de 18 h; mithril,
+  de 15 min), y eso ya va en P0.7. Es gratis: ni KV ni escrituras. Lo que más aprovecha es título → id (30 días, igual
+  para todos) y los juegos populares; a la escala de hoy no es imprescindible (el cupo da para ~288.000 llamadas al
+  día), es un seguro para cuando crezca.
+
   Nadie la usa todavía en este repo. **Al desplegar la P1 se comprueba en el dominio real** con una cabecera de
   diagnóstico (`x-cache: hit|miss`): dos peticiones seguidas por el mismo juego, la segunda tiene que decir `hit`.
 - **Caché en el borde, sin KV** (P0, sujeto a la medición), con un valor por juego:
@@ -590,7 +597,7 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
   2 llamadas a ITAD, y solo por lo que no esté en caché o esté más viejo que su plazo.
 - **Límites por usuario, no por IP:**
   - el plazo de su rango: si pide antes de tiempo, el borde contesta con lo cacheado sin preguntar a ITAD;
-  - un tope de peticiones por usuario y hora **según su rango** (bronce 30, plata 60, oro 120 y mithril 240; ver
+  - un tope de peticiones por usuario y hora **según su rango** (bronce 30, plata 60, oro 120 y mithril 1.200; ver
     «Límites por rango»), en memoria del aislado, por si un cliente se porta mal;
   - un tope global de **150 llamadas a ITAD por minuto** en memoria del aislado, por debajo de las 200 por minuto de
     media que da el cupo (1.000 cada 5 minutos). No es global de
@@ -628,6 +635,15 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
   - Si la lista de deseos está oculta, los precios no se piden aunque esté encendido.
 
 ## Fase P3 · Precios en Deseados · M
+
+- **Deseados sin tope para mithril (decisión del usuario, 16-10-2026).** El tope (`WISHLIST_MAX_GAMES`, 100) solo frena
+  las altas en el cliente; la sincronización no recorta. Para mithril pasa a no haber tope: el límite se decide por el
+  rango propio (`useOwnTier`) además del claim (400 con `admin`, `WISHLIST_MAX_GAMES_ADMIN`, que se queda para quien
+  lo tenga sin ser mithril), y sin tope el recuento de la lista no se dice contra ningún número ni se pinta «llena».
+  Nada visible nombra el rango (memoria `rangos-ocultos-al-usuario`).
+- **Los precios, por partes:** `/api/precios` admite hasta 400 títulos por petición, así que con una lista mayor el
+  cliente pide en tandas de 400; el borde, a su vez, parte cada tanda en llamadas a ITAD de hasta 200 ids. Cada tanda
+  cuenta como una petición en el tope por hora de su rango.
 
 - **Tabla (`GameTable`, solo en la pestaña `d` con el interruptor encendido):**
   - en escritorio, una columna «Precio» tras «Interés», con «11,99 € · −60 %» y una marca «Mínimo» si el precio
@@ -749,8 +765,9 @@ ITAD) no entra en esta fase.
     210 kB y tardó 317 ms. **Es casi el triple del tope de Deseados (100)**: la bandeja de P7.3 tiene que dejar
     elegir, no traerlo todo.
   - **`user_info` devuelve el nombre de la cuenta** (para decir con cuál se ha conectado).
-  - **El consentimiento:** la segunda autorización volvió en 5,2 s. Falta que el usuario confirme si ITAD le volvió a
-    enseñar su pantalla.
+  - **ITAD NO recuerda el consentimiento:** en la segunda autorización volvió a enseñar su pantalla (lo confirmó el
+    usuario). Cada importación pasa por ella: el texto de P7.2 no puede prometer que «la segunda vez no pregunta».
+  - **Una lista mayor que el tope de Deseados** (286 frente a 100): ver «Deseados sin tope para mithril» en P3.
 - No hace falta la clave de API de los precios: la lectura solo usa OAuth. **P7 no depende de P1–P3** y puede ir
   antes.
 
@@ -766,7 +783,7 @@ ITAD) no entra en esta fase.
   - sin configuración: `501`;
   - ITAD caído: `503`;
   - código caducado o usado: `400`, con un mensaje para volver a intentarlo.
-- Limitada por usuario y hora según su rango (bronce 0 —no importa—, plata 3, oro 6 y mithril 20: una importación más
+- Limitada por usuario y hora según su rango (bronce 0 —no importa—, plata 3, oro 6 y mithril 60: una importación más
   los reintentos de un código caducado) y por las importaciones al día de su rango. Sin KV.
 - Gemelo de desarrollo en `vite.config.ts`, como `localGithubOAuthApi`.
 - **Tests:**
@@ -857,14 +874,15 @@ hay (`PROFILE_TIER_SHARE_MAX_ACTIVE`, `PROFILE_TIER_FEED_TTL_MS`).
 | Ficha: índice completo de sus bibliotecas (F4), cada | — | **No** | **24 h** | **12 h** | **30 min** | **Decidido** (15-10-2026) |
 | Interruptor «IsThereAnyDeal» | **No aparece** | Sí | Sí | Sí | Sí | **Decidido** (P0.1, P0.2) |
 | Precios: refresco cada | — | **18 h** | **12 h** | **6 h** | **15 min** | **Decidido** (P0.7) |
-| `/api/precios`: peticiones por usuario y hora (red de seguridad; lo normal lo limita el refresco) | — | **30** | **60** | **120** | **240** | **Decidido** (16-10-2026): que dependa del rango, como todo |
+| `/api/precios`: peticiones por usuario y hora (red de seguridad; lo normal lo limita el refresco) | — | **30** | **60** | **120** | **1.200** | **Decidido** (16-10-2026): que dependa del rango, como todo; mithril, todo lo que se pueda sin quitar la red de seguridad |
+| Deseados: tope de juegos | 100 | 100 | 100 | 100 | **Sin tope** | **Decidido** (16-10-2026). Con el claim `admin`, 400 (ya existía). Ver P3 |
 | Precios: aviso de bajada al abrir (P4), con su casilla | — | No | Sí | Sí | Sí | **Decidido** (P0.5) |
 | Precios: otras tiendas y mínimos de 1 año y 3 meses en el recuadro | — | Sí | Sí | Sí | Sí | **Decidido:** para todos los que tienen precios (F0.15) |
 | Importar de ITAD | **No** | **No** | Sí | Sí | Sí | **Decidido** (D8) |
 | Importar: DLC y paquetes | — | — | No | Sí | Sí | **Decidido** (D8b) |
 | Importar: juegos por importación | — | — | 50 | 100 | 100 | **Decidido** (D8c). El tope de Deseados sigue en 100 para todos |
 | Importar: importaciones al día | — | — | 1 | 3 | Sin tope | **Decidido** |
-| `/api/itad/token`: peticiones por usuario y hora (una importación y sus reintentos) | — | **0** | **3** | **6** | **20** | **Decidido** (16-10-2026) |
+| `/api/itad/token`: peticiones por usuario y hora (una importación y sus reintentos) | — | **0** | **3** | **6** | **60** | **Decidido** (16-10-2026) |
 
 Con mithril a 15 minutos, la caché del borde no puede tener un plazo fijo más largo: por eso guarda la hora de
 cada precio y es cada petición la que decide si le vale (P1).
@@ -950,7 +968,7 @@ Ninguna: todas cerradas el 15-10-2026. Lo que queda son datos.
     Si solo admite una, una segunda app de ITAD para local, como la OAuth App de desarrollo de GitHub.
 - ✅ **Dominio de producción:** `https://mygamelist.pages.dev`.
 - ✅ **Prueba P7.0** (16-10-2026): el canje no necesita el secret; una lista real de 286 entradas con `added` y tres
-  `type`s. Ver P7.0. Solo falta saber si ITAD recuerda el consentimiento.
+  `type`s, y ITAD no recuerda el consentimiento: cada importación enseña su pantalla. Ver P7.0.
 - ✅ **Comprobado contra ITAD (16-10-2026), con las claves de `.dev.vars` y sin mostrarlas:**
   - **API Key: funciona.** `/games/prices/v3` responde 200 con datos reales (7 tiendas para *Silksong*, con los tres
     mínimos); con una clave falsa, 403 «Invalid or expired api key». `/games/overview/v2` también responde.
@@ -982,6 +1000,7 @@ Ninguna: todas cerradas el 15-10-2026. Lo que queda son datos.
   dice la huella de amistades (ver F3).
 - ✅ **Arranque crítico, medido:** 193,3 de 195 kB con la ficha (F2), 192,9 tras quitar el detalle de la tabla (F5).
   El panel va precacheado y diferido, fuera del arranque; lo de tus amistades, fuera del precache (F4).
-- ✅ **Los topes por usuario y hora**, por rango: `/api/precios` 30/60/120/240 y `/api/itad/token` 0/3/6/20 (bronce,
-  plata, oro y mithril). Ver «Límites por rango».
+- ✅ **Los topes por usuario y hora**, por rango: `/api/precios` 30/60/120/1.200 y `/api/itad/token` 0/3/6/60
+  (bronce, plata, oro y mithril). Mithril, alto pero con tope, para que un bucle propio se corte; lo que protege la
+  clave es el tope global de 150 llamadas por minuto. Ver «Límites por rango».
 
