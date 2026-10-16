@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { copyFile } from 'node:fs/promises';
 import type { ServerResponse } from 'node:http';
 import { defineConfig, type Plugin } from 'vite';
@@ -162,6 +162,13 @@ function serviceWorkerPrecache(): Plugin {
         throw new Error('[service-worker-precache] La lista de assets del arranque ha salido vacía; el precache sería inútil.');
       }
 
+      /* SOLO LO QUE EXISTE. Una hoja que importan varios módulos (`personRow.scss`, de `HubPersonRow` y de la ficha) sale
+         en un chunk de JS propio que Vite VACÍA y borra al final, después de que este plugin haya hecho la lista: su
+         CSS ya va en ella (`importedCss`), pero el `.js` no llega a `dist/`. Precachear un fichero que no existe tumba
+         la instalación entera del service worker, así que se quita aquí, con `dist/` ya escrito. */
+      const existe = (path: string) => existsSync(new URL(`./dist${path}`, import.meta.url));
+      precachePaths = precachePaths.filter(existe);
+      deferredPaths = deferredPaths.filter(existe);
       const precache = [...precachePaths, ...criticalFontPaths];
       const buildId = createHash('sha256').update([...precache, ...deferredPaths].join('\n')).digest('hex').slice(0, 12);
       const patched = source
