@@ -684,11 +684,11 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
 
 **Cómo quedó:**
 
-- **También en Próximos** (decisión del usuario, 16-10-2026): los precios salen en Próximos y en Deseados, con su orden
-  y su filtro, y en la ficha de un juego de cualquiera de las dos. Se piden las dos listas a la vez, en una petición,
-  con una de ellas abierta: la caché poda lo que no se pide y, pidiendo solo la abierta, tiraría los de la otra.
-  Deseados oculta deja de pedir los suyos, no los de Próximos. Los textos legales dicen «tus listas de próximos y de
-  deseos»; como no se había publicado, no hay versión que subir.
+- **Solo en Deseados** (decisión del usuario, 17-10-2026; el 16 estuvieron también en Próximos): lo que ya tienes en
+  otra lista —próximos, en curso, abandonados o completados— no enseña precio, ni en la tabla ni en la ficha, la abras
+  desde tus listas, el feed o el perfil de una amistad (`priceTitle` y `conPrecio` en `GameSheetPanel` miran TU entrada
+  del juego). Un orden por precio que quedara puesto en Próximos se aplica como el de siempre. Los textos legales
+  vuelven a «tu lista de deseos»; como no se había publicado, no hay versión que subir.
 - **Deseados sin tope para mithril** (decisión del usuario, 16-10-2026): `hasUnlimitedWishlist` en
   `core/constants/tiers.ts`. `App` lee el rango propio (`useOwnTier`) y, con mithril, el tope es infinito. Sin tope,
   el recuento no se dice contra ningún número (no hay `listCap`) y no se pinta «llena». Mientras el rango no se sabe

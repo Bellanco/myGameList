@@ -465,12 +465,13 @@ export function GameSheetPanel(props: GameSheetPanelProps) {
 }
 
 /**
- * DE QUÉ JUEGO SE PIDE EL PRECIO: de uno de tus próximos o deseos (P3), con tu nombre, y de uno que no tienes (P5),
- * con el de la primera amistad que lo nombra, como lo enseña la ficha. De uno que ya has jugado no se pide nada.
+ * DE QUÉ JUEGO SE PIDE EL PRECIO: de uno de tus deseos (P3), con tu nombre, y de uno que no tienes (P5), con el de la
+ * primera amistad que lo nombra, como lo enseña la ficha. De uno que ya tienes en otra lista, próximos incluidos, no
+ * se pide nada (17-10-2026, decisión del usuario).
  */
 function priceTitle(data: TabData, slug: string, signals: readonly GameSheetSignal[], deAmistad: FriendGameEntry | null): string | null {
   const own = findOwnEntry(data, slug);
-  if (own) return own.tab === 'd' || own.tab === 'p' ? own.item.name : null;
+  if (own) return own.tab === 'd' ? own.item.name : null;
   const deSuBloque = deAmistad?.item && matchesGameSheet(slug, deAmistad.item.name) ? deAmistad.item.name : null;
   return signalGameName(slug, signals) ?? deSuBloque;
 }
@@ -592,9 +593,9 @@ export function GameSheetPanelView({
   const sinBloque = (lista: GameSheetFriend[]) => (bloque ? lista.filter((friend) => friend.id !== bloque.friend.id) : lista);
   const amigos = ficha ? sinBloque(ficha.friends) : [];
   const quieren = ficha ? sinBloque(ficha.wishers) : [];
-  // El recuadro, de un próximo, un deseo o un juego que no tienes, y solo con un mejor precio: sin tienda que lo
-  // venda, la cabecera se queda como sin precio.
-  const conPrecio = Boolean((own === null || own.tab === 'd' || own.tab === 'p') && price?.mejor);
+  // El recuadro, de un deseo o de un juego que no tienes, y solo con un mejor precio: sin tienda que lo venda, la
+  // cabecera se queda como sin precio.
+  const conPrecio = Boolean((own === null || own.tab === 'd') && price?.mejor);
   const plataformas = ficha?.saga.find((entry) => entry.current)?.platforms ?? bloque?.item.platforms ?? [];
   return (
     <dialog

@@ -87,7 +87,7 @@ const TERMS: LegalDocument = {
     {
       heading: 'Servicios de terceros',
       paragraphs: [
-        'La app usa servicios de otras empresas, cuyas condiciones también se te aplican: GitHub (gists), Google (inicio de sesión, base de datos y analítica), Cloudflare (alojamiento), IGDB/Twitch (datos de videojuegos, solo si activas las carátulas), IsThereAnyDeal (precios de tus listas de próximos y de deseos, solo si lo activas) y TMDB (pósters de series y películas y fotos de intérpretes en los premios). Los datos de videojuegos proceden de IGDB.com. This product uses the TMDB API but is not endorsed or certified by TMDB. Las carátulas, pósters, fotos y marcas pertenecen a sus dueños y solo se muestran para identificar cada obra.',
+        'La app usa servicios de otras empresas, cuyas condiciones también se te aplican: GitHub (gists), Google (inicio de sesión, base de datos y analítica), Cloudflare (alojamiento), IGDB/Twitch (datos de videojuegos, solo si activas las carátulas), IsThereAnyDeal (precios de tu lista de deseos, solo si lo activas) y TMDB (pósters de series y películas y fotos de intérpretes en los premios). Los datos de videojuegos proceden de IGDB.com. This product uses the TMDB API but is not endorsed or certified by TMDB. Las carátulas, pósters, fotos y marcas pertenecen a sus dueños y solo se muestran para identificar cada obra.',
       ],
     },
     {
@@ -173,7 +173,7 @@ const PRIVACY: LegalDocument = {
         'GitHub: guarda tus gists, en tu propia cuenta.',
         'Cloudflare: aloja y sirve la web.',
         'IGDB (Twitch), solo si activas las carátulas: recibe el título del juego para buscar su portada. La consulta la hace nuestro servidor, así que IGDB no recibe tu IP ni nada que te identifique.',
-        'IsThereAnyDeal, solo si lo activas: si activas los precios, nuestro servidor envía a IsThereAnyDeal los nombres de los juegos de tus listas de próximos y de deseos. IsThereAnyDeal no recibe tu IP ni ningún dato de tu cuenta.',
+        'IsThereAnyDeal, solo si lo activas: si activas los precios, nuestro servidor envía a IsThereAnyDeal los nombres de los juegos de tu lista de deseos. IsThereAnyDeal no recibe tu IP ni ningún dato de tu cuenta.',
         'TMDB, para los premios: proporciona pósters y fotos de intérpretes. No recibe ningún dato tuyo.',
       ],
       paragraphs: [
@@ -255,7 +255,7 @@ const COOKIES: LegalDocument = {
       heading: 'Precios de IsThereAnyDeal',
       paragraphs: [
         'Los precios vienen desactivados y solo se ofrecen con el espacio social. Mientras no los actives en los ajustes, no se consulta nada.',
-        'Si los activas, nuestro servidor envía a IsThereAnyDeal los nombres de los juegos de tus listas de próximos y de deseos para buscar sus precios. IsThereAnyDeal no recibe tu IP ni ningún dato de tu cuenta, y tu navegador no se conecta con él. Los precios se guardan en tu navegador y se borran al cerrar la sesión. Puedes desactivarlos cuando quieras desde el mismo sitio.',
+        'Si los activas, nuestro servidor envía a IsThereAnyDeal los nombres de los juegos de tu lista de deseos para buscar sus precios. IsThereAnyDeal no recibe tu IP ni ningún dato de tu cuenta, y tu navegador no se conecta con él. Los precios se guardan en tu navegador y se borran al cerrar la sesión. Puedes desactivarlos cuando quieras desde el mismo sitio.',
       ],
     },
     {

@@ -114,10 +114,20 @@ describe('GameSheetPanel — el precio de un deseo', () => {
     expect(screen.getByRole('button', { name: /deseados/i })).toBeInTheDocument();
   });
 
-  it('de uno de tus próximos, también', async () => {
-    repo.loadGamePrice.mockResolvedValue({ ...precio, titulo: 'Hades II' });
+  // Solo los deseos: lo que ya tienes en otra lista, próximos incluidos, no lleva precio (17-10-2026).
+  it('de uno de tus próximos, tampoco', async () => {
     pintar({ slug: gameSheetSlug('Hades II'), pricesOn: true, priceTtlMs: 1000 });
-    expect(await screen.findByRole('region', { name: PRICES_UI.boxAria })).toBeInTheDocument();
-    expect(repo.loadGamePrice).toHaveBeenCalledWith('Hades II', 1000);
+    await screen.findByRole('heading', { name: 'Hades II' });
+    expect(repo.readCachedPrices).not.toHaveBeenCalled();
+    expect(repo.loadGamePrice).not.toHaveBeenCalled();
+    expect(screen.queryByRole('region', { name: PRICES_UI.boxAria })).toBeNull();
+  });
+
+  it('de un juego de una amistad que tú ya tienes fuera de deseos, tampoco', async () => {
+    senales.actuales = [{ kind: 'review', friend: { id: 'marta', name: 'Marta' }, gameName: 'Hollow Knight', grade: 96, snippet: 'Único.', at: 1 }];
+    pintar({ slug: 'hollow-knight', friendId: 'marta', pricesOn: true, priceTtlMs: 1000 });
+    await screen.findByRole('heading', { name: 'Hollow Knight' });
+    expect(repo.loadGamePrice).not.toHaveBeenCalled();
+    expect(screen.queryByRole('region', { name: PRICES_UI.boxAria })).toBeNull();
   });
 });
