@@ -11,6 +11,20 @@ dialog.modal-dialog.gs-dialog::backdrop { background: rgba(0, 0, 0, .4); backdro
 
 dialog.modal-dialog.gs-dialog[open] { padding: 0; justify-content: flex-end; align-items: stretch; }
 
+// ENCIMA TAMBIÉN DURANTE UN CAMBIO DE PANTALLA (17-10-2026). En una View Transition, lo que tiene nombre se pinta en
+// una capa por encima de la captura de la página, y el `<main>` lo tiene (`pantalla`, ver `_motion.scss`). La ficha,
+// sin nombre, iba en esa captura: al irse de ella a otra pantalla (tu reseña), la lista le pasaba por encima mientras
+// duraba la transición. Con nombre propio se pinta después de la pantalla, como en la página, y sin animación de
+// grupo: su salida es la suya, que sigue viva debajo. Al LLEGAR con la ficha abierta no basta, porque se abre después
+// de la captura: entonces la pantalla no se anima (`cambiaDeCamino` en `App`).
+// Su captura vieja no se ve si la ficha sigue en la pantalla nueva (saliendo): taparía, quieta, la salida viva. Si ya
+// no está, se funde como la pantalla que se va.
+dialog.modal-dialog.gs-dialog[open] { view-transition-name: ficha; }
+::view-transition-group(ficha),
+::view-transition-new(ficha) { animation: none; }
+::view-transition-old(ficha) { display: none; }
+::view-transition-old(ficha):only-child { display: block; animation: vt-salida .12s ease-in both; }
+
 dialog.modal-dialog.gs-dialog[open] .gs-panel {
   position: relative;
   max-width: none;

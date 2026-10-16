@@ -108,4 +108,30 @@ test.describe('view transitions del cambio de pantalla', () => {
     await expect.poll(async () => (await transiciones(page)).flat())
       .toContainEqual(expect.stringMatching(/^::view-transition-group\(resena-/));
   });
+
+  /* LLEGAR CON LA FICHA ABIERTA NO ANIMA LA PANTALLA (17-10-2026). La ficha se abre después de que el navegador capture
+     la pantalla nueva, así que la captura del `<main>`, que tiene nombre, le pasaba por encima mientras duraba la
+     transición: la lista salía delante de la ficha. */
+  test('el buscador lleva a la lista de un juego con su ficha abierta, sin animar la pantalla por encima', async ({ page }) => {
+    await page.addInitScript(() => {
+      const juego = (id: number, name: string) => ({ id, _ts: 1, name, platforms: ['Steam'], genres: ['RPG'], steamDeck: false, review: '' });
+      localStorage.setItem('mis-listas-v12-unified', JSON.stringify({
+        c: [juego(1, 'Hollow Knight')], v: [], e: [], p: [juego(2, 'Nioh 2')], d: [], deleted: [], updatedAt: Date.now(),
+      }));
+    });
+    await page.goto('/completados');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible(LISTA_CARGADA);
+    // El buscador se monta en ocioso: el atajo se repite hasta que lo abre.
+    await expect(async () => {
+      await page.keyboard.press('Control+k');
+      await expect(page.getByRole('combobox')).toBeVisible({ timeout: 500 });
+    }).toPass(LISTA_CARGADA);
+    await page.getByRole('combobox').fill('nioh');
+    await page.keyboard.press('Enter');
+
+    await expect(page).toHaveURL(/\/proximos\?juego=nioh-2$/);
+    await expect(page.getByRole('dialog', { name: 'Ficha de Nioh 2' })).toBeVisible();
+    await page.waitForTimeout(400);
+    expect((await transiciones(page)).flat()).not.toContainEqual(expect.stringMatching(/^::view-transition-new\(/));
+  });
 });

@@ -955,7 +955,11 @@ export default function App() {
      un cambio de pantalla: al pulsar un filtro la pantalla entera se iba y volvía a entrar. React decide la
      animación con las props del render que se confirma, así que basta con comparar con el último camino pintado. */
   const caminoPintado = useRef(location.pathname);
-  const cambiaDeCamino = caminoPintado.current !== location.pathname;
+  /* NI SI SE LLEGA CON LA FICHA ABIERTA (el buscador te lleva a la lista del juego; desde la ficha, el perfil de una
+     amistad). La ficha se abre DESPUÉS de que el navegador capture la pantalla nueva, así que la transición la
+     dejaba debajo de la captura del `<main>`, que tiene nombre: la lista le pasaba por encima mientras duraba. Aquí
+     lo que se anima es la ficha, y la pantalla de debajo cambia tapada por su velo. */
+  const cambiaDeCamino = caminoPintado.current !== location.pathname && !gameSheetSlugParam;
   useEffect(() => {
     caminoPintado.current = location.pathname;
   }, [location.pathname]);
