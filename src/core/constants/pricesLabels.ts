@@ -7,10 +7,9 @@ export const PRICES_UI = {
   /** El sello del recuadro de la ficha. */
   historicLow: 'Mínimo histórico',
   boxAria: 'Precio',
-  /** Dónde está el mejor precio. */
-  inStore: (store: string) => `En ${store}`,
-  noOffer: (store: string) => `Sin oferta ahora · ${store}`,
-  until: (date: string) => ` · hasta el ${date}`,
+  /** Hasta cuándo dura la oferta, o que no la hay: la tienda ya la dice el botón «Ver en *tienda*». */
+  noOffer: 'Sin oferta ahora',
+  until: (date: string) => `Hasta el ${date}`,
   lowsAria: 'Precios mínimos',
   lows: { historic: 'Histórico', year: 'Último año', months3: '3 meses' },
   otherStoresAria: 'Otras tiendas',

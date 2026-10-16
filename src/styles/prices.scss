@@ -69,8 +69,8 @@ div.game-card-price .price-tag { justify-content: flex-start; }
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 35%, transparent);
 }
 
-// Con ancho, el recuadro estira hasta el alto de su columna (el lado de la cabecera ya es una columna flexible).
-.gs-head-lado > .gs-price { flex: 1 1 auto; }
+// En el cuerpo de la ficha, como su primera sección: sin el filete de arriba de las demás, que ya lleva su cerco.
+.gs-sec-precio { border-top: 0; padding-top: 0; }
 
 .gs-price-arriba { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .3rem .8rem; }
 .gs-price-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .6rem; }
@@ -98,15 +98,14 @@ div.game-card-price .price-tag { justify-content: flex-start; }
   white-space: nowrap;
 }
 
-.gs-price-donde { margin: 0; font-size: var(--fs-sm); color: var(--text); }
-.gs-price-donde span { color: var(--text-muted); }
+.gs-price-donde { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
 
 // El emparejamiento con otro título, a la vista: para que uno equivocado se vea.
 .gs-price-match { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); font-style: italic; }
 
 .gs-price-minimos {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
   gap: .5rem;
   margin: 0;
   padding: .5rem 0;
@@ -133,7 +132,7 @@ div.game-card-price .price-tag { justify-content: flex-start; }
 .gs-price-otras-precio small { color: color-mix(in srgb, var(--success) 75%, var(--text)); }
 
 .gs-price-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; margin-top: auto; padding-top: .15rem; }
-.gs-price-credit { font-size: var(--fs-2xs); color: var(--text-muted); }
+.gs-price-credit { margin-left: auto; font-size: var(--fs-2xs); color: var(--text-muted); }
 
 // ─── La atribución al pie de Deseados ───────────────────────────────────────────────────────────────────────────
 

@@ -41,8 +41,9 @@ export function PriceTag({ precio, name }: { precio: PrecioItad | null | undefin
 
 /**
  * EL RECUADRO DE LA FICHA, repartido en diagonal (F0.15): precio, descuento y precio normal arriba a la izquierda; el
- * sello «Mínimo histórico» arriba a la derecha; dónde y hasta cuándo; los tres mínimos en una fila; las dos tiendas
- * siguientes; «Ver en *tienda*» abajo a la izquierda y el crédito de ITAD abajo a la derecha. Las `url` van tal cual
+ * sello «Mínimo histórico» arriba a la derecha; hasta cuándo dura la oferta (la tienda la dice el botón); los mínimos
+ * en una fila, sin repetir cifra; las dos tiendas siguientes; «Ver en *tienda*» abajo a la izquierda y el crédito de
+ * ITAD abajo a la derecha. Las `url` van tal cual
  * las da ITAD (sus condiciones lo piden). Solo se monta con un mejor precio (`precio.mejor`).
  */
 export function PriceBox({ precio, name }: { precio: PrecioItad; name: string }): ReactElement | null {
@@ -51,11 +52,19 @@ export function PriceBox({ precio, name }: { precio: PrecioItad; name: string })
   const otro = matchedOtherTitle(precio, name);
   const hasta = fecha(mejor.hasta, HASTA);
   const historico = precio.minimos.historico;
-  const minimos: Array<[string, number | null | undefined, string | null]> = [
+  /* LOS MÍNIMOS, SIN REPETIRSE (16-10-2026): el del último año y el de 3 meses solo si dicen algo que no diga el de
+     antes. Tres veces la misma cifra es una fila entera que no informa. */
+  const minimos: Array<[string, number, string | null]> = [];
+  let anterior: number | null = null;
+  for (const [etiqueta, valor, cuando] of [
     [P.lows.historic, historico?.precio, fecha(historico?.fecha ?? null, MES_Y_ANIO)],
     [P.lows.year, precio.minimos.anio, null],
     [P.lows.months3, precio.minimos.tresMeses, null],
-  ];
+  ] as const) {
+    if (typeof valor !== 'number' || valor === anterior) continue;
+    minimos.push([etiqueta, valor, cuando]);
+    anterior = valor;
+  }
   return (
     <section className="gs-price" aria-label={P.boxAria}>
       <div className="gs-price-arriba">
@@ -66,14 +75,11 @@ export function PriceBox({ precio, name }: { precio: PrecioItad; name: string })
         </div>
         {isHistoricLow(precio) ? <span className="gs-price-low">{P.historicLow}</span> : null}
       </div>
-      <p className="gs-price-donde">
-        {mejor.descuento > 0 ? P.inStore(mejor.tienda) : P.noOffer(mejor.tienda)}
-        {hasta ? <span>{P.until(hasta)}</span> : null}
-      </p>
+      {mejor.descuento > 0 && !hasta ? null : <p className="gs-price-donde">{mejor.descuento > 0 && hasta ? P.until(hasta) : P.noOffer}</p>}
       {otro ? <p className="gs-price-match">{P.matchedAs(otro)}</p> : null}
-      <dl className="gs-price-minimos" aria-label={P.lowsAria}>
-        {minimos.map(([etiqueta, valor, cuando]) =>
-          typeof valor === 'number' ? (
+      {minimos.length ? (
+        <dl className="gs-price-minimos" aria-label={P.lowsAria}>
+          {minimos.map(([etiqueta, valor, cuando]) => (
             <div key={etiqueta}>
               <dt>{etiqueta}</dt>
               <dd>
@@ -81,9 +87,9 @@ export function PriceBox({ precio, name }: { precio: PrecioItad; name: string })
                 {cuando ? <small>{cuando}</small> : null}
               </dd>
             </div>
-          ) : null,
-        )}
-      </dl>
+          ))}
+        </dl>
+      ) : null}
       {precio.otras.length ? (
         <ul className="gs-price-otras" aria-label={P.otherStoresAria}>
           {precio.otras.slice(0, 2).map((oferta) => (

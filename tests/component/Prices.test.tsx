@@ -62,7 +62,7 @@ describe('PriceBox', () => {
     const box = screen.getByRole('region', { name: PRICES_UI.boxAria });
     expect(nbsp(box.querySelector('.gs-price-now')?.textContent)).toBe('22,49 €');
     expect(nbsp(box.querySelector('.gs-price-regular')?.textContent)).toBe('29,99 €');
-    expect(within(box).getByText(/En Steam/)).toHaveTextContent('En Steam · hasta el 30 de octubre');
+    expect(within(box).getByText(PRICES_UI.until('30 de octubre'))).toBeInTheDocument();
     expect(within(box).queryByText(PRICES_UI.historicLow)).toBeNull();
 
     const minimos = within(box).getByLabelText(PRICES_UI.lowsAria);
@@ -82,9 +82,17 @@ describe('PriceBox', () => {
   it('sin oferta, dónde está y que no hay rebaja; en su mínimo, el sello', () => {
     const p = precio({ mejor: { ...precio().mejor!, precio: 19.49, descuento: 0, hasta: null } });
     render(<PriceBox precio={p} name="Hades 2" />);
-    expect(screen.getByText(PRICES_UI.noOffer('Steam'))).toBeInTheDocument();
+    expect(screen.getByText(PRICES_UI.noOffer)).toBeInTheDocument();
     expect(screen.getByText(PRICES_UI.historicLow)).toBeInTheDocument();
     expect(document.querySelector('.gs-price-regular')).toBeNull();
+  });
+
+  it('los mínimos no repiten cifra: el del año y el de 3 meses, solo si dicen algo nuevo', () => {
+    render(<PriceBox precio={precio({ minimos: { historico: { precio: 30.48, fecha: null }, anio: 30.48, tresMeses: 30.48 } })} name="Hades 2" />);
+    const minimos = screen.getByLabelText(PRICES_UI.lowsAria);
+    expect(within(minimos).getByText(PRICES_UI.lows.historic)).toBeInTheDocument();
+    expect(within(minimos).queryByText(PRICES_UI.lows.year)).toBeNull();
+    expect(within(minimos).queryByText(PRICES_UI.lows.months3)).toBeNull();
   });
 
   it('con otro título, «Precio de: …» a la vista', () => {

@@ -703,8 +703,12 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
   el aro sigue en el canto. Sin precio, la ranura no existe (`:empty`).
 - **El mosaico:** en la caja plana, que tiene el alto fijo, el precio va en la línea de la nota, contra el canto; una
   línea más se salía por abajo con un título de dos. Con carátula, una línea bajo las etiquetas.
-- **La ficha:** el recuadro de F0.15 en el lado de la cabecera, en lugar de la saga, que baja al cuerpo. Las `url`
-  de ITAD, tal cual y con `rel="noopener"`.
+- **La ficha:** el recuadro de F0.15, como **primera sección del cuerpo** (detrás del bloque de una amistad), y la saga
+  sigue en la cabecera. Decisión del usuario (16-10-2026), viéndolo con datos reales: en el lado de la cabecera la
+  estiraba muy por encima de la carátula y dejaba vacía la columna del título. En el recuadro, la tienda la dice solo
+  el botón («Ver en *tienda*»; debajo del precio, «Hasta el…» o «Sin oferta ahora»), los mínimos no repiten cifra (el
+  del año y el de 3 meses, solo si cambian) y el crédito va siempre a la derecha. Las `url` de ITAD, tal cual y con
+  `rel="noopener"`.
 - **Emparejamiento visible:** «Precio de: *título de ITAD*» en el recuadro y, en el renglón, al pasar por encima
   (`matchedOtherTitle`, con `gameTitleKey`: *Hades II* y *Hades 2* son el mismo).
 - **Sin precio** (sin red, sin emparejamiento, `429`, `501`): no se pinta nada, ni «—» ni un error.

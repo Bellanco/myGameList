@@ -620,21 +620,26 @@ export function GameSheetPanelView({
           </button>
           <div className="gs-scroll" key={ficha.slug} ref={scrollRef}>
             <div className="gs-contenido" ref={contentRef}>
-              {/* El lado de la cabecera: el precio de un deseo o de un juego que no tienes (P3, P5, F0.15) o, sin
-                  precio, la saga. Con ancho, la saga va ahí (sin ella, ese hueco quedaba vacío); en estrecho, al final
-                  del cuerpo. Se pinta en los dos sitios y el CSS esconde la que no toca. Con precio, la saga se queda
-                  solo en el cuerpo. */}
+              {/* Con ancho, el lado de la cabecera es la saga (sin ella, ese hueco quedaba vacío); en estrecho, la saga
+                  va al final del cuerpo. Se pinta en los dos sitios y el CSS esconde la que no toca. */}
               <Cabecera
                 sheet={ficha}
                 covers={covers}
-                lado={conPrecio && price ? (
-                  <Suspense fallback={null}>
-                    <PriceBox precio={price} name={ficha.name} />
-                  </Suspense>
-                ) : ficha.saga.length ? <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
+                lado={ficha.saga.length ? <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
               />
               <div className="gs-cuerpo">
                 {bloque ? <BloqueDeAmistad entrada={bloque} onOpenReview={openFriendReview} /> : null}
+                {/* EL PRECIO, PRIMERA SECCIÓN DEL CUERPO (16-10-2026, decisión del usuario). En el lado de la cabecera
+                    (F0.15) la estiraba muy por encima de la carátula y dejaba vacía la columna del título; aquí lo
+                    reparten las columnas del cuerpo como a lo demás. Detrás del bloque de una amistad, que va arriba
+                    (F0.7). */}
+                {conPrecio && price ? (
+                  <div className="hub-detail-metadata gs-sec-precio">
+                    <Suspense fallback={null}>
+                      <PriceBox precio={price} name={ficha.name} />
+                    </Suspense>
+                  </div>
+                ) : null}
                 {own ? <TusDatos tab={own.tab} item={own.item} reviewTarget={reviewTarget} conTitulo={Boolean(bloque)} /> : null}
                 {amigos.length || quieren.length ? (
                   <Suspense fallback={null}>
@@ -647,7 +652,7 @@ export function GameSheetPanelView({
                     />
                   </Suspense>
                 ) : null}
-                <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className={conPrecio ? '' : 'is-solo-estrecho'} />
+                <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-solo-estrecho" />
               </div>
             </div>
           </div>

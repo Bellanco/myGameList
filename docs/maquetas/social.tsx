@@ -846,16 +846,17 @@ const MI_BIBLIOTECA: TabData = {
   deleted: [],
   updatedAt: 0,
 };
-// El precio de Silksong: en su mínimo histórico, con descuento y dos tiendas más (el recuadro completo, F0.15).
+// El precio de Silksong: en su mínimo histórico, con descuento y dos tiendas más (el recuadro completo, F0.15), en una
+// tienda de nombre largo y con los tres mínimos iguales, que es lo que más alto lo hacía.
 const PRECIO_SILKSONG: PrecioItad = {
   titulo: 'Hollow Knight: Silksong',
   itadId: 'silksong',
-  mejor: { tienda: 'GOG', precio: 15.99, normal: 19.99, descuento: 20, hasta: new Date(Date.now() + 6 * 864e5).toISOString(), url: 'https://isthereanydeal.com/' },
+  mejor: { tienda: 'IndieGala Store', precio: 15.99, normal: 19.99, descuento: 20, hasta: new Date(Date.now() + 6 * 864e5).toISOString(), url: 'https://isthereanydeal.com/' },
   otras: [
     { tienda: 'Steam', precio: 17.99, normal: 19.99, descuento: 10, hasta: null, url: 'https://isthereanydeal.com/' },
     { tienda: 'Epic Game Store', precio: 19.99, normal: 19.99, descuento: 0, hasta: null, url: 'https://isthereanydeal.com/' },
   ],
-  minimos: { historico: { precio: 15.99, fecha: '2026-06-14T00:00:00Z' }, anio: 15.99, tresMeses: 17.99 },
+  minimos: { historico: { precio: 15.99, fecha: '2026-06-14T00:00:00Z' }, anio: 15.99, tresMeses: 15.99 },
   urlFicha: 'https://isthereanydeal.com/',
   bundles: [],
 };
