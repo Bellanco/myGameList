@@ -263,23 +263,25 @@ dejar hueco. Nunca un esqueleto que se queda para siempre.
 Ojo: `setOffline` de Playwright no cambia `navigator.onLine` (memoria `offline-detection-two-signals`). Hay que cortar
 las peticiones con `page.route`.
 
-## Fase F1 · Núcleo puro · S
+## Fase F1 · Núcleo puro · S · ✅ hecha (16-10-2026)
 
-- `core/utils/gameSheetPath.ts`:
-  - `gameSheetSlug(name)`: `gameTitleKey(name)` con los espacios cambiados por `-`.
-  - `gameSheetSearch(name)`: `?juego=<slug>`, para enlazar desde cualquier pantalla.
-  - `matchesGameSheet(slug, name)`.
-
-  Este módulo va en el arranque (lo usan la tabla y el buscador): mantenerlo mínimo y medirlo.
-- `core/gameSheet/buildGameSheet.ts`, puro. Recibe tu `TabData`, las entradas de tus amistades ya filtradas por
-  visibilidad (`{ friend, tab, item }[]`) y la actividad social cacheada. Devuelve el modelo de la ficha: cabecera
-  unida, tu entrada, amistades ordenadas, media (con el umbral de F0.2), «lo quieren» y saga.
-- **Tests** (`tests/unit/gameSheet.test.ts`):
-  - casos de la clave: *Hades II* y *Hades 2*, sufijos de edición, «The», acentos;
-  - una amistad con la lista oculta no aparece;
-  - las horas ocultas no salen;
-  - la media no sale con menos de 3 notas;
-  - la saga no incluye el propio juego.
+- `core/utils/gameSheetPath.ts`: `gameSheetSlug(name)` (`gameTitleKey` con guiones), `gameSheetSearch(name)`
+  (`?juego=<slug>`), `matchesGameSheet(slug, name)` y `GAME_SHEET_PARAM`. Va en el arranque cuando lo usen la tabla y
+  el buscador (F2, F5): medirlo entonces.
+- `core/gameSheet/buildGameSheet.ts`, puro:
+  - recibe la clave, tu `TabData` y las **señales** de tus amistades, de tres clases: `library` (una entrada de su
+    biblioteca ya filtrada por visibilidad, F4), `review` (su reseña del canal social, F3) y `move` (su aviso de
+    lista, F3);
+  - junta las señales de cada amistad: la biblioteca manda en la lista; sin ella, el aviso más reciente; la reseña
+    pone el adelanto y la nota;
+  - devuelve tu entrada, las amistades ordenadas (con reseña primero, luego por nota), «lo quieren» aparte y sin
+    nota, la media con las notas que haya (F0.2: completados, y abandonados solo con `scored`) y la saga (tu
+    biblioteca y las bibliotecas de tus amistades, sin repetir y con el juego actual marcado);
+  - `findOwnEntry` y `entriesForGame` para buscar un juego en una biblioteca (la F4 los usa tras
+    `applyProfileVisibility`).
+- **Tests** (`tests/unit/gameSheet.test.ts`, 18): claves (romanos, acentos, «The», sufijos de edición), listas
+  ocultas, horas ocultas, juntar señales, orden, media con una y con varias notas, `scored`, en curso sin nota,
+  deseados aparte, saga sin repetir y sin emparentar *Dead Space* con *Dead Cells*.
 
 ## Fase F2 · El modal, con lo propio, en lugar del detalle · M–L
 
