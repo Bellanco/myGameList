@@ -1,16 +1,3 @@
-// MAQUETA DESECHABLE de la ficha de juego (`docs/plan-ficha-de-juego-y-precios.md`): un panel que entra por la
-// derecha, casi a toda pantalla, sin cabecera de modal, en columnas y con los botones fijos abajo. En el móvil, la
-// pantalla entera. Ver `ficha-juego.html` para los parámetros.
-//
-// Detrás va la tabla REAL (`GameTable`) con una biblioteca inventada. Tocar una fila ya no despliega el detalle:
-// abre la ficha, que lo sustituye. Abrirla añade `?juego=<clave>` a la URL con `pushState`, así que «atrás» la cierra
-// en vez de salir de la lista. Es lo que haría la app.
-//
-// La ficha usa las piezas reales del hub y de los modales (`useNativeDialog`, `.modal`, `HubPersonRow`, `GameCover`,
-// `StarRating`, `ScoreDisplay`). Lo único propio es `ficha-juego.scss`, que sería la hoja del modal.
-//
-// Carátulas: la ficha las pide en `solo-cache` al gemelo `localCoverApi`, que sirve lo ya resuelto en
-// `.covers.local.json`. Sin ese fichero sale la portada de casa, que también vale para ver la composición.
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactElement, type Ref, type RefObject } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
@@ -47,26 +34,21 @@ type Lista = 'c' | 'v' | 'e' | 'd';
 const LISTAS: readonly Lista[] = ['c', 'v', 'e', 'd'];
 const lista: Lista = (LISTAS as readonly string[]).includes(params.get('lista') || '') ? (params.get('lista') as Lista) : 'd';
 const conSocial = params.get('social') !== '0';
-// `?precio=0`: el servicio de precios no responde (sin red, ITAD caído o sin cupo). El bloque no se pinta.
+
 const conPrecio = params.get('precio') !== '0';
-// `?nota=100`: la escala de quien mira es la nota 0–100. En la app la da `useScoreScale` (preferencia de su cuenta) y
-// la pinta `ScoreDisplay`; aquí no se toca esa preferencia, así que se elige por la URL y se pinta con las mismas
-// piezas (`ScoreRing` o `StarRating`).
+
 const escala: 'stars' | 'grade' = params.get('nota') === '100' ? 'grade' : 'stars';
 
-/** Lo que haría `ScoreDisplay`: el aro 0–100 o las estrellas, según la escala de quien mira. */
 function Nota({ game }: { game: ScoredLike }) {
   return escala === 'grade' ? <ScoreRing grade={resolveGrade(game)} /> : <StarRating value={resolveStars(game)} />;
 }
 const avisar = (que: string) => () => window.alert(`En la app: ${que}`);
 
-// ─── Biblioteca inventada ────────────────────────────────────────────────────────────────────────────────────
 const AHORA = Date.now();
 function juego(id: number, name: string, extra: Partial<GameItem> = {}): GameItem {
   return { id, _ts: AHORA, name, platforms: ['PC'], genres: [], steamDeck: false, review: '', ...extra };
 }
 
-// Reseña larga para los casos extremos (las reales llegan a 2.381 caracteres). Inventada: la maqueta va al repo.
 const RESENA_LARGA = Array.from({ length: 14 }, (_, i) =>
   [
     'Empieza despacio y engancha a la tercera hora, cuando el sistema de combate termina de enseñar sus cartas.',
@@ -76,10 +58,6 @@ const RESENA_LARGA = Array.from({ length: 14 }, (_, i) =>
   ][i % 4],
 ).join(' ');
 
-// LOS CASOS EXTREMOS DE UNA BIBLIOTECA REAL (los 302 juegos de `myGames.json`, 15-10-2026): plataformas que son
-// tiendas (hasta 3, más Steam Deck), géneros de hasta 26 caracteres, nombres de hasta 49, 5 puntos fuertes, 3 débiles,
-// 5 años, 900 horas, abandonados con motivos y nota (`scored`), en curso sin nota. Los nombres son los de los juegos;
-// lo demás, inventado.
 const BIBLIOTECA: Record<Lista, GameItem[]> = {
   c: [
     juego(1, 'Hollow Knight', {
@@ -147,7 +125,6 @@ const TODOS = LISTAS.flatMap((t) => BIBLIOTECA[t]);
 const listaDe = (id: number): Lista => LISTAS.find((t) => BIBLIOTECA[t].some((g) => g.id === id)) ?? 'd';
 const clave = (name: string) => gameTitleKey(name).replace(/ /g, '-');
 
-// ─── Lo que llega de fuera: amistades y precios ──────────────────────────────────────────────────────────────
 interface Amistad {
   nombre: string;
   tab: TabId;
@@ -156,8 +133,6 @@ interface Amistad {
   adelanto?: string;
 }
 
-// Lo que da `/games/prices/v3` de ITAD: las ofertas por tienda (precio, normal, descuento y hasta cuándo) y los
-// mínimos (de siempre, del último año y de los últimos 3 meses).
 interface Precio {
   ahora: number;
   normal: number;
@@ -222,12 +197,6 @@ const TITULO_LISTA: Record<Lista, string> = { c: 'Completados', v: 'Abandonados'
 const euros = new Intl.NumberFormat(APP_LOCALE, { style: 'currency', currency: 'EUR' });
 const mesYAnio = new Intl.DateTimeFormat(APP_LOCALE, { month: 'long', year: 'numeric' });
 
-// ─── Piezas de la ficha ──────────────────────────────────────────────────────────────────────────────────────
-/**
- * EL RECUADRO DEL PRECIO, REPARTIDO EN DIAGONAL: arriba a la izquierda lo que más pesa (el precio, el descuento y dónde),
- * arriba a la derecha el sello de mínimo; en medio, los tres mínimos en fila y las otras tiendas; abajo a la izquierda
- * el botón de la tienda y abajo a la derecha el crédito de ITAD. Se estira hasta el alto de la cabecera.
- */
 function PrecioBloque({ p }: { p: Precio }) {
   const enMinimo = p.ahora <= p.minimo;
   const minimos: Array<[string, number | undefined, string?]> = [
@@ -262,7 +231,6 @@ function PrecioBloque({ p }: { p: Precio }) {
           ) : null,
         )}
       </dl>
-      {/* Las otras tiendas, para comparar sin salir: las dos siguientes más baratas. */}
       {p.otras.length ? (
         <ul className="gs-price-otras">
           {p.otras.slice(0, 2).map((o) => (
@@ -288,18 +256,9 @@ function PrecioBloque({ p }: { p: Precio }) {
   );
 }
 
-/**
- * Sin cabecera de modal: el nombre va aquí, junto a la carátula, y la X en la esquina del panel.
- *
- * LA CABECERA, CON AIRE: el nombre, tu lista y desde cuándo, un resumen de una línea (la primera plataforma, el primer
- * género y, en completados, el último año) y una fila de cifras (tu nota o tu interés, la media de tus amistades y
- * cuántas lo tienen). A la derecha, con ancho, el precio si es un deseo y si no la saga. Las listas enteras de
- * plataformas y géneros, como chips, en «Tus datos» (con chips aquí arriba quedaba todo demasiado junto).
- */
 function Cabecera({ g, tab, amistades, lado }: { g: GameItem; tab: Lista; amistades: Amistad[]; lado?: ReactElement | null }) {
   const loTienen = amistades.filter((a) => a.tab !== 'd');
   const notas = loTienen.map((a) => a.nota).filter((n): n is number => typeof n === 'number');
-  // La media, con las notas que haya (decisión del usuario, 15-10-2026), y cuántas son al lado.
   const media = notas.length ? Math.round(notas.reduce((s, n) => s + n, 0) / notas.length) : null;
   const desde = g.enteredAt?.[tab];
   const ultimoAnio = tab === 'c' && g.years?.length ? Math.max(...g.years) : null;
@@ -318,12 +277,9 @@ function Cabecera({ g, tab, amistades, lado }: { g: GameItem; tab: Lista; amista
           </span>
           {desde ? <span className="gs-desde">desde {mesYAnio.format(desde)}</span> : null}
         </div>
-        {/* Un resumen de una línea, sin chips: lo primero de cada cosa. Las listas enteras, en «Tus datos». */}
         {resumen ? <p className="gs-resumen">{resumen}</p> : null}
       </div>
       <dl className="gs-numbers gs-head-numbers">
-          {/* Las MISMAS reglas que el detalle de hoy: nota en completados, interés en próximos y deseos, en
-              abandonados solo si se puntuó (`scored`), y en curso nunca (ahí la nota vale 0 y no dice nada). */}
           {tab === 'c' || tab === 'd' || (tab === 'v' && g.scored) ? (
             <div>
               <dt>{tab === 'd' ? 'Tu interés' : 'Tu nota'}</dt>
@@ -335,7 +291,6 @@ function Cabecera({ g, tab, amistades, lado }: { g: GameItem; tab: Lista; amista
           {conSocial && media !== null ? (
             <div>
               <dt>Media de tus amistades</dt>
-              {/* En la escala de quien mira: la cifra con la nota 0–100 y las estrellas con estrellas. */}
               <dd className="gs-media">
                 {escala === 'grade' ? media : <StarRating value={starsFromGrade(media)} />} <small>· {notas.length} {notas.length === 1 ? 'nota' : 'notas'}</small>
               </dd>
@@ -353,8 +308,6 @@ function Cabecera({ g, tab, amistades, lado }: { g: GameItem; tab: Lista; amista
   );
 }
 
-// Los ayudantes del detalle de hoy (`GameTable.tsx:325-400`), copiados tal cual para la maqueta. En la app salen
-// de `GameTable` a un módulo compartido y los usan la tabla y la ficha.
 function chips(values: string[], className: string, tone = false) {
   if (!values.length) return <span className="chip-none" aria-hidden="true">—</span>;
   return (
@@ -379,21 +332,12 @@ function insignia(type: 'replayable' | 'retry', value: boolean) {
   );
 }
 
-/**
- * TODO LO QUE ENSEÑA HOY EL DETALLE DE LA FILA, con su mismo marcado (`detail-content`, `detail-box`, chips e
- * insignias) y las mismas reglas por lista: años y rejugar solo en completados, horas en completados y abandonados,
- * puntos fuertes en c/v/e, débiles en c/e, motivos en v, reintentar en v. Así los temas que ya visten el detalle lo
- * visten aquí igual.
- */
 function TusDatos({ g, tab }: { g: GameItem; tab: TabId }) {
   const D = UI_MESSAGES.detail;
   return (
     <div className="hub-detail-metadata gs-sec-datos">
       <div className="hub-metadata-section">
-        {/* Sin «Tus datos», «Plataformas» ni «Géneros»: se dan por supuestos. Los chips hablan solos. */}
         <div className="detail-content gs-detail">
-          {/* Plataformas y géneros, cada uno en un renglón a todo el ancho con la etiqueta delante: en cajas de una
-              columna, con nombres de tienda largos, quedaba un chip por línea. */}
           <div className="detail-box gs-fila">
             <div className="chips" aria-label={D.platforms}>
               {g.platforms.map((v) => (
@@ -460,7 +404,6 @@ function TusDatos({ g, tab }: { g: GameItem; tab: TabId }) {
   );
 }
 
-/** El análisis, en su propio bloque: así las columnas del cuerpo lo pueden repartir aparte de los datos. */
 function Analisis({ g }: { g: GameItem }) {
   const D = UI_MESSAGES.detail;
   if (!g.review) return null;
@@ -480,10 +423,8 @@ function Analisis({ g }: { g: GameItem }) {
 
 function Amistades({ amistades, conQuieren }: { amistades: Amistad[]; conQuieren: boolean }) {
   const loTienen = amistades.filter((a) => a.tab !== 'd');
-  // «Lo quieren» es RELLENO: solo sale si cabe sin quitarle sitio a nada (lo decide `FichaModal`).
   const loQuieren = conQuieren ? amistades.filter((a) => a.tab === 'd') : [];
   if (!loTienen.length && !loQuieren.length) return null;
-  // Orden: con reseña primero y, dentro, por nota.
   const orden = [...loTienen].sort((a, b) => Number(Boolean(b.adelanto)) - Number(Boolean(a.adelanto)) || (b.nota ?? -1) - (a.nota ?? -1));
   return (
     <>
@@ -536,7 +477,6 @@ function Amistades({ amistades, conQuieren }: { amistades: Amistad[]; conQuieren
 }
 
 function Saga({ g, onOpen, className = '' }: { g: GameItem; onOpen: (id: number) => void; className?: string }) {
-  // La saga, con la regla real (`sharedSagaName`) sobre tu biblioteca. En la app se suman las de tus amistades.
   const entregas = TODOS.filter((o) => o.id === g.id || sharedSagaName(g.name, o.name));
   if (entregas.length < 2) return null;
   return (
@@ -563,7 +503,6 @@ function Saga({ g, onOpen, className = '' }: { g: GameItem; onOpen: (id: number)
   );
 }
 
-/** Los botones del detalle de hoy, fijos abajo: mover según la lista, editar, compartir (con reseña) y borrar. */
 function BarraDeAcciones({ g, tab, ref }: { g: GameItem; tab: Lista; ref?: Ref<HTMLElement> }) {
   return (
     <footer className="gs-bar" ref={ref}>
@@ -591,18 +530,6 @@ function BarraDeAcciones({ g, tab, ref }: { g: GameItem; tab: Lista; ref?: Ref<H
   );
 }
 
-/**
- * DESLIZAR HACIA LA DERECHA PARA CERRAR, como una hoja de Android o iOS pero en horizontal: el panel vuelve por donde
- * vino. Así no se lee como una pantalla nueva y el scroll vertical de la ficha queda intacto.
- *
- *  · Solo con el dedo o el lápiz (`pointerType`): con el ratón estorbaría al seleccionar texto en escritorio.
- *  · El eje se decide en los primeros 10 px: si el gesto es horizontal y hacia la derecha, es del panel; si es
- *    vertical, es del scroll y aquí no se hace nada (`touch-action: pan-y` deja el vertical al navegador).
- *  · Lo que se desplaza en horizontal (la tira de la saga) se respeta: si el gesto empieza ahí y la tira aún puede
- *    moverse hacia ese lado, se mueve la tira.
- *  · Al soltar: se cierra si se ha llevado más de un 30 % del ancho o con un gesto rápido; si no, vuelve a su sitio.
- *  · El gesto de «atrás» del sistema desde el borde (iOS, Android) también cierra: quita el `?juego=` de la URL.
- */
 function useDeslizarParaCerrar(panelRef: RefObject<HTMLDivElement | null>, onClose: () => void) {
   const gesto = useRef<{ x: number; y: number; t: number; eje: 'x' | 'y' | null; id: number } | null>(null);
 
@@ -631,11 +558,9 @@ function useDeslizarParaCerrar(panelRef: RefObject<HTMLDivElement | null>, onClo
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
       g.eje = dx > 0 && Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
       if (g.eje === 'x') {
-        // Puede fallar si el puntero ya no está (se levantó entre medias): el gesto sigue igual sin la captura.
         try {
           e.currentTarget.setPointerCapture(e.pointerId);
         } catch {
-          /* sin captura */
         }
         panel.classList.add('is-gesto', 'is-arrastrando');
       }
@@ -679,24 +604,11 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   const tab = g ? listaDe(g.id) : 'd';
   const amistades = g && conSocial ? AMISTADES[g.name] || [] : [];
   const precio = g && tab === 'd' && conPrecio ? PRECIOS[g.name] : undefined;
-  // EL ESPACIO EN BLANCO, SIEMPRE EL MÍNIMO. El alto es siempre entero; el ancho se MIDE, de más estrecho a más
-  // ancho, y se queda en el primero en el que todo cabe sin scroll:
-  //   0 · una columna, 600 px;
-  //   1 · dos columnas, 880 px;
-  //   2 · dos columnas, 1.240 px (el tope; si tampoco cabe, aquí hace scroll el cuerpo).
-  // Los dos anchos dejan siempre unos 80 px de la lista a la vista.
-  // Solo se pasa de 0 si el cuerpo tiene más de una sección que repartir. Se mide después de `showModal`
-  // (el efecto de `useNativeDialog` va antes que este) y otra vez cada vez que el contenido cambia de tamaño
-  // (`ResizeObserver`: la letra que llega tarde, una carátula, las amistades que llegan después). Ese caso SOLO
-  // ensancha, así que no puede entrar en bucle. Cambiar el tamaño de la ventana sí vuelve a empezar por el más
-  // estrecho. El panel entra deslizándose desde fuera, así que los cambios de ancho no llegan a verse.
   const scrollRef = useRef<HTMLDivElement>(null);
   const layoutRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const barraRef = useRef<HTMLElement>(null);
   const [medida, setMedida] = useState<{ id: number; etapa: number } | null>(null);
-  // «Lo quieren», como relleno: primero se elige el ancho SIN esa sección; después se prueba a añadirla y, si así ya
-  // no cabe sin scroll, se quita. Nunca ensancha el panel ni provoca scroll.
   const [quieren, setQuieren] = useState<{ id: number; estado: 'probando' | 'si' | 'no' } | null>(null);
   const [pasada, setPasada] = useState(0);
   const etapa = g !== null && medida?.id === g.id ? medida.etapa : 0;
@@ -711,8 +623,6 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
     return () => window.removeEventListener('resize', alCambiar);
   }, []);
 
-  // EL HUECO DE LOS BOTONES SE MIDE: el cuerpo reserva abajo justo lo que ocupan (más un respiro), sea cual sea el
-  // tema, el tamaño de letra o si en el móvil las dianas son de 48 px. Fijo, se quedaba corto y tapaban lo último.
   useEffect(() => {
     const barra = barraRef.current;
     const panel = panelRef.current;
@@ -735,23 +645,18 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   useEffect(() => {
     const el = scrollRef.current;
     if (!open || !g || !el) return;
-    // En el móvil el panel es siempre la pantalla entera: no hay ancho que elegir, pero el relleno sí se prueba.
     const esMovil = window.matchMedia('(max-width: 600px)').matches;
     const sobra = el.scrollHeight > el.clientHeight + 1;
     const estadoQuieren = quieren?.id === g.id ? quieren.estado : null;
-    // 1 · Se estaba probando el relleno: se queda si cabe y se quita si no.
     if (estadoQuieren === 'probando') {
       setQuieren({ id: g.id, estado: sobra ? 'no' : 'si' });
       return;
     }
     if (sobra) {
-      // 2 · Sobra contenido (la letra llegó tarde, una carátula…): lo primero que se va es el relleno.
       if (estadoQuieren === 'si') {
         setQuieren({ id: g.id, estado: 'no' });
         return;
       }
-      // 3 · Sin relleno y aún no cabe: se ensancha, y con el ancho nuevo se vuelve a probar el relleno. Solo si hay
-      //     más de una sección que repartir (con una sola, dos columnas no ganarían altura).
       const secciones = el.querySelector('.gs-cuerpo')?.children.length ?? 0;
       if (!esMovil && etapa < 2 && secciones > 1) {
         setMedida({ id: g.id, etapa: etapa + 1 });
@@ -759,7 +664,6 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
       }
       return;
     }
-    // 4 · Cabe y hay relleno por probar: se prueba.
     if (estadoQuieren === null && amistades.some((a) => a.tab === 'd')) setQuieren({ id: g.id, estado: 'probando' });
   }, [open, g, etapa, pasada, quieren, amistades]);
 
@@ -776,23 +680,18 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
     >
       {open && g ? (
         <div ref={panelRef} className={`modal gs-panel ${['is-estrecho', 'is-medio', 'is-ancho'][etapa]}`} {...gestoCerrar}>
-          {/* El asa lateral: dice «esto se aparta hacia la derecha». Solo en pantallas táctiles. */}
           <span className="gs-asa-lateral" aria-hidden="true" />
           <button className="btn-icon gs-close" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
             <Icon name="close" />
           </button>
           <div className="gs-scroll" key={g.id} ref={scrollRef}>
             <div className="gs-contenido" ref={layoutRef}>
-              {/* El lado derecho de la cabecera, con ancho: el precio si es un deseo y, si no, la saga, que cabe a la
-                  altura de la carátula. Sin eso quedaba vacío. En el panel estrecho y en el móvil, la saga va al final
-                  del cuerpo (por eso se pinta dos veces y cada una se esconde donde no toca). */}
               <Cabecera
                 g={g}
                 tab={tab}
                 amistades={amistades}
                 lado={precio ? <PrecioBloque p={precio} /> : <Saga g={g} onOpen={onOpen} className="is-cabecera" />}
               />
-              {/* Columnas CSS con ancho: el navegador reparte las secciones y las deja a la misma altura. */}
               <div className="gs-cuerpo">
                 <TusDatos g={g} tab={tab} />
                 <Analisis g={g} />
@@ -808,9 +707,6 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   );
 }
 
-// ─── La lista con la ficha encima ────────────────────────────────────────────────────────────────────────────
-// `?juego=` en la URL: abrir hace `pushState` y «atrás» (o cerrar) lo quita. Acepta los alias de la primera
-// versión de la maqueta (`silksong`, `hollow`).
 const ALIAS: Record<string, string> = { silksong: clave('Hollow Knight: Silksong'), hollow: clave('Hollow Knight') };
 function idDeLaUrl(): number | null {
   const valor = new URLSearchParams(window.location.search).get('juego');
@@ -833,7 +729,6 @@ function Pantalla(): ReactElement {
     if (!g) return;
     const u = new URL(window.location.href);
     u.searchParams.set('juego', clave(g.name));
-    // De una ficha a otra (la saga) se reemplaza: «atrás» vuelve a la lista, no a la ficha anterior.
     if (abierto === null) window.history.pushState({ ficha: true }, '', u);
     else window.history.replaceState({ ficha: true }, '', u);
     setAbierto(id);
@@ -869,7 +764,6 @@ function Pantalla(): ReactElement {
   );
 }
 
-// ─── Barra de la maqueta (como la de social.tsx) ─────────────────────────────────────────────────────────────
 const TEMAS = ['tierramedia', 'arcade', 'witcher', 'persona', 'portal', 'cyberpunk', 'seaofstars', 'grimdark'];
 
 function Barra() {
