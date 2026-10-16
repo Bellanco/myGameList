@@ -707,9 +707,17 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
   la P5 y la P7 tendrán que diferir algo o rehacer las mediciones del tope.
 - **Maqueta:** `docs/maquetas/social.html?pantalla=ficha&abrir=deseo`, la ficha real con un precio inventado
   (también en `capturar-maqueta-social.mjs`).
-- **No entra, para una segunda pasada:** ordenar por precio o descuento y el filtro «Solo en oferta».
-- **Tests:** `tests/component/Prices.test.tsx`, `GameSheetPrice.test.tsx`, `useWishlistPrices.test.tsx` y lo nuevo
-  de `tests/unit/preciosCliente.test.ts`.
+- **Segunda pasada (16-10-2026): orden y filtro.** Los chips «Precio» (de lo más barato) y «Descuento» (la rebaja más
+  grande) se suman a los de Deseados, y la barra gana el filtro «En oferta» (`sale=1` en la URL). Como los precios no
+  están en `GameItem`, los aplica `App` sobre lo que ya filtró y ordenó el view-model (`core/prices/priceSort.ts`:
+  `sortByPrice`, con lo que no tiene precio siempre al final, y `onSaleOnly`). Sin precios, el filtro no se aplica y
+  un orden por precio que quedara puesto se aplica como el de siempre de Deseados.
+  - **Medido:** no cabía en el presupuesto total (240,1 de 240 kB). `priceSort` y la carga de los precios
+    (`viewmodel/prices/wishlistPricesLoader.ts`) viajan ahora con los precios, con `import()`; en el arranque solo
+    quedan el botón, los chips y la llamada. Queda: crítico **194,3 de 195 kB**, total **240,0 de 240 kB**, sin
+    margen. Probé a traer también el botón del chunk de los precios y pesaba más (cada `lazy` cuesta lo suyo).
+- **Tests:** `tests/component/Prices.test.tsx`, `GameSheetPrice.test.tsx`, `useWishlistPrices.test.tsx`,
+  `ToolbarSale.test.tsx`, `tests/unit/priceSort.test.ts` y lo nuevo de `tests/unit/preciosCliente.test.ts`.
 
 ## Fase P4 · Aviso de bajada · aparcada (16-10-2026)
 
@@ -743,7 +751,12 @@ tendrá que guardar otra vez el último precio visto de cada juego (salió de `p
 - Si se quiere que viaje entre dispositivos, es un campo aditivo de `GameItem` (decisión aparte, como el `igdbId`
   de C1).
 
-## Fase P7 · Traer tu lista de seguimiento de ITAD a Deseados · M
+## Fase P7 · Traer tu lista de seguimiento de ITAD a Deseados · M · aparcada (16-10-2026)
+
+**Aparcada para más adelante** (decisión del usuario, 16-10-2026). Lo de abajo —la prueba P7.0 hecha, las decisiones y
+los pasos— se queda tal cual para cuando se retome. Nada de la P7 está en el código: ni `/api/itad/token`, ni
+`/itad/vuelta`, ni el botón «Traer de IsThereAnyDeal». El secreto de la app de ITAD y su pantalla de autorización ya
+existen (ver «Pendiente para cerrar el plan»).
 
 **Para qué.** Quien ya tiene una *Waitlist* en IsThereAnyDeal la trae a Mis Listas sin volver a escribir cada juego.
 Decisión del usuario (15-10-2026): **la dirección es ITAD → Deseados.** Lo contrario (que tus deseos de aquí lleguen a
@@ -978,7 +991,7 @@ cada precio y es cada petición la que decide si le vale (P1).
 | 4 | F4, F5, F6 | Ficha completa y con sus entradas |
 | 5 | P5 | Cruce ficha ↔ precio (P4, el aviso, aparcada) |
 | 6 | P6 | Si la medición de P0 lo pide |
-| — | P7 (P7.0 → P7.3) | No depende de los precios: puede ir en cualquier momento, incluso antes que P1 |
+| — | P7 (P7.0 → P7.3) | **Aparcada** (16-10-2026), para más adelante. No depende de los precios |
 
 Un commit por fase, y la fase se marca como hecha aquí en el mismo commit. Cada fase sale con `npm run typecheck`,
 `npm run validate` y `npm run test` en verde. Las que tocan la ruta, el chunk perezoso o el layout llevan además

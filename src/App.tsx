@@ -5,6 +5,7 @@ import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
 import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS, WISHLIST_MAX_GAMES, WISHLIST_MAX_GAMES_ADMIN } from './core/constants/uiConfig';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from './model/types/game';
 import { PROFILE_TIER_PRICE_TTL_MS, hasUnlimitedWishlist } from './core/constants/tiers';
+import { DEFAULT_SORT, sortGames } from './core/utils/sortGames';
 import { useOwnTier } from './viewmodel/useOwnTier';
 import { useWishlistPrices } from './viewmodel/prices/useWishlistPrices';
 import { useItad } from './view/hooks/useItad';
@@ -112,6 +113,11 @@ type PricesChunk = Pick<typeof import('./view/components/prices/Prices'), 'Price
 const SIN_PRECIOS: PricesChunk = { PriceTag: () => null, PricesCredit: () => null };
 const importPrices = (): Promise<PricesChunk> => import('./view/components/prices/Prices').catch(() => SIN_PRECIOS);
 const PriceTag = lazy(() => importPrices().then((module) => ({ default: module.PriceTag })));
+/** Los chips de orden de Deseados con precios: los ordena `App` (`sortByPrice`), no el view-model. */
+const PRICE_SORTS = [
+  { header: UI_MESSAGES.table.priceSorts.price, key: 'price' },
+  { header: UI_MESSAGES.table.priceSorts.discount, key: 'discount' },
+];
 const PricesCredit = lazy(() => importPrices().then((module) => ({ default: module.PricesCredit })));
 const PublicReviewScreen = lazy(() => import('./view/components/PublicReviewScreen').then((module) => ({ default: module.PublicReviewScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
@@ -337,7 +343,7 @@ export default function App() {
     () => (wishlistPrices
       ? (game: GameItem) => (
         <Suspense fallback={null}>
-          <PriceTag precio={wishlistPrices[game.name]} name={game.name} />
+          <PriceTag precio={wishlistPrices.prices[game.name]} name={game.name} />
         </Suspense>
       )
       : undefined),
@@ -662,7 +668,18 @@ export default function App() {
   // P2: `getFilteredList` ya está memoizado sobre data/filters/sort; basta con depender de la propia función
   // (cambia cuando cambian esos inputs) y de la pestaña, en vez de re-listar sus internals.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const list = useMemo(() => vm.getFilteredList(currentTab, filters), [vm.getFilteredList, currentTab, filters]);
+  const filteredList = useMemo(() => vm.getFilteredList(currentTab, filters), [vm.getFilteredList, currentTab, filters]);
+  /* EL PRECIO EN EL ORDEN Y EN LOS FILTROS DE DESEADOS (segunda pasada de la P3): los precios no están en `GameItem`,
+     así que «En oferta» y el orden por precio o descuento se aplican aquí (`arrange`, que llega con los precios),
+     sobre lo que ya filtró y ordenó el view-model. Sin precios (apagados, o en otra lista), el filtro no se aplica y
+     un orden por precio que quedara puesto se aplica como el de siempre de Deseados (`sortGames` no sabe de precios). */
+  const pricesShown = currentTab === 'd' && wishlistPrices !== null;
+  const list = useMemo(() => {
+    if (currentTab !== 'd') return filteredList;
+    if (wishlistPrices) return wishlistPrices.arrange(filteredList, filters.sale, vm.sort.d);
+    // Las columnas de `PRICE_SORTS`: `isPriceSortColumn` viaja con los precios y no en el arranque.
+    return vm.sort.d.col === 'price' || vm.sort.d.col === 'discount' ? sortGames(filteredList, DEFAULT_SORT.d, 'd') : filteredList;
+  }, [currentTab, filteredList, wishlistPrices, filters.sale, vm.sort.d]);
 
   /* LA FICHA ABIERTA, que vive en `?juego=` (ver `useGameSheetParam`). Aquí solo se mira si hay algo que abrir: la
      ficha se monta dentro del chunk perezoso del panel, que es donde viajan `buildGameSheet` y la saga. */
@@ -1225,6 +1242,7 @@ export default function App() {
           onClearFilter={handleClearFilter}
           onClearAll={handleClearAllFilters}
           showSteamButton={showSteamButton}
+          showSaleFilter={pricesShown}
         />
         <GameTable
           games={list}
@@ -1240,6 +1258,7 @@ export default function App() {
           onOpenInbox={openInbox}
           sort={vm.sort[currentTab]}
           onSort={vm.sortBy}
+          extraSorts={pricesShown ? PRICE_SORTS : undefined}
           recentlyChangedId={recentlyChangedId}
           removingId={removingId}
         />

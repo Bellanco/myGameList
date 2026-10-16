@@ -24,6 +24,8 @@ interface ToolbarProps {
   onClearAll: () => void;
   /** Visibilidad del botón "Steam Deck" (preferencia de cuenta; por defecto true). */
   showSteamButton: boolean;
+  /** El filtro «En oferta»: solo en Deseados con los precios de IsThereAnyDeal encendidos (P3). */
+  showSaleFilter?: boolean;
 }
 
 export const Toolbar = memo(function Toolbar({
@@ -39,6 +41,7 @@ export const Toolbar = memo(function Toolbar({
   onClearFilter,
   onClearAll,
   showSteamButton,
+  showSaleFilter = false,
 }: ToolbarProps) {
   const scoreScale = useScoreScale();
   const [searchDraft, setSearchDraft] = useState(filters.search);
@@ -90,8 +93,9 @@ export const Toolbar = memo(function Toolbar({
     }
     if (filters.only && config) items.push({ id: 'only', label: config.label, onRemove: () => onClearFilter('only') });
     if (filters.deck) items.push({ id: 'deck', label: 'Steam Deck', onRemove: () => onClearFilter('deck') });
+    if (filters.sale && showSaleFilter) items.push({ id: 'sale', label: UI_MESSAGES.toolbar.onSale, onRemove: () => onClearFilter('sale') });
     return items;
-  }, [filters, config, onClearFilter, onToggleValue, scoreScale]);
+  }, [filters, config, onClearFilter, onToggleValue, scoreScale, showSaleFilter]);
 
   return (
     <div className="toolbar">
@@ -237,6 +241,19 @@ export const Toolbar = memo(function Toolbar({
             >
               <Icon name={COMMON_ICONS.steamDeck} />
               <span>{UI_MESSAGES.toolbar.steamDeck}</span>
+            </button>
+          </div>
+        ) : null}
+
+        {showSaleFilter ? (
+          <div className="filter-field filter-field-toggle">
+            <button
+              className={`btn btn-toggle ${filters.sale ? 'active' : ''}`}
+              type="button"
+              aria-pressed={filters.sale}
+              onClick={() => onFilterChange('sale', !filters.sale)}
+            >
+              <span>{UI_MESSAGES.toolbar.onSale}</span>
             </button>
           </div>
         ) : null}

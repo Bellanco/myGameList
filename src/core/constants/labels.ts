@@ -371,6 +371,8 @@ export const UI_MESSAGES = {
     sortDirection: (asc: boolean) => (asc ? 'De menor a mayor. Pulsa para invertir' : 'De mayor a menor. Pulsa para invertir'),
     toggleFilters: (open: boolean) => (open ? 'Ocultar filtros' : 'Mostrar filtros'),
     steamDeck: 'Steam Deck',
+    /** Deseados con los precios de IsThereAnyDeal encendidos: solo lo que está rebajado ahora. */
+    onSale: 'En oferta',
     removeFilter: (label: string) => `Quitar filtro ${label}`,
     genre: 'Género',
     allGenres: 'Todos los géneros',
@@ -423,6 +425,8 @@ export const UI_MESSAGES = {
       replay: 'Rejugar',
       retry: 'Dar otra oportunidad',
     },
+    /** Los chips de orden que solo salen en Deseados con los precios encendidos (no son columnas de la lista). */
+    priceSorts: { price: 'Precio', discount: 'Descuento' },
     replayBadge: (value: boolean) => `Rejugar: ${value ? 'Sí' : 'No'}`,
     retryBadge: (value: boolean) => `Dar otra oportunidad: ${value ? 'Sí' : 'No'}`,
   },

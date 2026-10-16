@@ -19,8 +19,9 @@ export const DEFAULT_SORT: Record<TabId, TabSort> = {
   d: { col: 'score', asc: false },
 };
 
-// Columnas numéricas/booleanas cuyo orden natural al activarlas es descendente (mayor primero).
-const DESC_FIRST_COLUMNS = ['score', 'years', 'hours', 'retry', 'replayable'];
+// Columnas numéricas/booleanas cuyo orden natural al activarlas es descendente (mayor primero). El descuento de
+// Deseados también: lo que se busca es la rebaja más grande. El precio, al revés: primero lo más barato.
+const DESC_FIRST_COLUMNS = ['score', 'years', 'hours', 'retry', 'replayable', 'discount'];
 
 /**
  * Siguiente orden al pulsar una cabecera: si es la columna activa, invierte la dirección; si es otra,

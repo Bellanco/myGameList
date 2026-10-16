@@ -124,6 +124,8 @@ export interface ToolbarFilters {
   hours: string;
   only: boolean;
   deck: boolean;
+  /** Solo lo que está en oferta (Deseados con los precios de IsThereAnyDeal encendidos; si no, no cuenta). */
+  sale: boolean;
 }
 
 export interface StatusNotice {

@@ -42,6 +42,11 @@ interface GameTableProps {
    */
   renderPrice?: (game: GameItem) => ReactNode;
   /**
+   * Chips de orden de más, que no son columnas de la lista: el precio y el descuento de Deseados (P3). Los ordena
+   * quien los pasa —los precios no están en `GameItem`—; aquí solo se pintan y se pulsan como los demás.
+   */
+  extraSorts?: ReadonlyArray<{ header: string; key: string }>;
+  /**
    * Cuántos juegos hay DE VERDAD cuando `games` es solo un lote: la ficha de un perfil pinta de 15 en 15, y el
    * recuento decía 15 aunque la lista tuviera 200. Sin él, se cuentan los que llegan.
    */
@@ -400,6 +405,7 @@ export const GameTable = memo(function GameTable({
   onAddGame,
   listCap,
   renderPrice,
+  extraSorts,
   totalCount,
   onImportLibrary,
   inboxCount = 0,
@@ -782,7 +788,8 @@ export const GameTable = memo(function GameTable({
      sentido. Se pinta solo si esta lista se puede ordenar (el listado del hub social llega sin `onSort`). */
   const sortableColumns = tableHeaders
     .map((column): { header: string; key: string | undefined } => ({ header: UI_MESSAGES.table.columns[column], key: SORT_COLUMN[column] }))
-    .filter((c): c is { header: string; key: string } => Boolean(c.key));
+    .filter((c): c is { header: string; key: string } => Boolean(c.key))
+    .concat(extraSorts ?? []);
   /**
    * EL ORDEN, SIN CARRIL QUE ARRASTRAR. Las columnas no cabían en un teléfono y hasta ahora sobraba
    * desplazándolas de lado: en la práctica eso esconde opciones —nadie arrastra una fila que no parece

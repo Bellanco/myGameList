@@ -33,17 +33,17 @@ describe('useWishlistPrices', () => {
     repo.loadWishlistPrices.mockReturnValue(new Promise((resolve) => { soltar = resolve; }));
     const titulos = ['Hades'];
     const { result } = renderHook(() => useWishlistPrices(titulos, 1000));
-    await waitFor(() => expect(result.current).toEqual({ Hades: viejo }));
+    await waitFor(() => expect(result.current?.prices).toEqual({ Hades: viejo }));
     expect(repo.loadWishlistPrices).toHaveBeenCalledWith(['Hades'], 1000);
     soltar({ prices: { Hades: nuevo }, status: 'ok' });
-    await waitFor(() => expect(result.current).toEqual({ Hades: nuevo }));
+    await waitFor(() => expect(result.current?.prices).toEqual({ Hades: nuevo }));
   });
 
   it('con el rango en vuelo, solo lo guardado', async () => {
     repo.readCachedPrices.mockResolvedValue({ Hades: viejo });
     const titulos = ['Hades'];
     const { result } = renderHook(() => useWishlistPrices(titulos, null));
-    await waitFor(() => expect(result.current).toEqual({ Hades: viejo }));
+    await waitFor(() => expect(result.current?.prices).toEqual({ Hades: viejo }));
     expect(repo.loadWishlistPrices).not.toHaveBeenCalled();
   });
 });
