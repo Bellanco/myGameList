@@ -448,6 +448,8 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 
 - `functions/_lib/itad.ts`, puro salvo el `fetch`:
   - `buscarIds(titulos)`;
+  - `buscarIds` hace una **segunda pasada** solo con los no encontrados, con los números romanos pasados a arábigos y
+    al revés (medido: +1 de 64 y +4 de 149; ver «Pendiente para cerrar el plan»);
   - `leerPrecios(ids, pais)` contra `/games/prices/v3`;
   - `leerBundles(ids, pais)` contra `/games/overview/v2`, solo si quien pide tiene el aviso activado (P0.10): de su
     respuesta solo se usa `bundles[]`, cruzado con los ids de `tiers[].games[]`;
@@ -815,8 +817,31 @@ Ninguna: todas cerradas el 15-10-2026. Lo que queda son datos.
 - ✅ **Dominio de producción:** `https://mygamelist.pages.dev`.
 - **Prueba P7.0** (½ día): si el canje necesita `client_secret`, qué devuelve una lista real (tamaño, `added`,
   `type`) y si ITAD recuerda el consentimiento.
-- **Medición P0:** el porcentaje de acierto de `/lookup/id/title/v1` con los nombres reales de unas listas de deseos.
-  Decide si P6 (corregir el emparejamiento) sube de prioridad.
+- ✅ **Comprobado contra ITAD (16-10-2026), con las claves de `.dev.vars` y sin mostrarlas:**
+  - **API Key: funciona.** `/games/prices/v3` responde 200 con datos reales (7 tiendas para *Silksong*, con los tres
+    mínimos); con una clave falsa, 403 «Invalid or expired api key». `/games/overview/v2` también responde.
+  - **Client Secret: sin comprobar.** Con el real y con uno falso, `/oauth/token/` responde igual («invalid_grant»):
+    rechaza el código inventado antes de mirar el secret. Se valida en P7.0, con un código de verdad.
+  - **Redirect URI: bien.** Con la de producción y con la de `localhost:8000`, ITAD enseña la pantalla de
+    autorización de la app; con una inventada, «Client authentication failed».
+  - **Pendiente en ITAD:** la pantalla de autorización dice «miListadeJuegos» y «Developer did not provide any
+    description». Es lo que verá cada usuario: ponerle el nombre «Mis Listas» y una frase.
+  - **Tiendas de claves:** el mejor precio de *Silksong* sale en **PlayerLand**. Confirma que elegir las tiendas desde
+    administración (P0.6) tiene sentido.
+- ✅ **Medición P0, acierto por título** (`/lookup/id/title/v1` con los nombres reales de `myGames.json`):
+
+  | Lista | Encontrados | Con la segunda pasada | Emparejamientos equivocados |
+  |---|---|---|---|
+  | Próximos (64) | 61 (95 %) | 62 (96 %) | 0 |
+  | Completados (149) | 130 (87 %) | 134 (89 %) | 0 |
+
+  - Los «títulos distintos» eran el mismo juego: ediciones GOTY, «™» o romanos frente a arábigos.
+  - **La segunda pasada va en P1:** a los no encontrados, una llamada más con los números romanos pasados a arábigos
+    y al revés. Recupera *Devil May Cry V*, *Hades 2* y *The Witcher II* y *III*.
+  - **Lo que queda sin encontrar** son erratas de la propia biblioteca (*Max Paine*, *XCOM: Enemy Unknow*), títulos
+    en español (*La Tierra Media: Sombras de Mordor*) y consolas que ITAD no cubre (*Pokémon*, *Wario Land*).
+  - **Consecuencia para P6:** no hace falta para corregir emparejamientos equivocados, que no ha habido, sino para
+    **buscar a mano lo que no se encontró**. Se queda como está, sin subir de prioridad.
 - **Medición P0:** si `caches.default` guarda y devuelve en las Pages Functions del dominio real. Si no, la caché de
   precios va solo en el cliente.
 - **En F3, mirando el código:** si el directorio cacheado (`peekCachedSocialDirectory`) trae la visibilidad y el
