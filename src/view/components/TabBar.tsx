@@ -46,6 +46,9 @@ export const TabBar = memo(function TabBar({ tabs, currentTab, tabCounts, onTabC
             <use href={`#icon-${TAB_ICONS[tab]}`} />
           </svg>
           <span className="tab-text-full">{TAB_TITLES[tab]}</span>
+          {/* El espacio no se pinta (la pestaña es `inline-flex`), pero sin él el texto visible se leía «…completista149»
+              y no estaba dentro del nombre accesible: la etiqueta tiene que formar parte del nombre (WCAG 2.5.3). */}
+          {' '}
           <span className="count-badge">{tabCounts[tab]}</span>
         </button>
       ))}
