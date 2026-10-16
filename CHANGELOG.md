@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-17
+
 ### Added
 
 - **Precios de IsThereAnyDeal en tu lista de deseos.** Si tienes espacio social, puedes activarlos en Ajustes › Datos,
