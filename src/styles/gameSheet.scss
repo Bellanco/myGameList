@@ -9,7 +9,12 @@
 // viendo la lista de la que se viene.
 dialog.modal-dialog.gs-dialog::backdrop { background: rgba(0, 0, 0, .4); backdrop-filter: none; }
 
-dialog.modal-dialog.gs-dialog[open] { padding: 0; justify-content: flex-end; align-items: stretch; }
+// `overflow: clip` Y NO EL `auto` QUE LE DA EL NAVEGADOR (17-10-2026). Mientras entra, el panel desplazado por la
+// animación desborda el `<dialog>` por la derecha, y `showModal()` enfoca la X, que está ahí fuera: el navegador
+// desplazaba el diálogo para enseñarla (`scrollLeft` = el ancho del panel). Ese scroll anulaba el `translateX` y se
+// iba reajustando conforme el panel entraba; en Firefox, desfasado: el panel iba de un lado a otro. Recortado no es
+// contenedor de scroll y no hay nada que desplazar; el scroll de la ficha es el suyo, el de `.gs-scroll`.
+dialog.modal-dialog.gs-dialog[open] { padding: 0; justify-content: flex-end; align-items: stretch; overflow: clip; }
 
 // ENCIMA TAMBIÉN DURANTE UN CAMBIO DE PANTALLA (17-10-2026). En una View Transition, lo que tiene nombre se pinta en
 // una capa por encima de la captura de la página, y el `<main>` lo tiene (`pantalla`, ver `_motion.scss`). La ficha,
