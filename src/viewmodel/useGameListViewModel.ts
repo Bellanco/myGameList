@@ -152,7 +152,11 @@ function readInitialState(): { data: TabData; meta: { updatedAt: number; etag: s
   };
 }
 
-export function useGameListViewModel() {
+/**
+ * @param wishlistMax tope de la lista de deseos para quien está mirando: `WISHLIST_MAX_GAMES`, o
+ *   `WISHLIST_MAX_GAMES_ADMIN` con el claim `admin` (lo decide `App`, que es quien escucha la sesión).
+ */
+export function useGameListViewModel(wishlistMax: number = WISHLIST_MAX_GAMES) {
   // Inicializador PEREZOSO (`useState(fn)`, no `useState(fn())`): sin él, cada render del hook —y este es el
   // hook raíz, así que re-renderiza con cada filtro, fila expandida, aviso y ciclo de sync— reparseaba y
   // renormalizaba la biblioteca completa solo para tirar el resultado.
@@ -374,7 +378,7 @@ export function useGameListViewModel() {
   useEffect(() => () => window.clearTimeout(noticeTimerRef.current), []);
 
   // ¿Cabe otro juego en la lista de deseos? Solo cuenta para las altas: editar uno que ya está no añade nada.
-  const wishlistFull = data.d.length >= WISHLIST_MAX_GAMES;
+  const wishlistFull = data.d.length >= wishlistMax;
 
   const openNewGame = useCallback((tab: TabId) => {
     // Con la lista llena ni se abre el formulario: el aviso de la página quedaría tapado por el diálogo, y

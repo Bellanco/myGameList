@@ -2,7 +2,7 @@ import { Suspense, ViewTransition, addTransitionType, lazy, startTransition, use
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ORDER, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
-import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS, WISHLIST_MAX_GAMES } from './core/constants/uiConfig';
+import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS, WISHLIST_MAX_GAMES, WISHLIST_MAX_GAMES_ADMIN } from './core/constants/uiConfig';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { decideReviewPublication } from './core/social/reviewPublication';
 import { applyReviewPublication } from './viewmodel/applyReviewPublication';
@@ -38,6 +38,7 @@ import { useSyncViewModel } from './viewmodel/useSyncViewModel';
 import { GithubConnectionProvider, type GithubConnection } from './viewmodel/sync/githubConnection';
 import { resolveSyncBadge } from './viewmodel/syncBadge';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
+import { useIsAdmin } from './view/hooks/useIsAdmin';
 import { useSocialProfileStatus } from './view/hooks/useSocialProfileSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
@@ -253,7 +254,11 @@ export default function App() {
     : matchAppSection(location.pathname);
   const legalDocId = getLegalDocId(location.pathname);
 
-  const vm = useGameListViewModel();
+  // El administrador tiene más sitio en la lista de deseos. `App` no se monta en la página pública de una reseña
+  // (`main.tsx` la sirve sola), así que escuchar aquí la sesión no carga Firebase donde no debe.
+  const isAdmin = useIsAdmin();
+  const wishlistMax = isAdmin ? WISHLIST_MAX_GAMES_ADMIN : WISHLIST_MAX_GAMES;
+  const vm = useGameListViewModel(wishlistMax);
   // F2: enlaza la sesión de Google con la escala de puntuación (hidrata desde Firestore / resetea al salir);
   // devuelve el uid para gatear la opción en Ajustes. Se monta aquí para que la escala esté en toda la app.
   const { uid: scoreScaleUid, ready: authReady } = useScoreScaleSession();
@@ -1144,7 +1149,7 @@ export default function App() {
           onDelete={vm.deleteGame}
           onMigrate={vm.migrateGame}
           onAddGame={handleAddGame}
-          listCap={currentTab === 'd' ? { total: vm.data.d.length, max: WISHLIST_MAX_GAMES } : undefined}
+          listCap={currentTab === 'd' ? { total: vm.data.d.length, max: wishlistMax } : undefined}
           onImportLibrary={handleImportLibraryExporter}
           inboxCount={inboxCount}
           onOpenInbox={openInbox}

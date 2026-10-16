@@ -442,7 +442,7 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 - `functions/api/precios.ts`, `POST`, con `requireUser` (P0.2):
   - lee el rango del perfil, como la cuota de compartir (`functions/_lib/quota.ts`): una lectura de Firestore por
     petición;
-  - **Entrada:** `{ titulos: string[] }`, ≤ 100 (el tope de Deseados, `WISHLIST_MAX_GAMES`), cada uno ≤ `MAX_NOMBRE`.
+  - **Entrada:** `{ titulos: string[] }`, ≤ 400 (el tope de Deseados para el administrador, `WISHLIST_MAX_GAMES_ADMIN`; 100 para el resto, `WISHLIST_MAX_GAMES`), cada uno ≤ `MAX_NOMBRE`.
   - **Salida:** `{ juegos: Record<titulo, Precio | null> }`.
   - Sin datos personales en la petición a ITAD: solo títulos, y salen desde el borde, así que ITAD no ve la IP de
     quien pide.
@@ -560,7 +560,7 @@ ITAD) no entra en esta fase.
 - **La bandeja de importados ya hace casi todo:** deduplica por nombre, marca lo que ya está en tus listas
   (`existsInLists`), funde orígenes y caduca a los 30 días (`core/import/staging.ts`). Pero se diseñó para
   Playnite: clasifica de uno en uno abriendo el formulario, y **no** clasifica en Deseados (`plan-lista-deseos.md`).
-- **Deseados tiene un tope de 100** (`WISHLIST_MAX_GAMES`).
+- **Deseados tiene un tope de 100** (`WISHLIST_MAX_GAMES`), **400 con el claim `admin`** (`WISHLIST_MAX_GAMES_ADMIN`).
 - `ImportSource` (`model/types/import.ts:10`) no tiene `'itad'`: sería un valor nuevo, aditivo.
 
 ### P7 · Decisiones
