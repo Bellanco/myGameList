@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { JUEGOS, sembrarBiblioteca } from './seed';
+import { JUEGOS, sembrarAmistades, sembrarBiblioteca } from './seed';
 import { PALETTES } from '../../src/core/constants/palettes';
 import { edicionAbierta, edicionPublicada, sirveFirestore } from './premiosFirestore';
 
@@ -106,6 +106,18 @@ async function fichaAbierta(page: Page): Promise<void> {
   await listaPintada(page);
   await page.locator('button[aria-haspopup="dialog"]', { hasText: JUEGOS[0].name }).first().click();
   await expect(page.getByRole('dialog', { name: `Ficha de ${JUEGOS[0].name}` })).toBeVisible();
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/**
+ * La ficha con TUS AMISTADES (F3): el renglón de persona del hub, con la piel de cada tema, la media en la cabecera y
+ * «Lo quieren». Sin esto, el contraste de esos renglones dentro del panel no lo miraba nadie.
+ */
+async function fichaConAmistades(page: Page): Promise<void> {
+  await listaPintada(page);
+  await sembrarAmistades(page, JUEGOS[0].name);
+  await page.locator('button[aria-haspopup="dialog"]', { hasText: JUEGOS[0].name }).first().click();
+  await expect(page.getByRole('dialog', { name: `Ficha de ${JUEGOS[0].name}` }).getByText('Tus amistades', { exact: true })).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -380,6 +392,7 @@ async function contrastesDeLaBarraDeProgreso(page: Page): Promise<Array<{ rareza
 const PANTALLAS: ReadonlyArray<{ nombre: string; amplia: boolean; deseos?: boolean; abrir: (page: Page) => Promise<void> }> = [
   { nombre: 'lista', amplia: false, abrir: listaPintada },
   { nombre: 'ficha', amplia: false, abrir: fichaAbierta },
+  { nombre: 'ficha con amistades', amplia: false, abrir: fichaConAmistades },
   { nombre: 'panel', amplia: true, deseos: true, abrir: panelDeEstadisticas },
   { nombre: 'ajustes', amplia: false, abrir: pantallaDeAjustes },
   { nombre: 'menú de ajustes', amplia: false, abrir: menuDeAjustesAbierto },

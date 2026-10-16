@@ -182,6 +182,38 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-arrastrando { transition: none;
 .gs-review-box { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; }
 .gs-review { -webkit-line-clamp: 4; line-clamp: 4; }
 
+// ─── Tus amistades y quienes lo quieren ──────────────────────────────────────────────────────────────────────
+// El renglón de persona del hub (`personRow.scss`), más bajo: aquí van varios seguidos y la ficha no es un listado. Con
+// las dos clases del renglón, para ganarle a su regla (0,2,0) sin depender de qué hoja carga antes: van en chunks
+// distintos.
+.gs-friends { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.gs-friends .hub-user-card.hub-person-row { padding-block: .4rem; min-height: 0; }
+
+// El adelanto de su reseña, en un renglón: entera, en su perfil.
+.gs-snippet {
+  display: block;
+  margin-top: .1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+// «Lo quieren»: solo avatar y nombre, seguidos, porque es relleno.
+.gs-wanters { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: 0; padding: 0; list-style: none; }
+
+.gs-wanter {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: var(--fs-sm);
+  color: var(--text);
+
+  .hub-avatar { width: 1.75rem; height: 1.75rem; }
+}
+
 // ─── Saga: una tira de carátulas que se desplaza en horizontal ───────────────────────────────────────────────
 .gs-saga {
   display: grid;

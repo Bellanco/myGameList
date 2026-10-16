@@ -1,18 +1,25 @@
-import { forwardRef, useEffect, useRef, type ReactElement } from 'react';
-import { Link } from 'react-router-dom';
+import { forwardRef, useCallback, useEffect, useRef, type ReactElement } from 'react';
+import { Link, generatePath, useNavigate } from 'react-router-dom';
 import { GAME_SHEET_UI } from '../../../core/constants/gameSheetLabels';
 import { COMMON_ICONS, TAB_ICONS } from '../../../core/constants/icons';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { coverDeCaja, type PedidoDePortada } from '../../../core/utils/coverDelListado';
-import type { GameSheet, GameSheetSagaEntry } from '../../../core/gameSheet/buildGameSheet';
+import { starsFromGrade } from '../../../core/utils/scoreScale';
+import type { GameSheet, GameSheetFriend, GameSheetSagaEntry } from '../../../core/gameSheet/buildGameSheet';
 import { UNPLAYED_TAB_IDS, type GameItem, type TabData, type TabId } from '../../../model/types/game';
+import { useGameSheetFriendSignals } from '../../../viewmodel/gameSheet/useGameSheetFriendSignals';
 import { useGameSheetViewModel } from '../../../viewmodel/gameSheet/useGameSheetViewModel';
+import { SOCIAL_ROUTES } from '../../../viewmodel/social/socialRoutes';
 import type { TabAction } from '../../../viewmodel/useGameListViewModel';
 import { useNativeDialog } from '../../modals/useNativeDialog';
 import { useCovers } from '../../hooks/useCovers';
+import { useScoreScale } from '../../hooks/useScoreScale';
 import { GameCover } from '../GameCover';
 import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
+import { StarRating } from '../StarRating';
+import { HubAvatar } from '../socialhub/HubAvatar';
+import { HubPersonRow } from '../socialhub/HubPersonRow';
 import { renderBooleanBadge, renderTags, yearsDesc } from '../gameTags';
 import { useGameSheetWidth } from './useGameSheetWidth';
 import { useSwipeToClose } from './useSwipeToClose';
@@ -93,6 +100,20 @@ function Saga({ saga, onOpenGame, covers, className = '' }: {
   );
 }
 
+/**
+ * La media de tus amistades, EN LA ESCALA DE QUIEN MIRA (F0.13): con la nota 0–100, la cifra; con estrellas, en
+ * estrellas. Al lado, cuántas notas la forman (F0.2: sale con las que haya, por pocas que sean).
+ */
+function MediaDeAmistades({ average }: { average: { grade: number; count: number } }) {
+  const scale = useScoreScale();
+  return (
+    <>
+      {scale === 'grade' ? average.grade : <StarRating value={starsFromGrade(average.grade)} />}{' '}
+      <small>{GAME_SHEET_UI.friendsAverageCount(average.count)}</small>
+    </>
+  );
+}
+
 function Cabecera({ sheet, covers, lado }: { sheet: GameSheet; covers: boolean; lado: ReactElement | null }) {
   const own = sheet.own;
   const item = own?.item;
@@ -121,13 +142,21 @@ function Cabecera({ sheet, covers, lado }: { sheet: GameSheet; covers: boolean; 
         {/* Un resumen de una línea, sin chips (F0.14): las listas enteras van en el cuerpo. */}
         {resumen ? <p className="gs-resumen">{resumen}</p> : null}
       </div>
-      {rotulo || amistades ? (
+      {rotulo || amistades || sheet.average ? (
         <dl className="gs-numbers gs-head-numbers">
           {rotulo && item ? (
             <div>
               <dt>{rotulo}</dt>
               <dd className="gs-media">
                 <ScoreDisplay game={item} />
+              </dd>
+            </div>
+          ) : null}
+          {sheet.average ? (
+            <div>
+              <dt>{GAME_SHEET_UI.friendsAverage}</dt>
+              <dd className="gs-media">
+                <MediaDeAmistades average={sheet.average} />
               </dd>
             </div>
           ) : null}
@@ -242,6 +271,64 @@ function Analisis({ tab, item, reviewTarget }: { tab: TabId; item: GameItem; rev
 }
 
 /**
+ * TUS AMISTADES QUE LO TIENEN (F3): una fila por persona con su avatar, su nombre, dónde lo tiene y, si lo reseñó, el
+ * adelanto y la nota. Ya vienen ordenadas (con reseña primero, después por nota: `buildGameSheet`). Es el renglón de
+ * persona del hub (`HubPersonRow`), para que cada tema la vista igual que en «Perfiles». Tocarla lleva a su perfil.
+ */
+function Amistades({ friends, onOpenFriend }: { friends: GameSheetFriend[]; onOpenFriend: (id: string) => void }) {
+  if (!friends.length) return null;
+  return (
+    <div className="hub-detail-metadata gs-sec-amistades">
+      <div className="hub-metadata-section">
+        <strong>{GAME_SHEET_UI.friendsTitle}</strong>
+        <ul className="gs-friends">
+          {friends.map((friend) => (
+            <li key={friend.id}>
+              <HubPersonRow
+                name={friend.name}
+                photoURL={friend.photoURL}
+                status={
+                  <>
+                    <span className={`hub-person-row-status is-${friend.tab}`}>
+                      <b>{GAME_SHEET_UI.listPill(friend.tab)}</b>
+                    </span>
+                    {friend.snippet ? <span className="gs-snippet">{GAME_SHEET_UI.friendSnippet(friend.snippet)}</span> : null}
+                  </>
+                }
+                onOpen={() => onOpenFriend(friend.id)}
+                openAriaLabel={GAME_SHEET_UI.friendOpenAria(friend.name)}
+              >
+                {friend.grade !== null ? <ScoreDisplay game={{ grade: friend.grade }} /> : null}
+              </HubPersonRow>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+/** QUIENES LO QUIEREN: sus deseos, aparte y sin nota. Es relleno (F0.4): solo sale si cabe sin scroll. */
+function LoQuieren({ wishers }: { wishers: GameSheetFriend[] }) {
+  if (!wishers.length) return null;
+  return (
+    <div className="hub-detail-metadata gs-sec-quieren">
+      <div className="hub-metadata-section">
+        <strong>{GAME_SHEET_UI.wishersTitle}</strong>
+        <ul className="gs-wanters">
+          {wishers.map((friend) => (
+            <li key={friend.id} className="gs-wanter">
+              <HubAvatar photoURL={friend.photoURL} />
+              {friend.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+/**
  * LOS BOTONES DEL DETALLE DE HOY, anclados abajo y sin barra: mover según la lista (con su color), editar y borrar,
  * este separado a la derecha. En el panel estrecho y en el móvil solo el primero lleva texto; los demás, icono con su
  * nombre en `aria-label`.
@@ -304,7 +391,8 @@ export function GameSheetPanel({
   onMigrate,
   reviewTarget,
 }: GameSheetPanelProps) {
-  const sheet = useGameSheetViewModel({ data, slug });
+  const signals = useGameSheetFriendSignals(open);
+  const sheet = useGameSheetViewModel({ data, slug, signals });
   const visible = open && sheet !== null;
   const dialogRef = useNativeDialog(visible, onClose);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -313,7 +401,12 @@ export function GameSheetPanel({
   const barRef = useRef<HTMLElement>(null);
   const { covers } = useCovers();
   const key = sheet?.slug ?? '';
-  const { width } = useGameSheetWidth(visible, key, scrollRef, contentRef, false);
+  const { width, showFiller } = useGameSheetWidth(visible, key, scrollRef, contentRef, Boolean(sheet?.wishers.length));
+  const navigate = useNavigate();
+  // Su perfil (F0.7). Con el juego abierto llegará en la F5, cuando su perfil abra la ficha.
+  const openFriend = useCallback((profileId: string) => {
+    void navigate(generatePath(SOCIAL_ROUTES.profileDetail, { profileId }));
+  }, [navigate]);
   const swipe = useSwipeToClose(panelRef, onClose);
 
   /* EL HUECO DE LOS BOTONES SE MIDE: el cuerpo reserva abajo justo lo que ocupan (más un respiro), sea cual sea el
@@ -357,6 +450,8 @@ export function GameSheetPanel({
               <div className="gs-cuerpo">
                 {own ? <TusDatos tab={own.tab} item={own.item} /> : null}
                 {own ? <Analisis tab={own.tab} item={own.item} reviewTarget={reviewTarget} /> : null}
+                <Amistades friends={sheet.friends} onOpenFriend={openFriend} />
+                {showFiller ? <LoQuieren wishers={sheet.wishers} /> : null}
                 <Saga saga={sheet.saga} onOpenGame={onOpenGame} covers={covers} className="is-solo-estrecho" />
               </div>
             </div>

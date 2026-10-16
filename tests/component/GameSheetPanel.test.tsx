@@ -1,10 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import type { GameSheetSignal } from '../../src/core/gameSheet/buildGameSheet';
 import { GameSheetPanel, type GameSheetPanelProps } from '../../src/view/components/gameSheet/GameSheetPanel';
 import { TAB_ACTIONS } from '../../src/core/constants/labels';
 import { statsReviewPath } from '../../src/core/utils/reviewPath';
 import type { GameItem, TabData } from '../../src/model/types/game';
+
+// Las señales de tus amistades salen de la copia del directorio social en IndexedDB (F3): aquí se dan hechas.
+const senales = vi.hoisted(() => ({ actuales: [] as GameSheetSignal[] }));
+vi.mock('../../src/viewmodel/gameSheet/gameSheetFriendSignals', () => ({
+  loadGameSheetFriendSignals: () => Promise.resolve(senales.actuales),
+}));
 
 // LA FICHA DE UN JUEGO (F2 del plan de la ficha): el panel que sustituye al detalle de la fila. jsdom no maqueta,
 // así que aquí se prueba lo que no depende del layout —qué enseña, qué hace cada botón, Esc y el gesto de cerrar— y
@@ -182,5 +189,76 @@ describe('GameSheetPanel · deslizar a la derecha para cerrar', () => {
     const { durante } = arrastrar(250, 0, 'mouse', 100);
     expect(durante).toBe('');
     expect(props.onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe('GameSheetPanel · tus amistades (F3)', () => {
+  const marta = { id: 'p-marta', name: 'Marta' };
+  const nacho = { id: 'p-nacho', name: 'Nacho' };
+  const sara = { id: 'p-sara', name: 'Sara' };
+
+  afterEach(() => {
+    senales.actuales = [];
+  });
+
+  function Donde() {
+    return <span data-testid="donde">{useLocation().pathname}</span>;
+  }
+
+  async function pintarConAmistades() {
+    senales.actuales = [
+      { kind: 'move', friend: nacho, gameName: 'Hollow Knight', tab: 'e', at: 2 },
+      { kind: 'review', friend: marta, gameName: 'Hollow Knight', grade: 90, snippet: 'Un mapa a mano.', at: 1 },
+      { kind: 'move', friend: sara, gameName: 'Hollow Knight', tab: 'd', at: 3 },
+      { kind: 'review', friend: nacho, gameName: 'Celeste', grade: 40, snippet: 'Otro juego.', at: 1 },
+    ];
+    const props: GameSheetPanelProps = {
+      open: true,
+      data: biblioteca({ c: [hollow] }),
+      slug: 'hollow-knight',
+      onClose: vi.fn(),
+      onOpenGame: vi.fn(),
+      tabActions: TAB_ACTIONS,
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onMigrate: vi.fn(),
+      reviewTarget: (_tab, game) => ({ to: statsReviewPath(game.id, game.name) }),
+    };
+    render(
+      <MemoryRouter initialEntries={['/completados?juego=hollow-knight']}>
+        <Routes>
+          <Route path="*" element={<><GameSheetPanel {...props} /><Donde /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByText('Tus amistades');
+  }
+
+  it('enseña quién lo tiene, con reseña primero, su adelanto y dónde lo tiene; de otro juego, nada', async () => {
+    await pintarConAmistades();
+    const filas = screen.getAllByRole('article');
+    expect(filas.map((fila) => fila.getAttribute('aria-label'))).toEqual(['Ver el perfil de Marta', 'Ver el perfil de Nacho']);
+    expect(screen.getByText('«Un mapa a mano.»')).toBeInTheDocument();
+    expect(screen.getByText('En curso')).toBeInTheDocument();
+    expect(screen.queryByText('«Otro juego.»')).toBeNull();
+  });
+
+  it('la cabecera dice la media con cuántas notas y cuántas lo tienen', async () => {
+    await pintarConAmistades();
+    expect(screen.getByText('Media de tus amistades')).toBeInTheDocument();
+    expect(screen.getByText('· 1 nota')).toBeInTheDocument();
+    expect(screen.getByText('Lo tienen')).toBeInTheDocument();
+  });
+
+  it('quien lo tiene en deseos va aparte, en «Lo quieren», cuando cabe', async () => {
+    await pintarConAmistades();
+    expect(await screen.findByText('Lo quieren')).toBeInTheDocument();
+    expect(screen.getByText('Sara')).toBeInTheDocument();
+  });
+
+  it('tocar una amistad lleva a su perfil', async () => {
+    await pintarConAmistades();
+    fireEvent.click(screen.getByRole('article', { name: 'Ver el perfil de Marta' }));
+    expect(screen.getByTestId('donde')).toHaveTextContent('/social/profiles/p-marta');
   });
 });

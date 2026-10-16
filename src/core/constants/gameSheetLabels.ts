@@ -38,6 +38,12 @@ export const GAME_SHEET_UI = {
   friendsAverageCount: (count: number) => `· ${count} ${count === 1 ? 'nota' : 'notas'}`,
   friendsOwning: 'Lo tienen',
   friendsCount: (count: number) => (count === 1 ? 'amistad' : 'amistades'),
+  /** La sección de quienes lo tienen, y la de quienes lo quieren (sus deseos, aparte y sin nota). */
+  friendsTitle: 'Tus amistades',
+  wishersTitle: 'Lo quieren',
+  /** Adelanto de su reseña, entre comillas latinas como el resto de citas de la app. */
+  friendSnippet: (snippet: string) => `«${snippet}»`,
+  friendOpenAria: (name: string) => `Ver el perfil de ${name}`,
   saga: 'Saga',
   sagaOwn: (tab: TabId | null) => (tab ? `Tú: ${LIST_SHORT[tab]}` : 'No lo tienes'),
   sagaFriends: (count: number) => `${count} ${count === 1 ? 'amistad' : 'amistades'}`,

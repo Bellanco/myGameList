@@ -354,20 +354,32 @@ dependen del layout y jsdom no los ve.
   - con **120+ juegos**, para que la tabla virtualice;
   - en renglones y en mosaico.
 
-## Fase F3 · Amistades desde el canal social (coste 0) · S
+## Fase F3 · Amistades desde el canal social (coste 0) · S · ✅ hecha (16-10-2026)
 
-- Leer el directorio cacheado (`peekCachedSocialDirectory`) solo si hay perfil social en este dispositivo
-  (`useSocialProfileStatus`). Nunca cargar Firebase por abrir la ficha (memoria `enlace-publico-sin-firebase`).
-- De ahí salen, sin red:
-  - las **reseñas** de tus amistades sobre el juego (`activity`: nota y adelanto de 160 caracteres);
-  - los **avisos de lista** de los últimos 30 días (`moves`).
-- Esto ya llena la sección de amistades en la mayoría de los casos: quien reseñó o movió el juego hace poco.
-- **Comprobar en F3, antes de pintar:**
-  - si cada entrada del directorio cacheado trae la visibilidad de la amistad (`hiddenTabs`…);
-  - si trae el estado `'friends'`.
-
-  Si no lo trae, la ficha aplica `LOCKED_VISIBILITY`, como `useForeignProfileGames`, y solo enseña lo que ya está
-  en el canal social, que ya es público entre amistades.
+- **De dónde:** la copia del directorio que guarda el hub (`peekCachedSocialDirectory`), leída al abrir la ficha y
+  solo si hay espacio social en este dispositivo (`getSocialSyncConfig`, como el buscador general). Sin red y sin
+  Firebase. `viewmodel/gameSheet/gameSheetFriendSignals.ts` (pura salvo la lectura) y `useGameSheetFriendSignals`.
+- **Qué sale:** las **reseñas** de tus amistades sobre el juego (`activity`: nota y adelanto de 160 caracteres; la nota
+  vieja en estrellas pasa a 0–100) y sus **avisos de lista** (`moves`; el canal ya solo guarda los de 30 días).
+- **Comprobado antes de pintar:**
+  - **Solo amistades:** la copia lleva también a quien no lo es, y quién sí lo dice la huella de amistades
+    (`friendUidsFromDirectoryKey`). En una copia anterior a la huella, la misma regla que el buscador: el directorio
+    solo lee el canal de tus amistades.
+  - **Visibilidad:** cada entrada trae la suya (`visibility`, `socialSkipped`, `socialUnreadable`), pero no hace
+    falta aplicarla: la ficha solo enseña lo que ya está en el canal social, y los avisos de las listas que alguien
+    esconde van aparte (`hiddenMoves`) y no se leen.
+  - **La foto** ya llega resuelta con su `showPhoto`.
+- **Pintado:** «Tus amistades» con el renglón de persona del hub (`HubPersonRow`, la piel de cada tema), con reseña
+  primero; «Lo quieren» como relleno (F0.4); en la cabecera, la media en la escala de quien mira (F0.13) y «Lo
+  tienen». Tocar una amistad lleva a su perfil; **con el juego abierto, en la F5**, cuando su perfil abra la ficha.
+- **Estilos del renglón, en su hoja:** `styles/personRow.scss`, que importan `HubPersonRow` y `HubUserCard`.
+  Importar `social.scss` desde la ficha metía el hub entero en el precache. Comprobado con la maqueta social: 48
+  capturas (amigos, solicitudes y perfil; 8 temas, claro y oscuro) idénticas píxel a píxel antes y después.
+- **Medido:** lo diferido pasa de 7,5 a 12,8 kB y **el total del precache queda en 239,6 de 240 kB**. La P5 (precio
+  en la ficha) no cabe sin decidir antes: cargar las amistades aparte y sin precache (son opcionales, F0.10) o
+  rehacer las mediciones del tope.
+- **Tests:** `tests/unit/gameSheetFriendSignals.test.ts`, los de amistades de `GameSheetPanel.test.tsx`, el e2e
+  `fichaAmistades.test.ts` y la pantalla «ficha con amistades» del recorrido de accesibilidad.
 
 ## Fase F4 · Índice de las bibliotecas de tus amistades · M
 
@@ -400,6 +412,9 @@ Cuando la fila del perfil de una amistad abra la ficha, se borra lo que la F2 de
 (`expandedId`/`onExpandedChange`, la fila `detail`, `DETAIL_ROW_ESTIMATE_PX`, el bloque del mosaico y su marcado),
 sus estilos de fila desplegada (F0.8) y los textos de `UI_MESSAGES.detail` que ya no se usen, y se reescribe
 `GameTableColumns.test.tsx`.
+
+Y tocar una amistad en la ficha pasa a llevar a su perfil **con ese juego abierto** (F0.7): en la F3 lleva solo
+a su perfil (`GameSheetPanel`, `openFriend`).
 
 | Desde | Cambio |
 |---|---|
