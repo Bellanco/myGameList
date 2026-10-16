@@ -304,11 +304,14 @@ dependen del layout y jsdom no los ve.
   va diferido y precacheado (`DEFERRED_MODULES` en `vite.config.ts`), y cuenta solo en el total (234,1 de 240).
 - **Revisión del 16-10-2026:** las horas suben a la cabecera, los años pierden su rótulo, el orden de las cajas
   (renglones de chips, fuertes y débiles en dos columnas, rejugar en línea), el análisis vestido como el de una
-  amistad y **la salida animada**: el panel guarda la última ficha y sale por la derecha mientras el velo se
-  desvanece (320 ms), y solo entonces se cierra el `<dialog>`. Con «reducir movimiento», o si se cerró deslizándolo,
+  amistad y **la salida animada**: el panel guarda la última ficha y sale mientras el velo se desvanece, y solo
+  entonces se cierra el `<dialog>`. En el móvil entra y sale como un cajón (320 ms al salir); en ancho, desde el
+  17-10-2026, asoma 2,5rem con un fundido (decisión del usuario: el cajón de 1.240 px se veía «muy bestia» en Firefox). Con «reducir movimiento», o si se cerró deslizándolo,
   se cierra en el acto. El ancho se mide antes de pintar (`useLayoutEffect`), para que no salte mientras entra.
-- **Doble clic:** con ratón, la fila espera 250 ms (`DOBLE_CLIC_MS`) antes de abrir la ficha, para que el doble clic
-  edite sin abrirla; con el dedo o el teclado abre al momento.
+- **Doble clic:** la fila abre la ficha al primer clic, también con ratón (17-10-2026: la espera de 250 ms para
+  distinguir el doble clic se notaba como un clic que no hace nada). El segundo clic cae en el velo, que no cierra
+  (`detail` 2) y abre el formulario de edición encima de la ficha; no desde el perfil de una amistad (`?de=`). Si el
+  segundo clic aún llega a la fila, `App` espera a que la ficha esté en la URL para abrir el formulario encima.
 - **Al cambiar de lista, la ficha se cierra** (`App.tsx`, con `ownGameSheetTab`): es lo que hacía el detalle, que se
   iba con su fila, y si no, la cápsula de un logro queda debajo del panel modal sin poder tocarse. Cancelar el
   formulario de «Pasar a» no mueve el juego y la ficha sigue abierta.

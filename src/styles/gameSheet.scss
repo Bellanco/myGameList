@@ -17,16 +17,28 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel {
   height: 100dvh;
   max-height: none;
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
-  animation: gsEntra .44s cubic-bezier(.22, 1, .36, 1) both;
-  will-change: transform;
+  animation: gsEntra .5s cubic-bezier(.32, .72, 0, 1) both;
+  will-change: transform, opacity;
 }
 
-// ENTRAR Y SALIR COMO UN CAJÓN (16-10-2026). Entra frenando poco a poco, sin el golpe final de la curva de un modal, y
-// sale acelerando suave hacia la derecha mientras el velo se desvanece (`.is-saliendo`, que pone el panel mientras
-// dura: ver «La salida se anima» en `GameSheetPanel`). Antes desaparecía de golpe, velo incluido.
+// ENTRAR Y SALIR (16-10-2026). La salida se anima: `.is-saliendo` lo pone el panel mientras dura (ver «La salida se
+// anima» en `GameSheetPanel`); antes desaparecía de golpe, velo incluido.
+//  · EN EL MÓVIL, COMO UN CAJÓN: entra desde el borde frenando poco a poco (la curva de las hojas de iOS) y sale
+//    acelerando hacia la derecha. Es lo que pide el gesto de cerrarla deslizándola con el dedo.
+//  · EN ANCHO, ASOMA Y SE FUNDE (17-10-2026, decisión del usuario: en Firefox el cajón seguía viéndose «muy bestia»).
+//    El cajón cruzaba hasta 1.240 px en medio segundo, justo mientras llegan las amistades, el precio y las carátulas
+//    y el ancho se vuelve a medir: cada fotograma que el navegador no llega a pintar era un salto de decenas de
+//    píxeles. Ahora recorre 2,5rem mientras aparece, y un fotograma perdido no se ve.
 dialog.modal-dialog.gs-dialog[open]::backdrop { animation: gsVeloEntra .36s ease-out both; }
 dialog.modal-dialog.gs-dialog.is-saliendo::backdrop { animation: gsVeloSale .32s ease-in both; }
 dialog.modal-dialog.gs-dialog.is-saliendo .gs-panel { animation: gsSale .32s cubic-bezier(.4, 0, .2, 1) both; pointer-events: none; }
+
+@media (min-width: 601px) {
+  dialog.modal-dialog.gs-dialog[open] .gs-panel { animation: gsEntraSuave .32s cubic-bezier(.2, .8, .2, 1) both; }
+  dialog.modal-dialog.gs-dialog[open]::backdrop { animation-duration: .3s; }
+  dialog.modal-dialog.gs-dialog.is-saliendo .gs-panel { animation: gsSaleSuave .22s cubic-bezier(.4, 0, 1, 1) both; }
+  dialog.modal-dialog.gs-dialog.is-saliendo::backdrop { animation-duration: .22s; }
+}
 
 // EL ANCHO SE MIDE (`useGameSheetWidth`): el más estrecho de los tres en el que todo cabe sin scroll. Los dos anchos
 // de dos columnas dejan siempre unos 80 px de la lista a la vista, por donde se pulsa para cerrar.
@@ -36,6 +48,8 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-ancho { width: min(1240px, calc
 
 @keyframes gsEntra { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes gsSale { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes gsEntraSuave { from { opacity: 0; transform: translateX(2.5rem); } to { opacity: 1; transform: translateX(0); } }
+@keyframes gsSaleSuave { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(1.5rem); } }
 @keyframes gsVeloEntra { from { opacity: 0; } to { opacity: 1; } }
 @keyframes gsVeloSale { from { opacity: 1; } to { opacity: 0; } }
 

@@ -1,9 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { GameTable } from '../../src/view/components/GameTable';
 import type { GameItem } from '../../src/model/types/game';
 
-// TOCAR ABRE LA FICHA Y EL DOBLE CLIC SIGUE EDITANDO (F2 y F5 del plan de la ficha): la ficha sustituyó al detalle
+// TOCAR ABRE LA FICHA AL MOMENTO Y EL DOBLE CLIC SIGUE EDITANDO (F2 y F5 del plan de la ficha): la ficha sustituyó al detalle
 // que se desplegaba bajo la fila, también en el perfil de una amistad.
 
 const juego: GameItem = { id: 7, _ts: 1, name: 'Celeste', platforms: ['PC'], genres: ['Plataformas'], steamDeck: false, review: '' };
@@ -28,8 +28,6 @@ function clicConRaton(el: Element) {
 }
 
 describe('GameTable · abrir la ficha', () => {
-  afterEach(() => vi.useRealTimers());
-
   it('con el dedo o el teclado, tocar el renglón abre la ficha al momento', () => {
     const onOpenGame = vi.fn();
     pintar(onOpenGame);
@@ -40,29 +38,21 @@ describe('GameTable · abrir la ficha', () => {
     expect(onOpenGame).toHaveBeenCalledWith(juego);
   });
 
-  it('con el ratón espera al doble clic: si llega, edita y no abre la ficha', () => {
-    vi.useFakeTimers();
+  it('con el ratón también abre la ficha al primer clic, sin esperar al doble clic', () => {
+    const onOpenGame = vi.fn();
+    pintar(onOpenGame);
+    clicConRaton(document.querySelector('tr.main-row') as HTMLElement);
+    expect(onOpenGame).toHaveBeenCalledWith(juego);
+  });
+
+  it('si el doble clic aún llega a la fila, edita, y su segundo clic no vuelve a abrir la ficha', () => {
     const onOpenGame = vi.fn();
     const { onEdit } = pintar(onOpenGame);
     const fila = document.querySelector('tr.main-row') as HTMLElement;
-    act(() => {
-      clicConRaton(fila);
-      clicConRaton(fila);
-      fireEvent.doubleClick(fila);
-      vi.advanceTimersByTime(400);
-    });
+    fireEvent.click(fila, { detail: 1 });
+    fireEvent.click(fila, { detail: 2 });
+    fireEvent.doubleClick(fila);
+    expect(onOpenGame).toHaveBeenCalledTimes(1);
     expect(onEdit).toHaveBeenCalledWith('c', 7);
-    expect(onOpenGame).not.toHaveBeenCalled();
-  });
-
-  it('con el ratón, un clic suelto abre la ficha pasado el tiempo del doble clic', () => {
-    vi.useFakeTimers();
-    const onOpenGame = vi.fn();
-    pintar(onOpenGame);
-    const fila = document.querySelector('tr.main-row') as HTMLElement;
-    act(() => clicConRaton(fila));
-    expect(onOpenGame).not.toHaveBeenCalled();
-    act(() => vi.advanceTimersByTime(300));
-    expect(onOpenGame).toHaveBeenCalledWith(juego);
   });
 });

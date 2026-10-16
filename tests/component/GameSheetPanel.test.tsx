@@ -173,6 +173,28 @@ describe('GameSheetPanel', () => {
     expect(props.onClose).toHaveBeenCalledTimes(2);
   });
 
+  it('pulsar fuera cierra; el segundo clic de un doble clic, no', () => {
+    const props = pintar();
+    const dialog = screen.getByRole('dialog');
+    fireEvent.mouseDown(dialog, { detail: 2 });
+    expect(props.onClose).not.toHaveBeenCalled();
+    fireEvent.mouseDown(dialog, { detail: 1 });
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('el doble clic que la abrió edita el juego, con la ficha debajo', () => {
+    const props = pintar();
+    fireEvent.doubleClick(screen.getByRole('dialog'));
+    expect(props.onEdit).toHaveBeenCalledWith('c', 1);
+    expect(props.onClose).not.toHaveBeenCalled();
+  });
+
+  it('desde el perfil de una amistad (`?de=`), el doble clic sobre su juego no edita el tuyo', () => {
+    const props = pintar({ friendId: 'marta' });
+    fireEvent.doubleClick(screen.getByRole('dialog'));
+    expect(props.onEdit).not.toHaveBeenCalled();
+  });
+
   it('los botones mueven, editan y borran el juego de su lista', () => {
     const props = pintar();
     fireEvent.click(screen.getByRole('button', { name: /Pasar a en curso/ }));

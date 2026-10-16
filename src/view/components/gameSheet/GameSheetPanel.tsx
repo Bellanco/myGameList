@@ -69,7 +69,7 @@ export interface GameSheetPanelProps {
   priceTtlMs?: number | null;
 }
 
-/** Lo que dura la salida del panel (`gsSale` en `styles/gameSheet.scss`). */
+/** Lo que dura la salida del panel, la más larga de las dos (`gsSale`, en el móvil, en `styles/gameSheet.scss`). */
 const SALIDA_MS = 320;
 
 const PEDIDO_PROPIO: PedidoDePortada = { preferirConocidas: false, soloCache: false };
@@ -505,6 +505,7 @@ export function GameSheetPanelView({
   onMigrate,
   reviewTarget,
   onAddGame,
+  friendId,
   signals: canalEIndice,
   missing,
   friendEntry: deAmistad,
@@ -559,6 +560,13 @@ export function GameSheetPanelView({
     void navigate(generatePath(SOCIAL_ROUTES.profileReview, { profileId: deAmistad.friend.id, gameId: String(deAmistad.item.id) }));
   }, [navigate, deAmistad]);
   const swipe = useSwipeToClose(panelRef, cerrar);
+  /* EL DOBLE CLIC SOBRE UN JUEGO EDITA (17-10-2026). La fila abre la ficha al primer clic, así que el segundo cae en el
+     velo: aquí se convierte en editar, con el formulario encima de la ficha, como su botón «Editar». No desde el perfil
+     de una amistad (`?de=`): el doble clic sobre su juego no edita el tuyo. */
+  const editarConDobleClic = () => {
+    const propia = ficha?.own;
+    if (visible && propia && !friendId) onEdit(propia.tab, propia.item.id);
+  };
 
   /* Si no hay animación que esperar, la salida termina ya: con «reducir movimiento», o si el panel ya se fue
      deslizándolo con el dedo (`.is-gesto` lo deja fuera y apaga la animación). Y, por si `animationend` no llega
@@ -603,7 +611,11 @@ export function GameSheetPanelView({
       className={`modal-dialog gs-dialog${saliendo ? ' is-saliendo' : ''}`}
       aria-label={ficha ? GAME_SHEET_UI.panelAria(ficha.name) : undefined}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) cerrar();
+        // El segundo clic de un doble clic no cierra: es el de la fila, que ya abrió la ficha (ver `onDoubleClick`).
+        if (event.target === event.currentTarget && event.detail < 2) cerrar();
+      }}
+      onDoubleClick={(event) => {
+        if (event.target === event.currentTarget) editarConDobleClic();
       }}
     >
       {ficha && (visible || saliendo) ? (
@@ -612,7 +624,7 @@ export function GameSheetPanelView({
           className={`modal gs-panel ${width}`}
           {...swipe}
           onAnimationEnd={(event) => {
-            if (saliendo && event.target === event.currentTarget && event.animationName === 'gsSale') terminarSalida();
+            if (saliendo && event.target === event.currentTarget && event.animationName.startsWith('gsSale')) terminarSalida();
           }}
         >
           <span className="gs-asa-lateral" aria-hidden="true" />

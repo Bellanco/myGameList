@@ -63,7 +63,7 @@ import { useImportInbox } from './viewmodel/useImportInbox';
 import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
 import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
 import { useGameSheetParam } from './viewmodel/gameSheet/useGameSheetParam';
-import { gameSheetSearch, ownGameSheetTab } from './core/utils/gameSheetPath';
+import { gameSheetSearch, gameSheetSlug, ownGameSheetTab } from './core/utils/gameSheetPath';
 import { statsReviewPath } from './core/utils/reviewPath';
 import { runWhenIdle } from './core/utils/idle';
 import { carryStamps } from './core/utils/gameStamps';
@@ -689,6 +689,23 @@ export default function App() {
   const { slug: gameSheetSlugParam, friendId: gameSheetFriendId, openSheet, closeSheet } = useGameSheetParam();
   const gameSheetTab = useMemo(() => ownGameSheetTab(vm.data, gameSheetSlugParam), [vm.data, gameSheetSlugParam]);
   const openGameSheet = useCallback((game: GameItem) => openSheet(game.name), [openSheet]);
+  /* EL DOBLE CLIC QUE AÚN LLEGA A LA FILA. La fila abre la ficha al primer clic y el segundo cae en su velo, que lo
+     convierte en editar (ver `GameSheetPanel`). Pero si llega antes de que la ficha se abra —un doble clic muy rápido,
+     un equipo lento—, el formulario se abriría primero y la ficha le quedaría encima, tapándolo. Así que, si la ficha de
+     ese juego aún no está en la URL, el formulario espera a que llegue, que es justo después: la abrió su primer clic. */
+  const { openEditGame } = vm;
+  const edicionTrasLaFicha = useRef<{ slug: string; tab: TabId; id: number } | null>(null);
+  const editGameFromTable = useCallback((tab: TabId, id: number) => {
+    const slug = gameSheetSlug(vm.data[tab].find((item) => item.id === id)?.name ?? '');
+    if (slug === gameSheetSlugParam) openEditGame(tab, id);
+    else edicionTrasLaFicha.current = { slug, tab, id };
+  }, [vm.data, gameSheetSlugParam, openEditGame]);
+  useEffect(() => {
+    const pendiente = edicionTrasLaFicha.current;
+    if (pendiente?.slug !== gameSheetSlugParam) return;
+    edicionTrasLaFicha.current = null;
+    openEditGame(pendiente.tab, pendiente.id);
+  }, [gameSheetSlugParam, openEditGame]);
   const gameSheetReviewTarget = useCallback((tab: TabId, game: GameItem) => ({
     to: statsReviewPath(game.id, game.name),
     // Al volver de la reseña, a la lista CON la ficha abierta: es de donde se fue.
@@ -1251,7 +1268,7 @@ export default function App() {
           games={list}
           currentTab={currentTab}
           onOpenGame={openGameSheet}
-          onEdit={vm.openEditGame}
+          onEdit={editGameFromTable}
           onAddGame={handleAddGame}
           // Sin tope (mithril), el recuento no se dice contra ningún número.
           listCap={currentTab === 'd' && Number.isFinite(wishlistMax) ? { total: vm.data.d.length, max: wishlistMax } : undefined}

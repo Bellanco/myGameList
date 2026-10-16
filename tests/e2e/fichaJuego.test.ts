@@ -69,6 +69,36 @@ test.describe('la ficha de un juego · sobre la lista', () => {
     await expect(fila).toBeFocused();
     await expect(page).not.toHaveURL(/[?&]juego=/);
   });
+
+  /* EL DOBLE CLIC: la ficha se abre al primer clic, sin esperar (17-10-2026). Con una pausa de persona, el segundo clic
+     cae en el velo, que no cierra y abre el formulario; sin pausa, aún llega a la fila y el formulario espera a la
+     ficha. En los dos casos el formulario queda ENCIMA, y Esc lo cierra a él y deja la ficha. */
+  for (const [caso, pausa] of [['con pausa de persona', 120], ['sin pausa', 0]] as const) {
+    test(`el doble clic abre la ficha y el formulario de edición encima (${caso})`, async ({ page }) => {
+      await sembrarBiblioteca(page);
+      await page.goto('/completados');
+      const caja = await page.locator('button.row-toggle', { hasText: JUEGOS[0].name }).boundingBox();
+      if (!caja) throw new Error('sin fila');
+      await page.mouse.move(caja.x + caja.width / 2, caja.y + caja.height / 2);
+      await page.mouse.down({ clickCount: 1 });
+      await page.mouse.up({ clickCount: 1 });
+      if (pausa) await page.waitForTimeout(pausa);
+      await page.mouse.down({ clickCount: 2 });
+      await page.mouse.up({ clickCount: 2 });
+
+      const formulario = page.getByRole('dialog', { name: 'Editar juego' });
+      await expect(formulario).toBeVisible();
+      await expect(ficha(page)).toBeVisible();
+      const encima = await formulario.evaluate((dialog) => {
+        const r = dialog.querySelector('.modal')!.getBoundingClientRect();
+        return document.elementFromPoint(r.right - 30, r.top + 30)?.closest('dialog') === dialog;
+      });
+      expect(encima).toBe(true);
+      await page.keyboard.press('Escape');
+      await expect(formulario).toBeHidden();
+      await expect(ficha(page)).toBeVisible();
+    });
+  }
 });
 
 test.describe('la ficha de un juego · en el mosaico', () => {

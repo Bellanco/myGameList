@@ -347,9 +347,6 @@ const SORT_COLUMN: Partial<Record<TableColumn, string>> = {
   interest: 'score',
 };
 
-/** Lo que dura un doble clic: lo que espera la ficha antes de abrirse con el ratón (ver `pulsarJuego`). */
-const DOBLE_CLIC_MS = 250;
-
 /* Cuántas filas nuevas como mucho se animan a la vez. Una o dos son "acabo de añadir un juego"; treinta son una
    importación o un cambio de filtro, y treinta filas deslizándose a la vez no es una confirmación, es un mareo. */
 const MAX_ENTERING_ROWS = 4;
@@ -423,22 +420,15 @@ export const GameTable = memo(function GameTable({
   const shownCount = totalCount ?? games.length;
   const enteringIds = useEnteringRows(games, currentTab);
 
-  /* TOCAR ABRE LA FICHA; EL DOBLE CLIC SIGUE EDITANDO. Con el ratón, la ficha espera lo que dura un doble clic: si
-     llega el segundo, se cancela y se edita (abierta al primero, el segundo clic caería en el velo del panel y lo
-     cerraría). Con el dedo, el lápiz o el teclado no hay doble clic que esperar: abre al momento. */
-  const fichaPendiente = useRef<number | undefined>(undefined);
-  useEffect(() => () => window.clearTimeout(fichaPendiente.current), []);
+  /* TOCAR ABRE LA FICHA AL MOMENTO; EL DOBLE CLIC SIGUE EDITANDO (17-10-2026). Antes, con el ratón, la ficha esperaba
+     lo que dura un doble clic (250 ms) y se notaba como un clic que no hace nada. Ahora el segundo clic cae ya en el
+     velo del panel, y es el panel quien lo convierte en editar (ver «El doble clic» en `GameSheetPanel`). Si aún llega
+     a la fila (la ficha no se ha abierto todavía), no vuelve a abrirla —apilaría otra entrada en el historial— y su
+     `onDoubleClick` edita. */
   const pulsarJuego = (event: React.MouseEvent, game: GameItem) => {
-    window.clearTimeout(fichaPendiente.current);
-    const conRaton = (event.nativeEvent as PointerEvent).pointerType === 'mouse';
-    if (!conRaton || readOnly) {
-      onOpenGame(game);
-      return;
-    }
-    fichaPendiente.current = window.setTimeout(() => onOpenGame(game), DOBLE_CLIC_MS);
+    if (event.detail < 2) onOpenGame(game);
   };
   const editarConDobleClic = (game: GameItem) => {
-    window.clearTimeout(fichaPendiente.current);
     if (!readOnly) onEdit(currentTab, game.id);
   };
   const showYears = visibility?.showYears ?? true;

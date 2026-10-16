@@ -127,8 +127,11 @@ const root = path.join(__dirname, '..');
 // de ese día se hizo para no tocar el arranque (el buscador y su lupa llegan por `lazy()` en ocioso; ver
 // `GlobalSearch`), así que el número no subió por un pasajero. Las palancas de arriba siguen pendientes: la próxima
 // vez que el margen se acabe, toca medirlas antes de volver a subirlo.
+//
+// EL TOTAL, DE 240 A 245 (17-10-2026), POR DECISIÓN DEL USUARIO: estaba en 239,98 kB (20 bytes de margen) y abrir la
+// ficha sin esperar al doble clic lo dejó en 240,04. El crítico no cambió (194,4).
 const BOOT_CRITICAL_BUDGET_KB = 195;
-const BOOT_TOTAL_BUDGET_KB = 240;
+const BOOT_TOTAL_BUDGET_KB = 245;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [
   path.join(root, 'index.html'),
