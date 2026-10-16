@@ -51,7 +51,7 @@ describe('entrada de las imágenes', () => {
   it('las capas de fondo de esas piezas funden con el mixin', () => {
     const hojas: Record<string, number> = {
       'src/styles/_table.scss': 1,
-      'src/styles/social.scss': 1,
+      'src/styles/personRow.scss': 1,
       'src/styles/reviews.scss': 2,
       'src/styles/yearSummary.scss': 2,
     };

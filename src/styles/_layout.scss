@@ -1378,6 +1378,10 @@ html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
   user-select: none;
 }
 
+/* La foto del avatar (`HubAvatar`), donde se pinte: el hub y la ficha de un juego. Vivía en `social.scss`, que solo
+   carga el hub. */
+.hub-avatar-img { object-fit: cover; background: var(--surface-hover); }
+
 /* Avatar de la tarjeta de persona del directorio y la bandeja: la cara es lo que se reconoce de un vistazo en
    una rejilla, así que pide más presencia que el del feed, sin llegar al del hero. */
 .hub-avatar-md {
