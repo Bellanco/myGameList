@@ -570,6 +570,17 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
   - **Salida:** `{ juegos: Record<titulo, Precio | null> }`.
   - Sin datos personales en la petición a ITAD: solo títulos, y salen desde el borde, así que ITAD no ve la IP de
     quien pide.
+- **La Cache API (`caches.default`) sí funciona en `*.pages.dev`**, según la documentación de Cloudflare (revisada el
+  16-10-2026: «So do Pages functions, whether attached to custom domains or `*.pages.dev` domains»). Lo que obliga en
+  el diseño:
+  - **solo guarda peticiones `GET`**, y `/api/precios` es `POST`: la clave de cada valor es una petición `GET`
+    sintética por juego (`https://cache.mis-listas/itad/precio/<id>`), no la del cliente;
+  - **es por centro de datos**, no se replica: dos usuarios comparten la consulta si entran por el mismo (casi todo el
+    tráfico de España entra por Madrid). El cupo de ITAD sigue protegido por los plazos de rango;
+  - no admite `stale-while-revalidate` y no guarda respuestas con `Set-Cookie`.
+
+  Nadie la usa todavía en este repo. **Al desplegar la P1 se comprueba en el dominio real** con una cabecera de
+  diagnóstico (`x-cache: hit|miss`): dos peticiones seguidas por el mismo juego, la segunda tiene que decir `hit`.
 - **Caché en el borde, sin KV** (P0, sujeto a la medición), con un valor por juego:
   - título normalizado → id de ITAD: 30 días; un `null`, 7 días (como el `MISS_TTL` de las carátulas);
   - id → precio, **con la hora a la que se pidió**. Cada petición acepta lo cacheado si es más reciente que el plazo
@@ -579,8 +590,10 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
   2 llamadas a ITAD, y solo por lo que no esté en caché o esté más viejo que su plazo.
 - **Límites por usuario, no por IP:**
   - el plazo de su rango: si pide antes de tiempo, el borde contesta con lo cacheado sin preguntar a ITAD;
-  - un tope de peticiones por usuario y hora, en memoria del aislado, por si un cliente se porta mal;
-  - un tope global por minuto en memoria del aislado, muy por debajo de 1.000 cada 5 minutos. No es global de
+  - un tope de peticiones por usuario y hora **según su rango** (bronce 30, plata 60, oro 120 y mithril 240; ver
+    «Límites por rango»), en memoria del aislado, por si un cliente se porta mal;
+  - un tope global de **150 llamadas a ITAD por minuto** en memoria del aislado, por debajo de las 200 por minuto de
+    media que da el cupo (1.000 cada 5 minutos). No es global de
     verdad (Cloudflare reparte entre aislados), así que lo que de verdad protege la clave son la caché y los plazos.
 
   Al pasarse, `429` con `Retry-After`, y el cliente se queda con lo que tiene.
@@ -725,6 +738,19 @@ ITAD) no entra en esta fase.
   - si el canje necesita secreto;
   - qué devuelve `GET /waitlist/games/v1` con una lista real: el tamaño, si viene `added` y qué `type`s aparecen;
   - si ITAD recuerda el consentimiento, de modo que la segunda importación no vuelva a preguntar.
+- **Hecha (16-10-2026)**, con la cuenta del usuario y un receptor local en `localhost:8000/itad/vuelta` que no
+  guardó ni el token ni los títulos:
+  - **El canje NO necesita el secret:** con PKCE y sin `client_secret`, `/oauth/token/` devuelve el token (200). La
+    Function de P7.1 puede canjear sin él; `ITAD_CLIENT_SECRET` se queda guardado por si ITAD empieza a pedirlo.
+  - **El token:** `Bearer`, con caducidad de 2.682.000 s (31 días) y `refresh_token`. Da igual: se usa una vez y se
+    descarta.
+  - **Una lista real:** 286 entradas (263 `game`, 13 `dlc`, 10 `package`), todas con `added` en ISO con hora.
+    Campos: `id`, `slug`, `title`, `type`, `assets` (`boxart`, `banner145`…`banner600`), `mature`, `added`. Pesa unos
+    210 kB y tardó 317 ms. **Es casi el triple del tope de Deseados (100)**: la bandeja de P7.3 tiene que dejar
+    elegir, no traerlo todo.
+  - **`user_info` devuelve el nombre de la cuenta** (para decir con cuál se ha conectado).
+  - **El consentimiento:** la segunda autorización volvió en 5,2 s. Falta que el usuario confirme si ITAD le volvió a
+    enseñar su pantalla.
 - No hace falta la clave de API de los precios: la lectura solo usa OAuth. **P7 no depende de P1–P3** y puede ir
   antes.
 
@@ -740,7 +766,8 @@ ITAD) no entra en esta fase.
   - sin configuración: `501`;
   - ITAD caído: `503`;
   - código caducado o usado: `400`, con un mensaje para volver a intentarlo.
-- Limitada por usuario, como `/api/precios`, y por las importaciones al día de su rango. Sin KV.
+- Limitada por usuario y hora según su rango (bronce 0 —no importa—, plata 3, oro 6 y mithril 20: una importación más
+  los reintentos de un código caducado) y por las importaciones al día de su rango. Sin KV.
 - Gemelo de desarrollo en `vite.config.ts`, como `localGithubOAuthApi`.
 - **Tests:**
   - el token no aparece en la respuesta ni en ningún `console`;
@@ -830,12 +857,14 @@ hay (`PROFILE_TIER_SHARE_MAX_ACTIVE`, `PROFILE_TIER_FEED_TTL_MS`).
 | Ficha: índice completo de sus bibliotecas (F4), cada | — | **No** | **24 h** | **12 h** | **30 min** | **Decidido** (15-10-2026) |
 | Interruptor «IsThereAnyDeal» | **No aparece** | Sí | Sí | Sí | Sí | **Decidido** (P0.1, P0.2) |
 | Precios: refresco cada | — | **18 h** | **12 h** | **6 h** | **15 min** | **Decidido** (P0.7) |
+| `/api/precios`: peticiones por usuario y hora (red de seguridad; lo normal lo limita el refresco) | — | **30** | **60** | **120** | **240** | **Decidido** (16-10-2026): que dependa del rango, como todo |
 | Precios: aviso de bajada al abrir (P4), con su casilla | — | No | Sí | Sí | Sí | **Decidido** (P0.5) |
 | Precios: otras tiendas y mínimos de 1 año y 3 meses en el recuadro | — | Sí | Sí | Sí | Sí | **Decidido:** para todos los que tienen precios (F0.15) |
 | Importar de ITAD | **No** | **No** | Sí | Sí | Sí | **Decidido** (D8) |
 | Importar: DLC y paquetes | — | — | No | Sí | Sí | **Decidido** (D8b) |
 | Importar: juegos por importación | — | — | 50 | 100 | 100 | **Decidido** (D8c). El tope de Deseados sigue en 100 para todos |
 | Importar: importaciones al día | — | — | 1 | 3 | Sin tope | **Decidido** |
+| `/api/itad/token`: peticiones por usuario y hora (una importación y sus reintentos) | — | **0** | **3** | **6** | **20** | **Decidido** (16-10-2026) |
 
 Con mithril a 15 minutos, la caché del borde no puede tener un plazo fijo más largo: por eso guarda la hora de
 cada precio y es cada petición la que decide si le vale (P1).
@@ -920,8 +949,8 @@ Ninguna: todas cerradas el 15-10-2026. Lo que queda son datos.
   - redirecciones: `https://mygamelist.pages.dev/itad/vuelta` y, si ITAD la acepta, `http://localhost:8000/itad/vuelta`.
     Si solo admite una, una segunda app de ITAD para local, como la OAuth App de desarrollo de GitHub.
 - ✅ **Dominio de producción:** `https://mygamelist.pages.dev`.
-- **Prueba P7.0** (½ día): si el canje necesita `client_secret`, qué devuelve una lista real (tamaño, `added`,
-  `type`) y si ITAD recuerda el consentimiento.
+- ✅ **Prueba P7.0** (16-10-2026): el canje no necesita el secret; una lista real de 286 entradas con `added` y tres
+  `type`s. Ver P7.0. Solo falta saber si ITAD recuerda el consentimiento.
 - ✅ **Comprobado contra ITAD (16-10-2026), con las claves de `.dev.vars` y sin mostrarlas:**
   - **API Key: funciona.** `/games/prices/v3` responde 200 con datos reales (7 tiendas para *Silksong*, con los tres
     mínimos); con una clave falsa, 403 «Invalid or expired api key». `/games/overview/v2` también responde.
@@ -947,11 +976,12 @@ Ninguna: todas cerradas el 15-10-2026. Lo que queda son datos.
     en español (*La Tierra Media: Sombras de Mordor*) y consolas que ITAD no cubre (*Pokémon*, *Wario Land*).
   - **Consecuencia para P6:** no hace falta para corregir emparejamientos equivocados, que no ha habido, sino para
     **buscar a mano lo que no se encontró**. Se queda como está, sin subir de prioridad.
-- **Medición P0:** si `caches.default` guarda y devuelve en las Pages Functions del dominio real. Si no, la caché de
-  precios va solo en el cliente.
+- ✅ **`caches.default` en `*.pages.dev`:** según la documentación de Cloudflare, sí funciona en Pages Functions,
+  también en `*.pages.dev`; por centro de datos y solo con `GET` (ver P1). Se comprueba de verdad al desplegar la P1.
 - ✅ **En F3, mirando el código:** el directorio cacheado trae la visibilidad de cada perfil, y quién es amistad lo
   dice la huella de amistades (ver F3).
 - ✅ **Arranque crítico, medido:** 193,3 de 195 kB con la ficha (F2), 192,9 tras quitar el detalle de la tabla (F5).
   El panel va precacheado y diferido, fuera del arranque; lo de tus amistades, fuera del precache (F4).
-- **El tope por usuario y hora de `/api/precios` y `/api/itad/token`** (el de respaldo, en memoria del aislado).
+- ✅ **Los topes por usuario y hora**, por rango: `/api/precios` 30/60/120/240 y `/api/itad/token` 0/3/6/20 (bronce,
+  plata, oro y mithril). Ver «Límites por rango».
 
