@@ -7,6 +7,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Changed
 
+- **Cada juego tiene su ficha.** Al tocar un juego de tus listas, se abre un panel a la derecha con todo lo que
+  enseñaba el detalle: tu lista y desde cuándo, tu nota o tu interés, plataformas, géneros, años, horas, puntos
+  fuertes y débiles y el análisis. Abajo están los botones para moverlo, editarlo o borrarlo. Si tienes otras
+  entregas de la misma saga, salen en la ficha y llevan a la suya. La ficha queda en la dirección de la página,
+  así que «atrás» la cierra y una recarga la vuelve a abrir. En el móvil se cierra deslizándola hacia la derecha o
+  tocando la franja de la lista. El doble clic sigue abriendo la edición.
+
 - **«No puedes pasar» estrena colores.** De noche, el fondo es el verde hondo del bosque de Lórien, la hoja es más
   luminosa y el oro más vivo, y la pestaña activa y las letras de los títulos van en plata. De día, el pergamino
   pasa a piedra enana, con tintas de oro viejo, cobre y granate. Cada color tiene ahora nombre en la Tierra Media, y

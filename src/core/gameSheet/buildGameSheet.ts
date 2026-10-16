@@ -41,10 +41,14 @@ export interface GameSheetFriend {
   finishedOn?: string;
 }
 
-/** Una entrega de la saga: en qué lista la tienes tú (o `null`) y cuántas amistades la tienen. */
+/**
+ * Una entrega de la saga: en qué lista la tienes tú (o `null`) y cuántas amistades la tienen. Lleva las plataformas
+ * (las tuyas si la tienes; si no, las de una amistad) porque desempatan la carátula entre homónimos.
+ */
 export interface GameSheetSagaEntry {
   slug: string;
   name: string;
+  platforms: string[];
   ownTab: TabId | null;
   friendCount: number;
   current: boolean;
@@ -173,7 +177,15 @@ function buildSaga(
     const key = gameSheetSlug(gameName);
     if (!key) return null;
     if (key !== slug && !sharedSagaName(name, gameName)) return null;
-    const entry = entries.get(key) ?? { slug: key, name: gameName, ownTab: null, friendCount: 0, current: key === slug, friends: new Set<string>() };
+    const entry = entries.get(key) ?? {
+      slug: key,
+      name: gameName,
+      platforms: [] as string[],
+      ownTab: null,
+      friendCount: 0,
+      current: key === slug,
+      friends: new Set<string>(),
+    };
     entries.set(key, entry);
     return entry;
   };
@@ -183,13 +195,16 @@ function buildSaga(
       if (entry && entry.ownTab === null) {
         entry.ownTab = tab;
         entry.name = item.name;
+        entry.platforms = item.platforms || [];
       }
     }
   }
   for (const signal of signals) {
     if (signal.kind !== 'library' || signal.tab === 'd') continue;
     const entry = touch(signal.item.name);
-    entry?.friends.add(signal.friend.id);
+    if (!entry) continue;
+    entry.friends.add(signal.friend.id);
+    if (!entry.platforms.length) entry.platforms = signal.item.platforms || [];
   }
   if (!entries.has(slug)) touch(name);
   const saga = [...entries.values()].map(({ friends, ...entry }) => ({ ...entry, friendCount: friends.size }));

@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ORDER, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
 import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS, WISHLIST_MAX_GAMES, WISHLIST_MAX_GAMES_ADMIN } from './core/constants/uiConfig';
-import { TAB_IDS, type TabData, type TabId } from './model/types/game';
+import { TAB_IDS, type GameItem, type TabData, type TabId } from './model/types/game';
 import { decideReviewPublication } from './core/social/reviewPublication';
 import { applyReviewPublication } from './viewmodel/applyReviewPublication';
 import { copyText } from './core/utils/clipboard';
@@ -57,6 +57,9 @@ import { normalizeName } from './core/utils/normalizeName';
 import { useImportInbox } from './viewmodel/useImportInbox';
 import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
 import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
+import { useGameSheetParam } from './viewmodel/gameSheet/useGameSheetParam';
+import { gameSheetSearch, ownGameSheetTab } from './core/utils/gameSheetPath';
+import { statsReviewPath } from './core/utils/reviewPath';
 import { runWhenIdle } from './core/utils/idle';
 import { carryStamps } from './core/utils/gameStamps';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
@@ -93,6 +96,12 @@ const FiltersSettings = lazy(() => import('./view/components/settings/FiltersSet
 /* La ruleta de los listados va por su envoltorio, no por el modal desnudo: así el pool y la ponderación
    se calculan DENTRO del chunk perezoso en vez de en el arranque (ver `ListsRouletteModal`). */
 const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.ListsRouletteModal })));
+/* LA FICHA DE UN JUEGO, el panel lateral que sustituye al detalle de la fila (ver `GameSheetPanel`). Como la ruleta:
+   perezosa, montada al abrirse por primera vez y precargada en idle. Además va PRECACHEADA por el service worker
+   (plugin `service-worker-precache` de `vite.config.ts`): sin red y recién desplegado, tocar una fila tiene que
+   seguir abriendo algo, como abría el detalle. */
+const importGameSheetPanel = () => import('./view/components/gameSheet/GameSheetPanel');
+const GameSheetPanel = lazy(() => importGameSheetPanel().then((module) => ({ default: module.GameSheetPanel })));
 const PublicReviewScreen = lazy(() => import('./view/components/PublicReviewScreen').then((module) => ({ default: module.PublicReviewScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
@@ -618,6 +627,39 @@ export default function App() {
   // (cambia cuando cambian esos inputs) y de la pestaña, en vez de re-listar sus internals.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const list = useMemo(() => vm.getFilteredList(currentTab, filters), [vm.getFilteredList, currentTab, filters]);
+
+  /* LA FICHA ABIERTA, que vive en `?juego=` (ver `useGameSheetParam`). Aquí solo se mira si hay algo que abrir: la
+     ficha se monta dentro del chunk perezoso del panel, que es donde viajan `buildGameSheet` y la saga. */
+  const { slug: gameSheetSlugParam, openSheet, closeSheet } = useGameSheetParam();
+  const gameSheetTab = useMemo(() => ownGameSheetTab(vm.data, gameSheetSlugParam), [vm.data, gameSheetSlugParam]);
+  const gameSheetOpen = gameSheetTab !== null;
+  const openGameSheet = useCallback((game: GameItem) => openSheet(game.name), [openSheet]);
+  const gameSheetReviewTarget = useCallback((tab: TabId, game: GameItem) => ({
+    to: statsReviewPath(game.id, game.name),
+    // Al volver de la reseña, a la lista CON la ficha abierta: es de donde se fue.
+    state: { backTo: `${TAB_ROUTE[tab]}${gameSheetSearch(game.name)}` },
+  }), []);
+  /* La ficha se cierra también en la URL —si no, «atrás» volvería a una entrada con un `?juego=` que ya no toca—
+     cuando el juego que enseña:
+     - deja de existir (se ha borrado desde ella, o se ha renombrado);
+     - cambia de lista. Es lo que hacía el detalle, que se iba con su fila, y deja a la vista lo que trae el cambio:
+       la cápsula de un logro quedaría debajo del panel, sin poder tocarse. Si se cancela el formulario de «Pasar a»,
+       el juego no se mueve y la ficha sigue.
+     Solo cuando HUBO ficha con esa clave: al recargar con la URL puesta, la biblioteca aún no ha llegado y no hay que
+     cerrar nada. */
+  const fichaVista = useRef<{ slug: string; tab: TabId } | null>(null);
+  useEffect(() => {
+    const vista = fichaVista.current;
+    const mismaFicha = Boolean(gameSheetSlugParam) && vista?.slug === gameSheetSlugParam;
+    if (gameSheetTab && !(mismaFicha && vista.tab !== gameSheetTab)) {
+      fichaVista.current = { slug: gameSheetSlugParam, tab: gameSheetTab };
+      return;
+    }
+    if (mismaFicha) {
+      fichaVista.current = null;
+      closeSheet();
+    }
+  }, [gameSheetTab, gameSheetSlugParam, closeSheet]);
   const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
 
   const exportData = useCallback(() => {
@@ -972,6 +1014,7 @@ export default function App() {
   const formModalMounted = useMountedOnceOpen(vm.formModalOpen);
   const confirmModalMounted = useMountedOnceOpen(!!vm.confirmState);
   const rouletteMounted = useMountedOnceOpen(rouletteOpen);
+  const gameSheetMounted = useMountedOnceOpen(gameSheetOpen);
 
   // Precarga en idle, ya pintada la pantalla: cuando el usuario abra un modal su módulo estará en caché y no
   // habrá que esperar a la red (el `fallback` de Suspense es `null`, así que una espera se vería como un clic
@@ -982,6 +1025,7 @@ export default function App() {
     void importFormModal();
     void importConfirmModal();
     void importRouletteModal();
+    void importGameSheetPanel();
     setSpriteRestoListo(true);
   }), []);
 
@@ -1145,6 +1189,7 @@ export default function App() {
           currentTab={currentTab}
           expandedId={vm.expandedId}
           onExpandedChange={setExpandedId}
+          onOpenGame={openGameSheet}
           onEdit={vm.openEditGame}
           onDelete={vm.deleteGame}
           onMigrate={vm.migrateGame}
@@ -1486,6 +1531,21 @@ export default function App() {
             title={vm.confirmState?.title || ''}
             onCancel={handleConfirmCancel}
             onConfirm={handleConfirmDelete}
+          />
+        ) : null}
+
+        {gameSheetMounted ? (
+          <GameSheetPanel
+            open={gameSheetOpen}
+            data={vm.data}
+            slug={gameSheetSlugParam}
+            onClose={closeSheet}
+            onOpenGame={openSheet}
+            tabActions={vm.tabActions}
+            onEdit={vm.openEditGame}
+            onDelete={vm.deleteGame}
+            onMigrate={vm.migrateGame}
+            reviewTarget={gameSheetReviewTarget}
           />
         ) : null}
 

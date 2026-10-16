@@ -29,6 +29,10 @@
  * para arrancar; los va guardando la regla de caché-primero a medida que el usuario los visita. Así la instalación
  * es ligera y las listas —el núcleo de la app— funcionan offline desde el primer arranque.
  *
+ * `PRECACHE_DEFERRED`, aparte: lo perezoso que aun así tiene que funcionar sin red desde el primer arranque (la
+ * ficha de un juego, que sustituye al detalle de la fila). Se guarda en la instalación con lo demás, pero no forma
+ * parte del arranque (ver `DEFERRED_MODULES` en el plugin).
+ *
  * ACTUALIZACIONES: se llama a `skipWaiting()`. Antes NO se llamaba, con este razonamiento: tomar el control a la
  * fuerza y borrar la caché vieja deja a una pestaña abierta sin los chunks que todavía puede necesitar. El
  * razonamiento es correcto pero el coste NO era nulo, y en producción salió carísimo: esperar a que se cierren
@@ -48,6 +52,7 @@
 // sirviera sin pasar por el plugin.
 const BUILD_ID = self.__SW_BUILD_ID__ || 'dev';
 const PRECACHE_ASSETS = self.__PRECACHE_ASSETS__ || [];
+const PRECACHE_DEFERRED = self.__PRECACHE_DEFERRED__ || [];
 
 const CACHE_NAME = `mygamelist-${BUILD_ID}`;
 
@@ -163,7 +168,7 @@ self.addEventListener('install', (event) => {
     // parcial —que la regla de caché-primero completará sola— que ninguno.
     // `cache: 'reload'` evita que la caché HTTP del navegador cuele una copia vieja en el precache.
     await Promise.allSettled(
-      [...SHELL, ...PRECACHE_ASSETS].map((path) => cache.add(new Request(path, { cache: 'reload' }))),
+      [...SHELL, ...PRECACHE_ASSETS, ...PRECACHE_DEFERRED].map((path) => cache.add(new Request(path, { cache: 'reload' }))),
     );
     // Al final y no al principio: así se toma el control con el precache ya escrito, nunca con la caché a medias.
     // Ver la nota de ACTUALIZACIONES en la cabecera para por qué esto no es opcional.

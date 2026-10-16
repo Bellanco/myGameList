@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { gameSheetSearch, gameSheetSlug, matchesGameSheet } from '../../src/core/utils/gameSheetPath';
+import { gameSheetSearch, gameSheetSlug, matchesGameSheet, ownGameSheetTab } from '../../src/core/utils/gameSheetPath';
 import {
   buildGameSheet,
   entriesForGame,
@@ -51,6 +51,14 @@ describe('gameSheetPath', () => {
     expect(matchesGameSheet('hades-2', 'Hades II')).toBe(true);
     expect(matchesGameSheet('hades-2', 'Hades')).toBe(false);
     expect(matchesGameSheet('', '')).toBe(false);
+  });
+
+  it('dice en qué lista tienes el juego, con el orden de `findOwnEntry`, y nada sin clave', () => {
+    const datos = biblioteca({ e: [juego(1, 'Hades II')], d: [juego(2, 'Hades 2')] });
+    expect(ownGameSheetTab(datos, 'hades-2')).toBe('e');
+    expect(ownGameSheetTab(datos, 'hades-2')).toBe(findOwnEntry(datos, 'hades-2')?.tab);
+    expect(ownGameSheetTab(datos, 'celeste')).toBeNull();
+    expect(ownGameSheetTab(datos, '')).toBeNull();
   });
 });
 
@@ -162,8 +170,8 @@ describe('buildGameSheet', () => {
     ];
     const saga = buildGameSheet({ slug: 'hollow-knight', own, signals }).saga;
     expect(saga).toEqual([
-      { slug: 'hollow-knight', name: 'Hollow Knight', ownTab: 'c', friendCount: 2, current: true },
-      { slug: 'hollow-knight-silksong', name: 'Hollow Knight: Silksong', ownTab: 'd', friendCount: 0, current: false },
+      { slug: 'hollow-knight', name: 'Hollow Knight', platforms: ['Steam'], ownTab: 'c', friendCount: 2, current: true },
+      { slug: 'hollow-knight-silksong', name: 'Hollow Knight: Silksong', platforms: ['Steam'], ownTab: 'd', friendCount: 0, current: false },
     ]);
   });
 

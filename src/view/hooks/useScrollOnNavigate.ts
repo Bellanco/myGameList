@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
+import { GAME_SHEET_STATE } from '../../viewmodel/gameSheet/useGameSheetParam';
 
 /**
  * QUÉ HACE EL SCROLL AL CAMBIAR DE PANTALLA, que hasta ahora no lo decidía nadie.
@@ -120,6 +121,9 @@ export function useScrollOnNavigate(): void {
       return undefined;
     }
     if ((location.state as { anclaje?: unknown } | null)?.anclaje) return undefined;
+    /* Abrir la ficha de un juego (`?juego=`) es una navegación, pero la pantalla no cambia: el panel se pone ENCIMA
+       de la lista, y la lista se queda donde estaba (ver `useGameSheetParam`). */
+    if ((location.state as { [GAME_SHEET_STATE]?: unknown } | null)?.[GAME_SHEET_STATE]) return undefined;
     if (tipo === 'REPLACE') return undefined;
 
     const destino = tipo === 'POP' ? (mapa.get(location.key) ?? 0) : 0;

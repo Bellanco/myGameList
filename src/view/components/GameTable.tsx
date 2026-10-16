@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { Link } from 'react-router-dom';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
-import { categoryToneStyle, categoryToneVar } from '../../core/constants/categoryTone';
+import { categoryToneVar } from '../../core/constants/categoryTone';
 import { TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
 import { statsReviewPath } from '../../core/utils/reviewPath';
 import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
@@ -14,6 +14,7 @@ import { UNPLAYED_TAB_IDS, type GameItem, type TabId, type TabSort } from '../..
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { hueFromGrade, resolveGrade } from '../../core/utils/scoreScale';
 import { Icon } from './Icon';
+import { renderBooleanBadge, renderTags, yearsDesc } from './gameTags';
 import { ScoreDisplay } from './ScoreDisplay';
 import { useScoreScale } from '../hooks/useScoreScale';
 import { useListShape } from '../hooks/useListShape';
@@ -26,6 +27,12 @@ interface GameTableProps {
   currentTab: TabId;
   expandedId: number | null;
   onExpandedChange: (id: number | null) => void;
+  /**
+   * Abrir la FICHA del juego (el panel lateral, `view/components/gameSheet`) en vez de desplegar el detalle bajo la
+   * fila. Con ella, tocar una fila o una caja abre la ficha; sin ella (el perfil de una amistad, hasta la F5 del plan
+   * de la ficha), se sigue desplegando el detalle.
+   */
+  onOpenGame?: (game: GameItem) => void;
   onEdit: (tab: TabId, id: number) => void;
   onDelete: (tab: TabId, id: number) => void;
   onMigrate: (tab: TabId, id: number, target: TabId) => void;
@@ -322,46 +329,6 @@ function soltarNombreCortado(event: { currentTarget: HTMLElement }): void {
   if (hueco) hueco.style.height = '';
 }
 
-function renderTags(values: string[], className: string, maxVisible?: number, tone = false) {
-  /* EL HUECO CUANDO NO HAY DATO. Antes era un guion suelto, y en una rejilla de cajas eso se lee como un fallo;
-     con clase propia el hueco se puede dejar TENUE y ocupando su sitio, que es lo que mantiene alineadas unas
-     cajas con otras y unos renglones con otros aunque a un juego le falte la plataforma o el género. */
-  if (!values.length) return <span className="chip-none" aria-hidden="true">—</span>;
-  const overflow = maxVisible && values.length > maxVisible ? values.length - maxVisible : 0;
-  const visible = overflow ? values.slice(0, maxVisible) : values;
-  /* EL «+N» VA FUERA DEL GRUPO, no dentro. Es lo que permite que el desvanecido del final de la ranura —una
-     máscara— se aplique SOLO a los chips: metido dentro, la máscara lo apagaba a él también, y el apaño de
-     abrirle una ventana opaca al final resultó peor que la enfermedad, porque esa ventana atravesaba el chip
-     que pasara por ahí y lo partía en seco. Fuera, la máscara no lo toca y no hay ventana que abrir. */
-  return (
-    <>
-      <div className="chips">
-        {visible.map((value) => (
-          // `data-text`: el texto otra vez, para los temas que pintan una copia encima (el glitch de «Sin futuro»
-          // la enciende y apaga en el compositor en vez de animar `text-shadow`; ver `cyberpunk.scss`).
-          <span key={value} className={`chip ${className}`} style={tone ? categoryToneStyle(value) : undefined} data-text={value}>
-            {/* El texto va en su propio span para que los puntos suspensivos recorten SOLO el texto: con el
-                `overflow` en el chip se cortaba también lo que el tema le pinta por fuera (el papel y el lacre
-                de Witcher, las sombras duras de las pegatinas). */}
-            <span className="chip-text">{value}</span>
-          </span>
-        ))}
-      </div>
-      {overflow ? (
-        <span className="chip chip-more" title={values.slice(maxVisible).join(', ')}>
-          {UI_MESSAGES.table.moreCount(overflow)}
-        </span>
-      ) : null}
-    </>
-  );
-}
-
-/* Años del juego para pintar: siempre del más reciente al más antiguo, para que al quedarse con el primero
-   —que es lo que hacen el renglón y la caja— salga el último completado y no el más viejo. */
-function yearsDesc(years?: number[]) {
-  return [...(years || [])].sort((a, b) => b - a).map(String);
-}
-
 const IMPORT_UI = UI_MESSAGES.import.integrations;
 
 type TableColumn = keyof typeof UI_MESSAGES.table.columns;
@@ -379,28 +346,8 @@ const SORT_COLUMN: Partial<Record<TableColumn, string>> = {
   interest: 'score',
 };
 
-// `role="img"` NO es decorativo aquí, es lo que hace que la insignia se anuncie. Un `<span>` sin rol es
-// `generic`, y ARIA PROHÍBE ponerle nombre: el `aria-label` se descartaba y estas celdas —la única
-// presentación de "rejugar" y "otra oportunidad"— quedaban mudas para un lector de pantalla, con el icono
-// `aria-hidden` dentro y nada más. Lo destapó la auditoría con axe sobre el render (`tests/e2e/a11y.test.ts`);
-// el linter no puede verlo porque depende del rol que resulta al pintar, no del JSX.
-function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
-  if (type === 'replayable') {
-    const label = UI_MESSAGES.table.replayBadge(value);
-    return (
-      <span className={value ? 'badge-rejugar-activo' : 'badge-rejugar-inactivo'} role="img" aria-label={label} title={label}>
-        <Icon name={value ? COMMON_ICONS.starOliveBranches : COMMON_ICONS.lock} />
-      </span>
-    );
-  }
-
-  const label = UI_MESSAGES.table.retryBadge(value);
-  return (
-    <span className={value ? 'badge-opp-activo' : 'badge-opp-inactivo'} role="img" aria-label={label} title={label}>
-      <Icon name={value ? COMMON_ICONS.refresh : COMMON_ICONS.lock} />
-    </span>
-  );
-}
+/** Lo que dura un doble clic: lo que espera la ficha antes de abrirse con el ratón (ver `pulsarJuego`). */
+const DOBLE_CLIC_MS = 250;
 
 /* Cuántas filas nuevas como mucho se animan a la vez. Una o dos son "acabo de añadir un juego"; treinta son una
    importación o un cambio de filtro, y treinta filas deslizándose a la vez no es una confirmación, es un mareo. */
@@ -454,6 +401,7 @@ export const GameTable = memo(function GameTable({
   currentTab,
   expandedId,
   onExpandedChange,
+  onOpenGame,
   onEdit,
   onDelete,
   onMigrate,
@@ -476,6 +424,29 @@ export const GameTable = memo(function GameTable({
   /** Los juegos que se cuentan: los de verdad si `games` es un lote, y si no, los que llegan. */
   const shownCount = totalCount ?? games.length;
   const enteringIds = useEnteringRows(games, currentTab);
+
+  /* TOCAR ABRE LA FICHA; EL DOBLE CLIC SIGUE EDITANDO. Con el ratón, la ficha espera lo que dura un doble clic: si
+     llega el segundo, se cancela y se edita (abierta al primero, el segundo clic caería en el velo del panel y lo
+     cerraría). Con el dedo, el lápiz o el teclado no hay doble clic que esperar: abre al momento. */
+  const fichaPendiente = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(fichaPendiente.current), []);
+  const pulsarJuego = (event: React.MouseEvent, game: GameItem, expanded: boolean) => {
+    if (!onOpenGame) {
+      onExpandedChange(expanded ? null : game.id);
+      return;
+    }
+    window.clearTimeout(fichaPendiente.current);
+    const conRaton = (event.nativeEvent as PointerEvent).pointerType === 'mouse';
+    if (!conRaton || readOnly) {
+      onOpenGame(game);
+      return;
+    }
+    fichaPendiente.current = window.setTimeout(() => onOpenGame(game), DOBLE_CLIC_MS);
+  };
+  const editarConDobleClic = (game: GameItem) => {
+    window.clearTimeout(fichaPendiente.current);
+    if (!readOnly) onEdit(currentTab, game.id);
+  };
   const showYears = visibility?.showYears ?? true;
   const showReplayable = visibility?.showReplayable ?? true;
   const showRetry = visibility?.showRetry ?? true;
@@ -1194,10 +1165,11 @@ export const GameTable = memo(function GameTable({
                                 <button
                                   type="button"
                                   className="game-card-open"
-                                  aria-expanded={expanded}
-                                  aria-controls={`game-detail-${game.id}`}
-                                  onClick={() => onExpandedChange(expanded ? null : game.id)}
-                                  onDoubleClick={() => { if (!readOnly) onEdit(currentTab, game.id); }}
+                                  aria-expanded={onOpenGame ? undefined : expanded}
+                                  aria-controls={onOpenGame ? undefined : `game-detail-${game.id}`}
+                                  aria-haspopup={onOpenGame ? 'dialog' : undefined}
+                                  onClick={(event) => pulsarJuego(event, game, expanded)}
+                                  onDoubleClick={() => editarConDobleClic(game)}
                                 >
                                   <span className="sr-only">{game.name}</span>
                                 </button>
@@ -1306,20 +1278,17 @@ export const GameTable = memo(function GameTable({
                       className={`main-row ${rowCover ? 'has-cover' : ''} ${row.index % 2 === 0 ? 'striped' : ''} ${game.id === recentlyChangedId ? 'just-changed' : ''} ${enteringIds.has(game.id) ? 'is-entering' : ''} ${game.id === removingId ? 'is-leaving' : ''}`.replace(/\s+/g, ' ').trim()}
                       // A11y-2: el disparador accesible es el botón de la 1ª celda (anunciado como botón + aria-controls).
                       // La fila conserva click/doble-click como atajos de RATÓN, pero ya no es un control focusable.
-                      onClick={() => onExpandedChange(expanded ? null : game.id)}
-                      onDoubleClick={() => {
-                        if (!readOnly) {
-                          onEdit(currentTab, game.id);
-                        }
-                      }}
+                      onClick={(event) => pulsarJuego(event, game, expanded)}
+                      onDoubleClick={() => editarConDobleClic(game)}
                     >
                       {/* La carátula de fondo es el `::before` de esta celda: aquí se marca su entrada con fundido. */}
                       <td ref={refEntradaDeFondo(rowCover)}>
                         <button
                           type="button"
                           className="row-toggle"
-                          aria-expanded={expanded}
-                          aria-controls={detailId}
+                          aria-expanded={onOpenGame ? undefined : expanded}
+                          aria-controls={onOpenGame ? undefined : detailId}
+                          aria-haspopup={onOpenGame ? 'dialog' : undefined}
                           // A11y-4: SIN `aria-label`. El nombre accesible sale del CONTENIDO del botón, y eso
                           // importa por lo que pasa en móvil: ahí todas las celdas de datos son `display:none`
                           // (así que no están en el árbol de accesibilidad) y el meta compacto de abajo es la
@@ -1331,7 +1300,7 @@ export const GameTable = memo(function GameTable({
                           // El estado plegado/desplegado ya lo anuncia `aria-expanded`, que es para lo que existe.
                           onClick={(event) => {
                             event.stopPropagation();
-                            onExpandedChange(expanded ? null : game.id);
+                            pulsarJuego(event, game, expanded);
                           }}
                         >
                           <span className="row-chevron" aria-hidden="true" />

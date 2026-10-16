@@ -229,7 +229,7 @@ if (googleFontRefs.length > 0) {
 // assets del arranque (plugin `serviceWorkerPrecache` en vite.config.ts). Si alguien los renombra o los quita, el
 // build ya falla; esto lo detecta antes y con un mensaje que explica por qué existen.
 const swSource = fs.readFileSync(path.join(publicDir, 'service-worker.js'), 'utf8');
-for (const token of ['self.__SW_BUILD_ID__', 'self.__PRECACHE_ASSETS__']) {
+for (const token of ['self.__SW_BUILD_ID__', 'self.__PRECACHE_ASSETS__', 'self.__PRECACHE_DEFERRED__']) {
   if (!swSource.includes(token)) {
     fail(
       `public/service-worker.js ya no contiene el marcador ${token}. ` +
@@ -252,6 +252,16 @@ if (fs.existsSync(builtSw)) {
     fail('dist/service-worker.js no declara PRECACHE_ASSETS con una lista literal.');
   }
   const precached = JSON.parse(match[1]);
+  /* LO PRECACHEADO APARTE DEL ARRANQUE (`PRECACHE_DEFERRED`, ver `DEFERRED_MODULES` en `vite.config.ts`): se guarda
+     para que funcione sin red, pero no bloquea el primer pintado, así que cuenta en el TOTAL y no en el crítico. */
+  if (built.includes('self.__PRECACHE_DEFERRED__')) {
+    fail('dist/service-worker.js sigue con el marcador de lo diferido sin sustituir.');
+  }
+  const matchDiferido = built.match(/const PRECACHE_DEFERRED = (\[[^\]]*\])/);
+  if (!matchDiferido) {
+    fail('dist/service-worker.js no declara PRECACHE_DEFERRED con una lista literal.');
+  }
+  const diferido = JSON.parse(matchDiferido[1]);
   const hasJs = precached.some((asset) => asset.endsWith('.js'));
   const hasCss = precached.some((asset) => asset.endsWith('.css'));
   if (!hasJs || !hasCss) {
@@ -267,7 +277,11 @@ if (fs.existsSync(builtSw)) {
      hace falta: en el precache no hay otra cosa. */
   const bloquea = ({ asset }) => !/\.(woff2?|ttf|otf)$/i.test(asset);
   const criticoKb = pesos.filter(bloquea).reduce((total, { kb }) => total + kb, 0);
-  const totalKb = pesos.reduce((total, { kb }) => total + kb, 0);
+  const diferidoKb = diferido.reduce(
+    (total, asset) => total + zlib.gzipSync(fs.readFileSync(path.join(root, 'dist', asset))).length / 1024,
+    0,
+  );
+  const totalKb = pesos.reduce((total, { kb }) => total + kb, 0) + diferidoKb;
 
   /* EL 404 DE LOS CHUNKS VIEJOS depende de este fichero: sin `404.html`, Pages vuelve al modo SPA y contesta con el
      shell y un 200 a cualquier ruta sin fichero, incluidos los chunks de un despliegue anterior (ver el plugin
@@ -280,7 +294,7 @@ if (fs.existsSync(builtSw)) {
   }
 
   console.log(
-    `Service worker: ${precached.length} assets del arranque · ` +
+    `Service worker: ${precached.length} assets del arranque y ${diferido.length} diferidos (${diferidoKb.toFixed(1)} kB) · ` +
       `crítico ${criticoKb.toFixed(1)}/${BOOT_CRITICAL_BUDGET_KB} kB · ` +
       `total ${totalKb.toFixed(1)}/${BOOT_TOTAL_BUDGET_KB} kB (comprimidos).`,
   );

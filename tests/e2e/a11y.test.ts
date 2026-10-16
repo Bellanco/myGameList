@@ -94,13 +94,18 @@ async function animacionesDeEntradaTerminadas(page: Page): Promise<void> {
   });
 }
 
-/** Deja la lista pintada y una fila abierta: es el estado con más color y más controles a la vista. */
-async function listaConDetalleAbierto(page: Page): Promise<void> {
+/** Deja la lista pintada: la tabla con sus chips, la barra de filtros y la de pestañas. */
+async function listaPintada(page: Page): Promise<void> {
   await page.goto('/completados');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Lista del completista');
-  const fila = page.locator(`button[aria-controls="game-detail-${JUEGOS[0].id}"]`);
-  await fila.click();
-  await expect(fila).toHaveAttribute('aria-expanded', 'true');
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/** Abre la ficha de un juego sobre la lista: es el estado con más color y más controles a la vista. */
+async function fichaAbierta(page: Page): Promise<void> {
+  await listaPintada(page);
+  await page.locator('button[aria-haspopup="dialog"]', { hasText: JUEGOS[0].name }).first().click();
+  await expect(page.getByRole('dialog', { name: `Ficha de ${JUEGOS[0].name}` })).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -373,7 +378,8 @@ async function contrastesDeLaBarraDeProgreso(page: Page): Promise<Array<{ rareza
 }
 
 const PANTALLAS: ReadonlyArray<{ nombre: string; amplia: boolean; deseos?: boolean; abrir: (page: Page) => Promise<void> }> = [
-  { nombre: 'lista', amplia: false, abrir: listaConDetalleAbierto },
+  { nombre: 'lista', amplia: false, abrir: listaPintada },
+  { nombre: 'ficha', amplia: false, abrir: fichaAbierta },
   { nombre: 'panel', amplia: true, deseos: true, abrir: panelDeEstadisticas },
   { nombre: 'ajustes', amplia: false, abrir: pantallaDeAjustes },
   { nombre: 'menú de ajustes', amplia: false, abrir: menuDeAjustesAbierto },

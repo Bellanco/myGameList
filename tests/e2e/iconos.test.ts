@@ -43,9 +43,14 @@ test.describe('los dos sprites de iconos, sobre el build', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     expect(await iconosHuecos(page), 'listados').toEqual([]);
 
-    // Una fila desplegada saca los iconos de acción (editar, eliminar, mover).
-    await page.locator('button[aria-controls^="game-detail-"]').first().click();
-    expect(await iconosHuecos(page), 'listados · fila abierta').toEqual([]);
+    // La ficha de un juego saca los iconos de acción (editar, eliminar, mover). Va en un chunk perezoso, así que
+    // también prueba que sus iconos están en la mitad del sprite que ya ha llegado. Se cierra antes de seguir: el
+    // panel es modal y taparía la barra de abajo.
+    await page.locator('button[aria-haspopup="dialog"]').first().click();
+    await expect(page.locator('dialog.gs-dialog[open] .gs-bar')).toBeVisible();
+    expect(await iconosHuecos(page), 'listados · ficha abierta').toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('dialog.gs-dialog[open]')).toHaveCount(0);
 
     // 2) LAS PANTALLAS PEREZOSAS, que son las que necesitan la segunda mitad del sprite.
     await page.getByRole('button', { name: /^Social/ }).first().click();

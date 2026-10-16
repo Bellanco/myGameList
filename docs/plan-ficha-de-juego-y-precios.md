@@ -283,7 +283,34 @@ las peticiones con `page.route`.
   ocultas, horas ocultas, juntar señales, orden, media con una y con varias notas, `scored`, en curso sin nota,
   deseados aparte, saga sin repetir y sin emparentar *Dead Space* con *Dead Cells*.
 
-## Fase F2 · El modal, con lo propio, en lugar del detalle · M–L
+## Fase F2 · El modal, con lo propio, en lugar del detalle · M–L · ✅ hecha en dos tiempos (16-10-2026)
+
+**Lo hecho:** panel, `?juego=`, ficha con lo propio, apertura desde tus listas (renglones y mosaico) y precache.
+**Aplazado a la F5:** el borrado del detalle de `GameTable`, de sus estilos (F0.8) y de `UI_MESSAGES.detail`. El
+perfil de una amistad sigue desplegando el detalle hasta que su fila abra la ficha (F0.7), así que `GameTable`
+conserva las dos formas: con `onOpenGame` abre la ficha y sin ella despliega. `GameTableColumns.test.tsx` sigue
+probando el detalle por eso. **A la F6:** el ancho medido (`useGameSheetWidth`) y devolver el foco a la fila, que
+dependen del layout y jsdom no los ve.
+
+- **Medido** (`npm run build` + `npm run validate`): el crítico pasa de 192,4 a 193,3 kB (de 195). El panel no entra:
+  va diferido y precacheado (`DEFERRED_MODULES` en `vite.config.ts`), y cuenta solo en el total (234,1 de 240).
+- **Doble clic:** con ratón, la fila espera 250 ms (`DOBLE_CLIC_MS`) antes de abrir la ficha, para que el doble clic
+  edite sin abrirla; con el dedo o el teclado abre al momento.
+- **Al cambiar de lista, la ficha se cierra** (`App.tsx`, con `ownGameSheetTab`): es lo que hacía el detalle, que se
+  iba con su fila, y si no, la cápsula de un logro queda debajo del panel modal sin poder tocarse. Cancelar el
+  formulario de «Pasar a» no mueve el juego y la ficha sigue abierta.
+- **Contraste de los chips, arreglado de paso.** El recorrido de accesibilidad audita ya la ficha en las 16
+  combinaciones, y destapó que los chips de años, puntos fuertes y débiles no llegaban a 4,5:1 en tierramedia,
+  persona, portal y grimdark en claro, ni en cyberpunk (fuertes y débiles; débiles también en oscuro). No era de la
+  ficha: en los renglones medían aún menos (hasta 3,18), pero axe no ve su fondo (un pseudo-elemento debajo) y los
+  daba por buenos. Cada tema afina ahora su tinta (`--chip-generic-fg`, `--chip-pf-fg`, `--chip-pd-fg` en su
+  `_colors.scss`; Cyberpunk, su `--chipc`), el mismo tono un punto más hondo, hasta 4,6:1 sobre el peor fondo.
+  **Queda fuera:** el tono 1 de la escala de géneros de Portal en oscuro (`--cat-1-fg`, «Puzles») mide 3,5:1 sobre
+  su velo en los renglones.
+- **Verificado en Chromium:** abrir y cerrar no mueven el scroll de la lista (149 juegos, renglones y mosaico, con
+  ratón y con el dedo), Esc y «atrás» cierran y
+  quitan `?juego=`, y los 8 temas en claro y oscuro a 360 y 1.440 px (tierramedia también a 768 y 1.024), sin
+  scroll horizontal.
 
 - **El panel** (F0.11). `view/components/gameSheet/GameSheetPanel.tsx`, con `<dialog>` nativo y `useNativeDialog`.
   El ancho se mide con un hook propio (`useGameSheetWidth`: los tres pasos, el `ResizeObserver` que solo ensancha y
@@ -368,6 +395,11 @@ Para que «quién lo tiene» incluya también a quien lo tiene sin reseñar ni h
 ## Fase F5 · Puntos de entrada · S
 
 Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=<clave>`.
+
+Cuando la fila del perfil de una amistad abra la ficha, se borra lo que la F2 dejó en pie: el detalle de `GameTable`
+(`expandedId`/`onExpandedChange`, la fila `detail`, `DETAIL_ROW_ESTIMATE_PX`, el bloque del mosaico y su marcado),
+sus estilos de fila desplegada (F0.8) y los textos de `UI_MESSAGES.detail` que ya no se usen, y se reescribe
+`GameTableColumns.test.tsx`.
 
 | Desde | Cambio |
 |---|---|
