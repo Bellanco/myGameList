@@ -13,7 +13,7 @@
 // listbox: el foco se queda en la caja y las flechas mueven la opción activa (`aria-activedescendant`).
 import { useCallback, useEffect, useId, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import '../../../styles/search.scss';
 import { SEARCH_UI, isMacPlatform } from '../../../core/constants/searchLabels';
 import { runSearch, type SearchGroupKind, type SearchSource } from '../../../core/search/globalSearch';
@@ -169,6 +169,7 @@ function SearchPanel({ onClose, games, visibleTabs }: {
   visibleTabs: readonly TabId[];
 }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { openSheet } = useGameSheetParam();
   const baseId = useId();
   const listId = `${baseId}-list`;
@@ -227,17 +228,21 @@ function SearchPanel({ onClose, games, visibleTabs }: {
       setExpanded((current) => new Set([...current, kind]));
       return;
     }
-    // Un juego tuyo abre su ficha encima de donde estás, sin perder la pantalla ni sus filtros (F0.3).
+    /* Un juego tuyo lleva a SU LISTA con la ficha abierta (17-10-2026, decisión del usuario; antes se abría encima de
+       donde estuvieras). Al cerrarla te quedas en la lista: la entrada no lleva la marca de la ficha, así que cerrar
+       quita el `?juego=` en vez de volver atrás. Si ya estás en esa lista, se abre encima sin perder filtros ni
+       scroll (F0.3). */
     if (option.gameSheet) {
       onClose();
-      openSheet(option.gameSheet);
+      if (option.path && option.path.split('?')[0] !== pathname) void navigate(option.path);
+      else openSheet(option.gameSheet);
       return;
     }
     if (option.path) {
       onClose();
       void navigate(option.path);
     }
-  }, [navigate, onClose, openSheet]);
+  }, [navigate, onClose, openSheet, pathname]);
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {

@@ -125,7 +125,7 @@ describe('GlobalSearch', () => {
     expect(dialog().open).toBe(false);
   });
 
-  it('encuentra sin acentos y abre la ficha del juego encima de donde estás (F0.3 del plan de la ficha)', async () => {
+  it('encuentra sin acentos y lleva a la lista del juego con su ficha abierta', async () => {
     renderSearch();
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
     fireEvent.change(input(), { target: { value: 'pokemon' } });
@@ -134,7 +134,17 @@ describe('GlobalSearch', () => {
     fireEvent.keyDown(input(), { key: 'Enter' });
 
     expect(dialog().open).toBe(false);
-    expect(screen.getByTestId('where')).toHaveTextContent('/completados?juego=pokemon-escarlata');
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/en-curso\?juego=pokemon-escarlata$/);
+  });
+
+  it('si ya estás en la lista del juego, la ficha se abre encima, sin cambiar de pantalla (F0.3)', async () => {
+    renderSearch();
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    fireEvent.change(input(), { target: { value: 'hades' } });
+
+    fireEvent.click(screen.getByRole('option', { name: /Hades/ }));
+
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/completados\?juego=hades$/);
   });
 
   it('las flechas mueven la opción activa y el foco se queda en la caja', async () => {

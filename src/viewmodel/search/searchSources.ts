@@ -15,9 +15,9 @@ import { SOCIAL_ROUTES } from '../social/socialRoutes';
 import { gameSheetSearch } from '../../core/utils/gameSheetPath';
 
 /**
- * Tus juegos: cada uno abre su ficha encima de la pantalla en la que estás (F0.3 del plan de la ficha, 15-10-2026).
- * Antes llevaba a su lista con el filtro de texto puesto (13-10-2026); `path` es ahora el respaldo: su lista, con la
- * ficha abierta.
+ * Tus juegos: cada uno lleva a su lista con la ficha abierta (`path`, 17-10-2026); si ya estás en ella, el buscador la
+ * abre encima con `gameSheet`, sin perder filtros ni scroll. Antes la ficha se abría encima de cualquier pantalla
+ * (F0.3, 15-10-2026), y antes aún llevaba a la lista con el filtro de texto puesto (13-10-2026).
  */
 export function gameSearchSources(data: TabData, visibleTabs: readonly TabId[]): SearchSource[] {
   return visibleTabs.flatMap((tab) => (data[tab] ?? []).map((game) => ({

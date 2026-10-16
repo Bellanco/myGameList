@@ -33,7 +33,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   salir también quienes lo tienen aunque no lo hayan reseñado. Toca a una persona para ir a su perfil, que se abre
   con el juego a la vista.
 
-- **La ficha se abre desde más sitios.** Desde el buscador (⌘K), sin salir de donde estás; desde el nombre de un
+- **La ficha se abre desde más sitios.** Desde el buscador (⌘K), que te lleva a la lista del juego con su ficha
+  abierta (y al cerrarla te quedas en esa lista); desde el nombre de un
   juego en el chip de una reseña o en un aviso de lista del feed; y desde las listas de una amistad, con lo suyo
   arriba: su lista, sus datos y su reseña. También se abre la de un juego que no tienes, y puedes añadirlo a deseados
   o a próximos desde ella. El detalle que se desplegaba bajo cada juego ya no existe.
