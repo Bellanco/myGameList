@@ -184,19 +184,24 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-arrastrando { transition: none;
 .gs-cuerpo { margin-top: .9rem; }
 .gs-cuerpo > * { break-inside: avoid; margin-top: 0; margin-bottom: .9rem; }
 
-// Tus datos: el marcado del detalle de la fila, sin su relleno de celda de tabla. Las cajas, en dos columnas IGUALES:
-// con `auto-fill` cada caja tomaba el ancho que le cuadraba y puntos fuertes y débiles quedaban descolocados.
-.gs-detail.detail-content { padding: 0; gap: .75rem 1.25rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-// Los renglones de chips —plataformas, géneros y años—, sin rótulo (F0.14) y a todo el ancho. Un filete entre uno y
-// otro: sin rótulo, un género como «Plataformas» se leía como una plataforma más. Y algo más de aire tras el último,
-// donde empiezan las cajas con título.
-.gs-detail .detail-box.gs-renglon { grid-column: 1 / -1; }
-.gs-detail .detail-box.gs-renglon + .detail-box.gs-renglon { padding-top: .75rem; border-top: 1px dashed var(--hair); }
-.gs-detail .detail-box.gs-renglon:not(:has(+ .gs-renglon)) { margin-bottom: .35rem; }
-
-// Rejugar o reintentar: el rótulo y la insignia en la misma línea, a todo el ancho.
-.gs-detail .detail-box.gs-insignia { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: .7rem; }
+// Tus datos (16-10-2026): sin rótulos ni filetes, un RECUADRO por clase de dato, como los fuertes y débiles del renglón
+// de la tabla (`.row-note`): plataformas, géneros y años en una fila; fuertes (filo verde) y débiles (rojo) en otra. Solo
+// con el color, en algunos temas todo parecía de la misma categoría. El análisis, debajo, en la misma sección.
+// SIN RELLENO, solo el cerco: hundido como el de la tabla, en los temas claros el chip del año (translúcido) bajaba de
+// 4,5:1 de contraste (axe, `tests/e2e/a11y.test.ts`).
+.gs-detail.detail-content { display: grid; gap: .5rem; padding: 0; grid-template-columns: minmax(0, 1fr); }
+.gs-grupos { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .5rem; }
+.gs-grupo, .gs-grupo > .chips { display: flex; flex-wrap: wrap; gap: .35rem; min-width: 0; }
+.gs-grupo {
+  padding: .3rem .45rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hair);
+}
+.gs-grupo.is-bueno { border-color: color-mix(in srgb, var(--success) 45%, transparent); }
+.gs-grupo.is-malo { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.gs-sec-datos .gs-friends { margin-top: .8rem; }
+// Rejugar o reintentar, junto a la lista: la insignia de siempre (su tamaño de la tabla), a la altura de la píldora.
+.gs-insignia { display: inline-flex; }
 
 // ─── Tus amistades y quienes lo quieren ──────────────────────────────────────────────────────────────────────
 // El renglón de persona del hub (`personRow.scss`), más bajo: aquí van varios seguidos y la ficha no es un listado. Con

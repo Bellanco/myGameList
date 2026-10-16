@@ -177,6 +177,7 @@ function Cabecera({ sheet, covers, lado }: { sheet: GameSheet; covers: boolean; 
               {GAME_SHEET_UI.listPill(own.tab)}
             </span>
             {desde ? <span className="gs-desde">{GAME_SHEET_UI.since(desde)}</span> : null}
+            <Insignia tab={own.tab} item={own.item} />
           </div>
         ) : null}
         {/* Un resumen de una línea, sin chips (F0.14): las listas enteras van en el cuerpo. */}
@@ -224,108 +225,98 @@ function Cabecera({ sheet, covers, lado }: { sheet: GameSheet; covers: boolean; 
 }
 
 /**
- * TODO LO QUE ENSEÑABA EL DETALLE DE LA FILA (F0.12), con su mismo marcado (`detail-content`, `detail-box`, chips e
- * insignias) y sus mismas reglas por lista: años y rejugar en completados, puntos fuertes en c/v/e, débiles en c/e,
- * motivos en v y reintentar en v. La nota y las horas no van aquí: suben a las cifras de la cabecera.
- *
- * ORDEN, DE LO QUE ES EL JUEGO A LO QUE TE PARECIÓ (16-10-2026):
- *  · arriba, los renglones de chips SIN TÍTULO (F0.14): plataformas, géneros y, en completados, los años. Cada uno en
- *    su renglón y separados por un filete, porque sin rótulo un género como «Plataformas» se confundía con las
- *    plataformas de encima;
- *  · debajo, puntos fuertes y débiles, en dos columnas iguales;
- *  · al final, rejugar o reintentar, con su rótulo y la insignia en la misma línea.
+ * TUS DATOS Y TU ANÁLISIS, EN UNA SOLA SECCIÓN (16-10-2026, decisión del usuario: sin rótulos que no hacen falta, sin
+ * dividirlo en líneas y en secciones separadas). Lo que enseñaba el detalle de la fila (F0.12), con sus reglas por
+ * lista: años en completados, puntos fuertes en c/v/e, débiles en c/e y motivos en v. La nota y las horas suben a
+ * las cifras de la cabecera, y rejugar o reintentar, junto a la lista (`Insignia`). El análisis va en la misma sección que tus datos:
+ * en su propio bloque, las columnas del cuerpo lo separaban de ellos (con el bloque de una amistad, a la otra columna).
  */
-function TusDatos({ tab, item, conTitulo = false }: { tab: TabId; item: GameItem; conTitulo?: boolean }) {
+function TusDatos({ tab, item, reviewTarget, conTitulo = false }: { tab: TabId; item: GameItem; reviewTarget: GameSheetReviewTarget; conTitulo?: boolean }) {
+  const navigate = useNavigate();
+  const destino = item.review && !UNPLAYED_TAB_IDS.includes(tab) ? reviewTarget(tab, item) : null;
   return (
     <div className="hub-detail-metadata gs-sec-datos">
       <div className="hub-metadata-section">
         {/* Sin título (F0.14), salvo junto al bloque de una amistad: ahí ya no se sabe de quién son. */}
         {conTitulo ? <strong>{GAME_SHEET_UI.yourData}</strong> : null}
         <DatosDelJuego tab={tab} item={item} />
+        {destino ? (
+          <RenglonDeAnalisis
+            tab={tab}
+            item={item}
+            aria={UI_MESSAGES.detail.reviewLinkAria(item.name)}
+            onOpen={() => { void navigate(destino.to, { state: destino.state }); }}
+          />
+        ) : null}
       </div>
     </div>
   );
 }
 
-/** Los datos de una entrada, los tuyos o los de una amistad (su bloque, F0.7), con las reglas de `TusDatos`. */
-function DatosDelJuego({ tab, item }: { tab: TabId; item: GameItem }) {
-  const D = UI_MESSAGES.detail;
-  const fuertes = tab === 'c' || tab === 'v' || tab === 'e' ? item.strengths : undefined;
-  const malos = tab === 'v' ? item.reasons : tab === 'c' || tab === 'e' ? item.weaknesses : undefined;
-  const anios = tab === 'c' ? yearsDesc(item.years) : [];
-  return (
-        /* Un solo `detail-content`, como el detalle de la fila: es el que Persona, Arcade y Cyberpunk visten. */
-        <div className="detail-content gs-detail">
-          <div className="detail-box gs-renglon" aria-label={GAME_SHEET_UI.platformsAria}>
-            <div className="chips">
-              {item.platforms.map((platform) => (
-                <span key={platform} className="chip chip-plat" data-text={platform}>
-                  <span className="chip-text">{platform}</span>
-                </span>
-              ))}
-              {item.steamDeck ? (
-                <span className="chip chip-deck">
-                  <Icon name={COMMON_ICONS.steamDeck} />
-                  <span>{D.steamDeck}</span>
-                </span>
-              ) : null}
-            </div>
-          </div>
-          {item.genres.length ? (
-            <div className="detail-box gs-renglon" aria-label={GAME_SHEET_UI.genresAria}>
-              {renderTags(item.genres, 'chip-genre', undefined, true)}
-            </div>
-          ) : null}
-          {anios.length ? (
-            <div className="detail-box gs-renglon" aria-label={D.yearsCompleted}>
-              {renderTags(anios, 'chip-generic')}
-            </div>
-          ) : null}
-          {fuertes?.length ? (
-            <div className="detail-box detail-strong">
-              <span className="detail-label">{D.strengths}</span>
-              <div>{renderTags(fuertes, 'chip-pf')}</div>
-            </div>
-          ) : null}
-          {malos?.length ? (
-            <div className="detail-box detail-weak">
-              <span className="detail-label">{D.weaknesses}</span>
-              <div>{renderTags(malos, 'chip-pd')}</div>
-            </div>
-          ) : null}
-          {tab === 'c' || tab === 'v' ? (
-            <div className="detail-box gs-insignia">
-              <span className="detail-label">{tab === 'c' ? D.replayability : D.retry}</span>
-              {renderBooleanBadge(tab === 'c' ? 'replayable' : 'retry', Boolean(tab === 'c' ? item.replayable : item.retry))}
-            </div>
-          ) : null}
-        </div>
-  );
+/**
+ * REJUGAR O REINTENTAR, CON LA INSIGNIA DE SIEMPRE y arriba, junto a la lista (16-10-2026, decisión del usuario): sin el
+ * rótulo «Rejugabilidad», que no hacía falta; la insignia lleva su nombre en `aria-label` y `title`. Solo en
+ * completados (rejugar) y abandonados (reintentar).
+ */
+function Insignia({ tab, item }: { tab: TabId; item: GameItem }) {
+  if (tab !== 'c' && tab !== 'v') return null;
+  return <span className="gs-insignia">{renderBooleanBadge(tab === 'c' ? 'replayable' : 'retry', Boolean(tab === 'c' ? item.replayable : item.retry))}</span>;
 }
 
 /**
- * TU ANÁLISIS, VESTIDO COMO EL DE UNA AMISTAD (16-10-2026): el mismo renglón de persona (el de `HubPersonRow`), con el
- * comienzo del texto entre comillas, recortado a tres renglones, y tu nota a la derecha cuando la hay (la misma regla
- * que en la cabecera). SIN AVATAR NI NOMBRE: dicen de quién es, y aquí se sabe; sin ellos el texto gana el sitio. En
- * su propio bloque, para que las columnas del cuerpo lo puedan repartir aparte de los datos. Tocarlo lleva al análisis
- * entero, a la misma pantalla que «Ver análisis» desde la tabla.
+ * Los datos de una entrada, los tuyos o los de una amistad (su bloque, F0.7), en RECUADROS SIN RÓTULO, uno por clase de
+ * dato, como los fuertes y débiles del renglón de la tabla (16-10-2026, decisión del usuario: secciones separadas y no
+ * renglones con filetes; solo con el color, en algunos temas todo parecía de la misma categoría):
+ *  · lo que es el juego: plataformas (y Steam Deck), géneros y, en completados, los años;
+ *  · lo que te pareció: puntos fuertes (recuadro verde) y débiles o motivos (rojo).
+ * Cada recuadro lleva su nombre accesible. Dentro de `detail-content`, que es lo que visten los temas.
  */
-function Analisis({ tab, item, reviewTarget }: { tab: TabId; item: GameItem; reviewTarget: GameSheetReviewTarget }) {
+function DatosDelJuego({ tab, item }: { tab: TabId; item: GameItem }) {
   const D = UI_MESSAGES.detail;
-  const navigate = useNavigate();
-  if (!item.review || UNPLAYED_TAB_IDS.includes(tab)) return null;
-  const destino = reviewTarget(tab, item);
+  const fuertes = tab === 'c' || tab === 'v' || tab === 'e' ? item.strengths ?? [] : [];
+  const malos = (tab === 'v' ? item.reasons : tab === 'c' || tab === 'e' ? item.weaknesses : undefined) ?? [];
+  const anios = tab === 'c' ? yearsDesc(item.years) : [];
   return (
-    <div className="hub-detail-metadata gs-sec-analisis">
-      <div className="hub-metadata-section">
-        <strong>{D.review}</strong>
-        <RenglonDeAnalisis
-          tab={tab}
-          item={item}
-          aria={D.reviewLinkAria(item.name)}
-          onOpen={() => { void navigate(destino.to, { state: destino.state }); }}
-        />
+    <div className="detail-content gs-detail">
+      <div className="gs-grupos">
+        <div className="chips gs-grupo" role="group" aria-label={GAME_SHEET_UI.platformsAria}>
+          {item.platforms.map((platform) => (
+            <span key={platform} className="chip chip-plat" data-text={platform}>
+              <span className="chip-text">{platform}</span>
+            </span>
+          ))}
+          {item.steamDeck ? (
+            <span className="chip chip-deck">
+              <Icon name={COMMON_ICONS.steamDeck} />
+              <span>{D.steamDeck}</span>
+            </span>
+          ) : null}
+        </div>
+        {item.genres.length ? (
+          <div className="gs-grupo" role="group" aria-label={GAME_SHEET_UI.genresAria}>
+            {renderTags(item.genres, 'chip-genre', undefined, true)}
+          </div>
+        ) : null}
+        {anios.length ? (
+          <div className="gs-grupo" role="group" aria-label={D.yearsCompleted}>
+            {renderTags(anios, 'chip-generic')}
+          </div>
+        ) : null}
       </div>
+      {fuertes.length || malos.length ? (
+        <div className="gs-grupos">
+          {fuertes.length ? (
+            <div className="gs-grupo is-bueno" role="group" aria-label={D.strengths}>
+              {renderTags(fuertes, 'chip-pf')}
+            </div>
+          ) : null}
+          {malos.length ? (
+            <div className="gs-grupo is-malo" role="group" aria-label={D.weaknesses}>
+              {renderTags(malos, 'chip-pd')}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -377,6 +368,7 @@ function BloqueDeAmistad({ entrada, onOpenReview }: { entrada: FriendGameEntry; 
             {GAME_SHEET_UI.listPill(tab)}
           </span>
           {item.finishedOn ? <span className="gs-desde">{GAME_SHEET_UI.finishedOn(item.finishedOn)}</span> : null}
+          <Insignia tab={tab} item={item} />
           {llevaNota(tab, item) && !item.review ? <ScoreDisplay game={item} /> : null}
         </div>
         <DatosDelJuego tab={tab} item={item} />
@@ -643,8 +635,7 @@ export function GameSheetPanelView({
               />
               <div className="gs-cuerpo">
                 {bloque ? <BloqueDeAmistad entrada={bloque} onOpenReview={openFriendReview} /> : null}
-                {own ? <TusDatos tab={own.tab} item={own.item} conTitulo={Boolean(bloque)} /> : null}
-                {own ? <Analisis tab={own.tab} item={own.item} reviewTarget={reviewTarget} /> : null}
+                {own ? <TusDatos tab={own.tab} item={own.item} reviewTarget={reviewTarget} conTitulo={Boolean(bloque)} /> : null}
                 {amigos.length || quieren.length ? (
                   <Suspense fallback={null}>
                     <GameSheetFriends

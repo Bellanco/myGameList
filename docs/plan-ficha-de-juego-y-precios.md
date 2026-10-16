@@ -184,7 +184,13 @@ social ya tiene la ficha real con el recuadro del precio (F0.15). Lo que decidi�
 - **El precio, repartido en diagonal** y estirado a todo el alto de su columna (F0.15).
 
 **El cuerpo:**
-- **En columnas CSS** (`columns: 2` con ancho): tus datos, el análisis, tus amistades, lo quieren y la saga (en
+- **Tus datos, rehechos (16-10-2026, decisión del usuario):** sin rótulos que no hacen falta y sin renglones con
+  filetes, sino en secciones separadas. Un recuadro (solo el cerco) por clase de dato: plataformas, géneros y años en
+  una fila; puntos fuertes (filo verde) y débiles o motivos (rojo) en otra. Solo con el color, en algunos temas todo
+  parecía de la misma categoría. Rejugar o reintentar es la insignia de siempre, arriba, junto a la píldora de la lista
+  (también en el bloque de una amistad). Tu análisis va en la misma sección que tus datos: aparte, las columnas lo
+  mandaban a la otra. Con el bloque de una amistad, la ficha cabe ahora en el panel medio en vez del ancho.
+- **En columnas CSS** (`columns: 2` con ancho): tus datos (con tu análisis), tus amistades, lo quieren y la saga (en
   estrecho; con ancho va arriba). El navegador las equilibra solas.
 - **«Lo quieren» es relleno** (F0.4): solo sale si cabe sin scroll y sin ensanchar el panel.
 - **Ninguna sección se parte:** partida, la de amistades dejaba una persona suelta y sin título al principio de la

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import type { GameSheetSignal } from '../../src/core/gameSheet/buildGameSheet';
 import { GameSheetPanel, type GameSheetPanelProps } from '../../src/view/components/gameSheet/GameSheetPanel';
@@ -86,10 +86,26 @@ describe('GameSheetPanel', () => {
   it('enseña todo lo que enseñaba el detalle, con sus reglas de completados', () => {
     pintar();
     expect(screen.getByText('Steam Deck')).toBeInTheDocument();
-    expect(screen.getByText('Exploración')).toBeInTheDocument();
-    expect(screen.getByText('Mapa de pago')).toBeInTheDocument();
-    expect(screen.getByText('Rejugabilidad')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Puntos fuertes' })).toHaveTextContent('Exploración');
+    expect(screen.getByRole('group', { name: 'Puntos débiles' })).toHaveTextContent('Mapa de pago');
     expect(screen.getByText('Tu nota')).toBeInTheDocument();
+  });
+
+  it('sin rótulos que no hacen falta: rejugar es la insignia de siempre, arriba junto a la lista', () => {
+    pintar();
+    const arriba = document.querySelector('.gs-head .gs-linea') as HTMLElement;
+    expect(within(arriba).getByRole('img', { name: 'Rejugar: Sí' })).toBeInTheDocument();
+    expect(screen.queryByText('Rejugabilidad')).toBeNull();
+    expect(screen.queryByText('Puntos fuertes')).toBeNull();
+    cleanup();
+    pintar({ data: biblioteca({ c: [{ ...hollow, replayable: false }] }) });
+    expect(screen.getByRole('img', { name: 'Rejugar: No' })).toBeInTheDocument();
+  });
+
+  it('tu análisis va en la misma sección que tus datos', () => {
+    pintar();
+    const seccion = document.querySelector('.gs-sec-datos') as HTMLElement;
+    expect(within(seccion).getByRole('article', { name: /análisis/i })).toBeInTheDocument();
   });
 
   it('plataformas, géneros y años van en renglones sin rótulo, cada uno con su nombre accesible', () => {
