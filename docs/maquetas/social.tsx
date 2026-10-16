@@ -829,8 +829,8 @@ function Pasarela({ caso }: { caso: string }) {
 // La ficha REAL (`GameSheetPanelView`) con lo de tus amistades inventado: en la app lo carga `GameSheetPanel` de la
 // copia del directorio en IndexedDB, y aquí no se siembra nada porque el origen de desarrollo es el de la app.
 // Variantes (`abrir`): con amistades (por defecto), sin espacio social, abierta desde el perfil de Marta (su bloque
-// arriba, F0.7), un juego que no tienes y un deseo con su precio (P3; en la app lo pide `GameSheetPanel` a
-// `/api/precios`). El precio de un juego que no tienes llegará con la P5.
+// arriba, F0.7), un juego que no tienes, y con precio un deseo (P3) y un juego que no tienes (P5). En la app el precio
+// lo pide `GameSheetPanel` a `/api/precios`; aquí llega inventado.
 const MI_HOLLOW: GameItem = {
   id: 1, _ts: 1, name: 'Hollow Knight', platforms: ['Switch', 'PC'], genres: ['Metroidvania', 'Acción'], steamDeck: true,
   review: 'Un mapa que se descubre a mano y unos jefes que piden paciencia. La música de Christopher Larkin hace la mitad del trabajo: cada zona suena a lo que es.',
@@ -856,6 +856,16 @@ const PRECIO_SILKSONG: PrecioItad = {
     { tienda: 'Epic Game Store', precio: 19.99, normal: 19.99, descuento: 0, hasta: null, url: 'https://isthereanydeal.com/' },
   ],
   minimos: { historico: { precio: 15.99, fecha: '2026-06-14T00:00:00Z' }, anio: 15.99, tresMeses: 17.99 },
+  urlFicha: 'https://isthereanydeal.com/',
+  bundles: [],
+};
+// El de Outer Wilds, un juego que no tienes (P5): sin oferta ahora y por encima de su mínimo.
+const PRECIO_OUTER: PrecioItad = {
+  titulo: 'Outer Wilds',
+  itadId: 'outer-wilds',
+  mejor: { tienda: 'Steam', precio: 24.99, normal: 24.99, descuento: 0, hasta: null, url: 'https://isthereanydeal.com/' },
+  otras: [{ tienda: 'Epic Game Store', precio: 24.99, normal: 24.99, descuento: 0, hasta: null, url: 'https://isthereanydeal.com/' }],
+  minimos: { historico: { precio: 9.99, fecha: '2025-11-27T00:00:00Z' }, anio: 9.99, tresMeses: 14.99 },
   urlFicha: 'https://isthereanydeal.com/',
   bundles: [],
 };
@@ -889,7 +899,7 @@ const MARTA_OUTER: GameSheetSocialData['friendEntry'] = {
 
 function Ficha() {
   const caso = params.get('abrir') || '';
-  const ajeno = caso === 'ajeno';
+  const ajeno = caso === 'ajeno' || caso === 'ajeno-precio';
   const deseo = caso === 'deseo';
   const social: GameSheetSocialData = caso === 'sin-social'
     ? { signals: [], missing: 0, friendEntry: null }
@@ -914,7 +924,7 @@ function Ficha() {
         reviewTarget={() => ({ to: '/stats/resenas' })}
         onAddGame={avisar('lo añade a esa lista')}
         {...social}
-        price={deseo ? PRECIO_SILKSONG : undefined}
+        price={deseo ? PRECIO_SILKSONG : caso === 'ajeno-precio' ? PRECIO_OUTER : undefined}
       />
     </>
   );
@@ -976,7 +986,7 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
   // No es del hub —el panel lo monta `App` encima de cualquier pantalla—, pero así se ve en los ocho temas sin sesión.
   ficha: {
     nombre: 'Ficha de un juego',
-    ruta: ['de-amistad', 'ajeno'].includes(params.get('abrir') || '') ? RUTA_MARTA : '/social',
+    ruta: ['de-amistad', 'ajeno', 'ajeno-precio'].includes(params.get('abrir') || '') ? RUTA_MARTA : '/social',
     pintar: () => <Ficha />,
   },
 };
@@ -1005,6 +1015,7 @@ const VARIANTES: Record<string, Array<{ nombre: string; vista?: string; abrir?: 
     { nombre: 'Desde el perfil de Marta', abrir: 'de-amistad' },
     { nombre: 'Un juego que no tienes', abrir: 'ajeno' },
     { nombre: 'Un deseo con su precio', abrir: 'deseo' },
+    { nombre: 'Un juego que no tienes, con precio', abrir: 'ajeno-precio' },
   ],
   'perfil-propio': [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Publicaciones', vista: 'publicaciones' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
 };

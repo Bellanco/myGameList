@@ -1,5 +1,5 @@
-// EL PRECIO EN LA FICHA (P3 del plan de la ficha y los precios): el recuadro sale en el lado de la cabecera de un
-// DESEO con los precios encendidos; si no, ni se pide. El de un juego que no tienes es de la P5.
+// EL PRECIO EN LA FICHA (P3 y P5 del plan de la ficha y los precios): el recuadro sale en el lado de la cabecera de
+// un DESEO o de un juego que NO TIENES, con los precios encendidos. De uno que ya tienes en otra lista, ni se pide.
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -10,8 +10,9 @@ import { statsReviewPath } from '../../src/core/utils/reviewPath';
 import type { GameItem, TabData } from '../../src/model/types/game';
 import type { PrecioItad } from '../../src/model/types/prices';
 
+const senales = vi.hoisted(() => ({ actuales: [] as unknown[] }));
 vi.mock('../../src/viewmodel/gameSheet/gameSheetFriendSignals', () => ({
-  loadGameSheetFriendSignals: () => Promise.resolve([]),
+  loadGameSheetFriendSignals: () => Promise.resolve(senales.actuales),
 }));
 vi.mock('../../src/viewmodel/gameSheet/friendLibraryIndex', () => ({
   loadFriendLibraryIndex: () => Promise.resolve({ signals: [], missing: 0 }),
@@ -70,6 +71,7 @@ function pintar(over: Partial<GameSheetPanelProps>) {
 
 describe('GameSheetPanel — el precio de un deseo', () => {
   beforeEach(() => {
+    senales.actuales = [];
     repo.readCachedPrices.mockClear();
     repo.loadGamePrice.mockReset();
   });
@@ -100,5 +102,14 @@ describe('GameSheetPanel — el precio de un deseo', () => {
     pintar({ slug: 'hollow-knight', pricesOn: true, priceTtlMs: 1000 });
     await screen.findByRole('heading', { name: 'Hollow Knight' });
     expect(repo.readCachedPrices).not.toHaveBeenCalled();
+  });
+
+  it('de un juego que no tienes, lo pide con el nombre que le da tu amistad y lo enseña junto a «Añadir a deseados»', async () => {
+    senales.actuales = [{ kind: 'review', friend: { id: 'marta', name: 'Marta' }, gameName: 'Outer Wilds', grade: 96, snippet: 'Único.', at: 1 }];
+    repo.loadGamePrice.mockResolvedValue({ ...precio, titulo: 'Outer Wilds', minimos: { ...precio.minimos, historico: null } });
+    pintar({ slug: 'outer-wilds', pricesOn: true, priceTtlMs: 1000 });
+    expect(await screen.findByRole('region', { name: PRICES_UI.boxAria })).toBeInTheDocument();
+    expect(repo.loadGamePrice).toHaveBeenCalledWith('Outer Wilds', 1000);
+    expect(screen.getByRole('button', { name: /deseados/i })).toBeInTheDocument();
   });
 });

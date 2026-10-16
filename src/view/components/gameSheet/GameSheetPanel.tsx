@@ -5,7 +5,7 @@ import { COMMON_ICONS, TAB_ICONS } from '../../../core/constants/icons';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { coverDeCaja, type PedidoDePortada } from '../../../core/utils/coverDelListado';
 import { starsFromGrade } from '../../../core/utils/scoreScale';
-import type { GameSheet, GameSheetFriend, GameSheetSagaEntry, GameSheetSignal } from '../../../core/gameSheet/buildGameSheet';
+import { findOwnEntry, signalGameName, type GameSheet, type GameSheetFriend, type GameSheetSagaEntry, type GameSheetSignal } from '../../../core/gameSheet/buildGameSheet';
 import { gameSheetSearch, matchesGameSheet } from '../../../core/utils/gameSheetPath';
 import { UNPLAYED_TAB_IDS, type GameItem, type TabData, type TabId } from '../../../model/types/game';
 import { useGameSheetFriendSignals } from '../../../viewmodel/gameSheet/useGameSheetFriendSignals';
@@ -35,8 +35,8 @@ import '../../../styles/gameSheet.scss';
    pieza de fuera, opcional (F0.10): si no llega, la sección no se pinta. Con ella dentro, el panel no cabía en el
    presupuesto total del precache. */
 const GameSheetFriends = lazy(() => import('./GameSheetFriends').then((module) => ({ default: module.GameSheetFriends })));
-/* EL RECUADRO DEL PRECIO (P3), en el chunk de los precios: solo se pide con un deseo con precio, y no entra en el
-   precache de la ficha. Sin red y sin el chunk, el lado se queda vacío y la saga sigue en el cuerpo: sin errores. */
+/* EL RECUADRO DEL PRECIO (P3 y P5), en el chunk de los precios: solo se pide con un precio que enseñar, y no entra en
+   el precache de la ficha. Sin red y sin el chunk, el lado se queda vacío y la saga sigue en el cuerpo: sin errores. */
 type PriceBoxType = typeof import('../prices/Prices').PriceBox;
 const SIN_RECUADRO: PriceBoxType = () => null;
 const PriceBox = lazy(() => import('../prices/Prices').then((module) => ({ default: module.PriceBox }), () => ({ default: SIN_RECUADRO })));
@@ -467,10 +467,20 @@ export function GameSheetPanel(props: GameSheetPanelProps) {
   const { open, friendId = '', slug, data, pricesOn = false, priceTtlMs = null } = props;
   const { signals, missing } = useGameSheetFriendSignals(open);
   const deAmistad = useGameSheetFriendEntry(open, friendId, slug);
-  // El precio, solo de un deseo tuyo (P3); el de un juego que no tienes llega con la P5.
-  const deseo = open && pricesOn ? data.d.find((game) => matchesGameSheet(slug, game.name)) : undefined;
-  const price = useGamePrice(deseo?.name ?? null, priceTtlMs);
-  return <GameSheetPanelView {...props} signals={signals} missing={missing} friendEntry={deAmistad} price={deseo ? price : undefined} />;
+  const titulo = open && pricesOn ? priceTitle(data, slug, signals, deAmistad) : null;
+  const price = useGamePrice(titulo, priceTtlMs);
+  return <GameSheetPanelView {...props} signals={signals} missing={missing} friendEntry={deAmistad} price={titulo ? price : undefined} />;
+}
+
+/**
+ * DE QUÉ JUEGO SE PIDE EL PRECIO: de un deseo tuyo (P3), con tu nombre, y de uno que no tienes (P5), con el de la
+ * primera amistad que lo nombra, como lo enseña la ficha. De uno que ya tienes en otra lista no se pide nada.
+ */
+function priceTitle(data: TabData, slug: string, signals: readonly GameSheetSignal[], deAmistad: FriendGameEntry | null): string | null {
+  const own = findOwnEntry(data, slug);
+  if (own) return own.tab === 'd' ? own.item.name : null;
+  const deSuBloque = deAmistad?.item && matchesGameSheet(slug, deAmistad.item.name) ? deAmistad.item.name : null;
+  return signalGameName(slug, signals) ?? deSuBloque;
 }
 
 /** Lo que la ficha sabe de tus amistades, ya cargado: lo pone `GameSheetPanel` o, con datos inventados, la maqueta. */
@@ -481,7 +491,7 @@ export interface GameSheetSocialData {
   missing: number;
   /** El bloque de la amistad desde cuyo perfil se abrió (F0.7), o `null`. */
   friendEntry: FriendGameEntry | null;
-  /** El precio del juego, si es un deseo y se sabe (P3); `null` si ITAD no lo tiene. */
+  /** El precio del juego, si es un deseo (P3) o no lo tienes (P5) y se sabe; `null` si ITAD no lo tiene. */
   price?: PrecioItad | null;
 }
 
@@ -590,8 +600,9 @@ export function GameSheetPanelView({
   const sinBloque = (lista: GameSheetFriend[]) => (bloque ? lista.filter((friend) => friend.id !== bloque.friend.id) : lista);
   const amigos = ficha ? sinBloque(ficha.friends) : [];
   const quieren = ficha ? sinBloque(ficha.wishers) : [];
-  // El recuadro solo con un mejor precio: sin tienda que lo venda, la cabecera se queda como sin precio.
-  const conPrecio = Boolean(own?.tab === 'd' && price?.mejor);
+  // El recuadro, de un deseo o de un juego que no tienes, y solo con un mejor precio: sin tienda que lo venda, la
+  // cabecera se queda como sin precio.
+  const conPrecio = Boolean((own === null || own.tab === 'd') && price?.mejor);
   const plataformas = ficha?.saga.find((entry) => entry.current)?.platforms ?? bloque?.item.platforms ?? [];
   return (
     <dialog
@@ -617,9 +628,10 @@ export function GameSheetPanelView({
           </button>
           <div className="gs-scroll" key={ficha.slug} ref={scrollRef}>
             <div className="gs-contenido" ref={contentRef}>
-              {/* El lado de la cabecera: el precio de un deseo (P3, F0.15) o, sin precio, la saga. Con ancho, la saga
-                  va ahí (sin ella, ese hueco quedaba vacío); en estrecho, al final del cuerpo. Se pinta en los dos
-                  sitios y el CSS esconde la que no toca. Con precio, la saga se queda solo en el cuerpo. */}
+              {/* El lado de la cabecera: el precio de un deseo o de un juego que no tienes (P3, P5, F0.15) o, sin
+                  precio, la saga. Con ancho, la saga va ahí (sin ella, ese hueco quedaba vacío); en estrecho, al final
+                  del cuerpo. Se pinta en los dos sitios y el CSS esconde la que no toca. Con precio, la saga se queda
+                  solo en el cuerpo. */}
               <Cabecera
                 sheet={ficha}
                 covers={covers}

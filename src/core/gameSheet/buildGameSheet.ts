@@ -115,6 +115,15 @@ function signalName(signal: GameSheetSignal): string {
 }
 
 /**
+ * El nombre de ese juego tal y como lo escribe la PRIMERA amistad que lo nombra, o `null` si ninguna. Es el que enseña
+ * la ficha de un juego que no tienes, y con el que se pide su precio (P5 del plan de la ficha y los precios).
+ */
+export function signalGameName(slug: string, signals: readonly GameSheetSignal[]): string | null {
+  const first = signals.find((signal) => matchesGameSheet(slug, signalName(signal)));
+  return first ? signalName(first) : null;
+}
+
+/**
  * Junta en una sola amistad todo lo que llega de ella:
  *  · su biblioteca MANDA en la lista (es su estado de verdad, no un aviso de hace días);
  *  · sin biblioteca, el aviso de lista MÁS RECIENTE; una reseña sin aviso supone completados;
@@ -226,8 +235,7 @@ export function buildGameSheet({ slug, own, signals }: BuildGameSheetInput): Gam
   const average = grades.length
     ? { grade: Math.round(grades.reduce((sum, grade) => sum + grade, 0) / grades.length), count: grades.length }
     : null;
-  const firstSignal = signals.find((signal) => matchesGameSheet(slug, signalName(signal)));
-  const name = ownEntry?.item.name ?? (firstSignal ? signalName(firstSignal) : slug.replace(/-/g, ' '));
+  const name = ownEntry?.item.name ?? signalGameName(slug, signals) ?? slug.replace(/-/g, ' ');
   return {
     slug,
     name,

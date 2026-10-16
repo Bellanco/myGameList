@@ -4,6 +4,7 @@ import {
   buildGameSheet,
   entriesForGame,
   findOwnEntry,
+  signalGameName,
   type GameSheetFriendRef,
   type GameSheetSignal,
 } from '../../src/core/gameSheet/buildGameSheet';
@@ -79,6 +80,18 @@ describe('findOwnEntry y entriesForGame', () => {
     const ajena = biblioteca({ c: [juego(1, 'Celeste', { hours: 14 })] });
     const filtrada = applyProfileVisibility(ajena, { ...visible, hideGameTime: true });
     expect(entriesForGame(filtrada, 'celeste')[0].item.hours).toBeNull();
+  });
+});
+
+describe('signalGameName', () => {
+  it('es el nombre de la primera amistad que nombra el juego, como lo escribe ella', () => {
+    const senales: GameSheetSignal[] = [
+      { kind: 'review', friend: marta, gameName: 'Hades', grade: 90, snippet: '', at: 3 },
+      { kind: 'move', friend: nacho, gameName: 'Outer Wilds', tab: 'p', at: 2 },
+      { kind: 'library', friend: lucia, tab: 'c', item: juego(9, 'OUTER WILDS') },
+    ];
+    expect(signalGameName('outer-wilds', senales)).toBe('Outer Wilds');
+    expect(signalGameName('celeste', senales)).toBeNull();
   });
 });
 

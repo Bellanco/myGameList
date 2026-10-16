@@ -10,7 +10,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Precios de IsThereAnyDeal en tu lista de deseos.** Si tienes espacio social, puedes activarlos en Ajustes ›
   Integraciones. Cada deseo enseña su mejor precio, el descuento y la marca «Mínimo» si está en su mínimo histórico.
   Su ficha lleva el recuadro entero: dónde está y hasta cuándo, los mínimos histórico, del último año y de los
-  últimos tres meses, las dos tiendas siguientes y el enlace a la tienda. Si IsThereAnyDeal acierta con otro título,
+  últimos tres meses, las dos tiendas siguientes y el enlace a la tienda. La ficha de un juego que no tienes también
+  lo enseña, junto a «Añadir a deseados». Si IsThereAnyDeal acierta con otro título,
   la ficha lo dice («Precio de: …»). Vienen desactivados. Al activarlos, nuestro servidor envía a IsThereAnyDeal los
   nombres de los juegos de tu lista de deseos, nunca tu IP ni nada de tu cuenta. Sin red, el precio no sale y no
   verás ningún error.

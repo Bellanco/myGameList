@@ -5,8 +5,8 @@
 > las mediciones y la prueba de «Pendiente para cerrar el plan», al final. Sale de la idea C2 de
 > `docs/investigacion-interaccion-social.md`, de una integración con IsThereAnyDeal (ITAD) para la lista de deseos y
 > de traer a Deseados la lista de seguimiento de ITAD. Escrito leyendo `develop` tras `8bfd3b2d` y la documentación de
-> la API de ITAD (v2.11.0). La ficha ya construida se ve en la maqueta social (`docs/maquetas/social.html?pantalla=ficha`,
-> con el servidor de desarrollo); el diseño del recuadro del precio, en `docs/maquetas/ficha-juego.html` hasta la P5.
+> la API de ITAD (v2.11.0). La ficha ya construida, con su precio, se ve en la maqueta social
+> (`docs/maquetas/social.html?pantalla=ficha`, con el servidor de desarrollo).
 >
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
 > Las decisiones de la Fase 0 de cada parte son del usuario y van antes de escribir código.
@@ -124,20 +124,12 @@ con «Añadir a deseados».
 ## Diseño (maqueta del 15-10-2026)
 
 **La ficha construida (F6):** `docs/maquetas/social.html?pantalla=ficha`, con la ficha real (`GameSheetPanelView`) y lo
-de tus amistades inventado, en cuatro variantes (`abrir=`): con amistades, `sin-social`, `de-amistad` (desde el
-perfil de Marta) y `ajeno` (un juego que no tienes). La fotografía `scripts/capturar-maqueta-social.mjs`.
+de tus amistades inventado, en seis variantes (`abrir=`): con amistades, `sin-social`, `de-amistad` (desde el
+perfil de Marta), `ajeno` (un juego que no tienes) y, con el precio inventado, `deseo` (P3) y `ajeno-precio` (P5). La
+fotografía `scripts/capturar-maqueta-social.mjs`.
 
-**La maqueta del diseño**, de antes de construirla: `docs/maquetas/ficha-juego.html` con el servidor de desarrollo
-(`npx vite --port 8001`). **Se queda hasta la P5**, porque es lo único que tiene el diseño del recuadro del precio
-(F0.15); con la P5, la maqueta social gana la variante «con precio» y esta se borra.
-- **Detrás va la tabla real** (`GameTable`) con una biblioteca inventada que reproduce los extremos de una biblioteca
-  real (ver «Lo que enseñó una biblioteca real»). Tocar una fila abre la ficha.
-- **La URL hace lo que haría la app:** abrir pone `?juego=`, y «atrás», Esc, la X o pulsar fuera lo cierran.
-- **La barra de abajo a la derecha** cambia de lista (Completados, Abandonados, En curso, Deseados), la escala de
-  la nota (estrellas o 0–100), el precio («sin servicio» lo quita), con o sin social, y el tema y el modo.
-- **Piezas reales:** `useNativeDialog`, `.modal`, `GameTable`, el marcado del detalle (`detail-content`,
-  `detail-box`, chips e insignias), `HubPersonRow`, `HubAvatar`, `GameCover`, `StarRating` y `ScoreRing`. Lo único
-  propio es `ficha-juego.scss`, que sería `src/styles/gameSheet.scss`.
+**La maqueta del diseño**, de antes de construirla (`docs/maquetas/ficha-juego.*`), se borró con la P5: la maqueta
+social ya tiene la ficha real con el recuadro del precio (F0.15). Lo que decidió está abajo.
 
 **El panel (F0.11):**
 - **Siempre a todo el alto, y el ancho se mide para que el espacio en blanco sea el mínimo.** Se prueba de más
@@ -480,9 +472,8 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
   amistad y un juego que no tienes. Para pintarla con datos inventados sin sembrar el IndexedDB del origen de
   desarrollo —que es el de la app—, el panel se partió en `GameSheetPanel` (carga lo de tus amistades) y
   `GameSheetPanelView` (lo pinta, recibiéndolo por props). El script de capturas espera ahora a que terminen las
-  animaciones de entrada (con tope), o fotografiaba el panel a medio entrar. **Falta la variante «con precio»**, que
-  llega con la P5; hasta entonces **se queda `docs/maquetas/ficha-juego.*`**, que es lo único con el diseño del
-  recuadro del precio (F0.15).
+  animaciones de entrada (con tope), o fotografiaba el panel a medio entrar. Las variantes «con precio» llegaron con la
+  P3 y la P5, y con ellas se borró `docs/maquetas/ficha-juego.*`.
 - **e2e, contra el build** (`tests/e2e/fichaJuego.test.ts`):
   - con 130 juegos, abrir la ficha y volver atrás no mueven el scroll de la lista;
   - recargar con `?juego=` la abre, con el chunk en frío;
@@ -727,11 +718,23 @@ en la campana, ni casilla «Avisarme cuando baje», ni refresco en segundo plano
 Deseados (P3) o la ficha (P5). Lo decidido para ella sigue en P0.5, P0.9 y P0.10 por si vuelve. Si vuelve, la caché
 tendrá que guardar otra vez el último precio visto de cada juego (salió de `priceCache.ts` al aparcarla).
 
-## Fase P5 · Precio en la ficha · S (depende de F2 y P2)
+## Fase P5 · Precio en la ficha · S (depende de F2 y P2) · ✅ hecha (16-10-2026)
 
-- Si el juego no está en tus listas c/v/e/p, la ficha pide su precio (un título, normalmente ya en caché) y lo
-  enseña con «Añadir a deseados».
-- Si ya lo tienes, no se pide nada.
+**Cómo quedó:**
+
+- **De qué juego se pide** (`priceTitle` en `GameSheetPanel`): de un deseo tuyo (P3), con tu nombre; de uno que no
+  tienes en ninguna lista, con el nombre de la primera amistad que lo nombra (`signalGameName`, el mismo con el que la
+  ficha lo enseña) o el del bloque de la amistad desde cuyo perfil se abrió. De uno que ya tienes en c/v/e/p no se
+  pide nada.
+- **Un título solo**, con `loadGamePrice` y el plazo del rango de quien mira, sin podar la caché. Al abrir Deseados,
+  la poda saca de la caché los precios de juegos que no son deseos.
+- **El recuadro** es el mismo de la P3, en el lado de la cabecera, con «Añadir a deseados» y «Añadir a próximos»
+  abajo, como ya tenía la ficha de un juego que no tienes.
+- **Maqueta:** `docs/maquetas/social.html?pantalla=ficha&abrir=ajeno-precio` (Outer Wilds desde el perfil de Marta, sin
+  oferta). Con ella se borró `docs/maquetas/ficha-juego.*`.
+- **Coste medido** (`npm run build && npm run validate`): crítico **194,0 de 195 kB**, total **239,6 de 240 kB**. Al
+  total le quedan 0,4 kB: lo siguiente que crezca en el precache tendrá que diferirse.
+- **Tests:** el caso nuevo en `tests/component/GameSheetPrice.test.tsx` y `signalGameName` en `tests/unit/gameSheet.test.ts`.
 
 ## Fase P6 · Corregir el emparejamiento · S–M (según lo medido en P0)
 
