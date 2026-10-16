@@ -63,6 +63,7 @@ en blanco y viñetas `- `).
   desarrollo montan las pantallas reales con datos inventados; `node scripts/capturar-maqueta-social.mjs` las
   fotografía. Una pantalla nueva del hub o del panel se añade también a su maqueta.
 - **Firefox no se puede lanzar desde aquí** (macOS bloquea el perfil): diagnostica en el código y verifica en Chromium.
+  Tampoco el de Playwright (`npx playwright install firefox`), ni fuera del sandbox: «Could not find profile folder».
 
 ## Al compactar
 
