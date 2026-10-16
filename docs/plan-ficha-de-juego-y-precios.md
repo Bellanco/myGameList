@@ -1,8 +1,8 @@
 # Plan: ficha de juego y precios de IsThereAnyDeal
 
 > **Estado (15-10-2026): plan cerrado y aparcado, nada implementado.** Todas las decisiones de producto están tomadas
-> (tablas de decisiones de cada fase); antes de programar solo faltan los datos de «Pendiente para cerrar el plan»,
-> al final (la clave y las credenciales de ITAD, el dominio y unas mediciones). Sale de la idea C2 de
+> (tablas de decisiones de cada fase) y la app de ITAD está registrada (16-10-2026); antes de programar solo faltan
+> las mediciones y la prueba de «Pendiente para cerrar el plan», al final. Sale de la idea C2 de
 > `docs/investigacion-interaccion-social.md`, de una integración con IsThereAnyDeal (ITAD) para la lista de deseos y
 > de traer a Deseados la lista de seguimiento de ITAD. Escrito leyendo `develop` tras `8bfd3b2d` y la documentación de
 > la API de ITAD (v2.11.0). Diseño de la ficha: `docs/maquetas/ficha-juego.html` (con el servidor de desarrollo).
@@ -804,11 +804,15 @@ Ninguna: todas cerradas el 15-10-2026. Lo que queda son datos.
 
 ### Datos que hay que conseguir
 
-- **Registrar la app en ITAD** (`isthereanydeal.com/apps/my/`), que lo hace el usuario:
-  - la **clave de API** para los precios, subida como secreto `ITAD_API_KEY` a Pages y en `.dev.vars`;
-  - las **credenciales OAuth** para la importación, con el scope `wait_read`, la redirección
-    `https://<dominio>/itad/vuelta` y la de localhost si la acepta.
-- **El dominio de producción** donde se despliega, para la redirección de OAuth y para probar la Cache API.
+- ✅ **App registrada en ITAD (16-10-2026):**
+  - `ITAD_CLIENT_ID` en `wrangler.toml`, en sus tres bloques;
+  - `ITAD_API_KEY` e `ITAD_CLIENT_SECRET` subidos como secretos de Pages (producción) y documentados en
+    `.dev.vars.example`; en local, en el `.dev.vars` de cada uno;
+  - la casilla «This app will NOT store OAuth secret securely», **desmarcada**: el canje lo hace una Function y el
+    secret no llega al navegador;
+  - redirecciones: `https://mygamelist.pages.dev/itad/vuelta` y, si ITAD la acepta, `http://localhost:8000/itad/vuelta`.
+    Si solo admite una, una segunda app de ITAD para local, como la OAuth App de desarrollo de GitHub.
+- ✅ **Dominio de producción:** `https://mygamelist.pages.dev`.
 - **Prueba P7.0** (½ día): si el canje necesita `client_secret`, qué devuelve una lista real (tamaño, `added`,
   `type`) y si ITAD recuerda el consentimiento.
 - **Medición P0:** el porcentaje de acierto de `/lookup/id/title/v1` con los nombres reales de unas listas de deseos.
