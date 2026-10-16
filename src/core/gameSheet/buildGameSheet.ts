@@ -3,17 +3,34 @@ import { gameSheetSlug, matchesGameSheet } from '../utils/gameSheetPath';
 import { sharedSagaName } from '../utils/gameSaga';
 import { resolveGrade } from '../utils/scoreScale';
 
+/**
+ * EL MODELO DE LA FICHA DE UN JUEGO, puro: sin red, sin React y sin repositorios. Junta tu entrada, lo que se sabe
+ * de tus amistades sobre ese juego y su saga (ver `docs/plan-ficha-de-juego-y-precios.md`, F1).
+ *
+ * El juego se identifica por su CLAVE (`gameSheetSlug`), no por su `id`: el `id` es `max+1` en cada biblioteca, así
+ * que entre dos personas el nombre normalizado es lo único que vale.
+ */
+
+/** Quién es una amistad, lo justo para pintarla. */
 export interface GameSheetFriendRef {
   id: string;
   name: string;
   photoURL?: string;
 }
 
+/**
+ * LO QUE SE SABE DE UNA AMISTAD SOBRE UN JUEGO, por tres vías que llegan por separado y con distinto coste:
+ *  · `library`: una entrada de su biblioteca, ya filtrada con su visibilidad (`applyProfileVisibility`). La da el
+ *    índice de bibliotecas (F4), desde plata.
+ *  · `review`: su reseña del canal social, con el adelanto de 160 caracteres (F3). Coste cero.
+ *  · `move`: su aviso de cambio de lista de los últimos 30 días (F3). Coste cero.
+ */
 export type GameSheetSignal =
   | { kind: 'library'; friend: GameSheetFriendRef; tab: TabId; item: GameItem & { finishedOn?: string } }
   | { kind: 'review'; friend: GameSheetFriendRef; gameName: string; grade: number | null; snippet: string; at: number }
   | { kind: 'move'; friend: GameSheetFriendRef; gameName: string; tab: TabId; at: number };
 
+/** Una amistad ya resuelta para la ficha: dónde lo tiene, su nota (si cuenta) y el adelanto de su reseña. */
 export interface GameSheetFriend {
   id: string;
   name: string;
@@ -24,6 +41,7 @@ export interface GameSheetFriend {
   finishedOn?: string;
 }
 
+/** Una entrega de la saga: en qué lista la tienes tú (o `null`) y cuántas amistades la tienen. */
 export interface GameSheetSagaEntry {
   slug: string;
   name: string;
@@ -32,6 +50,7 @@ export interface GameSheetSagaEntry {
   current: boolean;
 }
 
+/** La ficha entera, lista para pintar. */
 export interface GameSheet {
   slug: string;
   name: string;
@@ -48,6 +67,7 @@ export interface BuildGameSheetInput {
   signals: readonly GameSheetSignal[];
 }
 
+/** Tu entrada de ese juego, en la primera lista en la que aparezca (`TAB_IDS`), o `null` si no lo tienes. */
 export function findOwnEntry(own: TabData, slug: string): { tab: TabId; item: GameItem } | null {
   for (const tab of TAB_IDS) {
     const item = (own[tab] || []).find((game) => matchesGameSheet(slug, game.name));
@@ -56,6 +76,10 @@ export function findOwnEntry(own: TabData, slug: string): { tab: TabId; item: Ga
   return null;
 }
 
+/**
+ * Todas las entradas de ese juego en una biblioteca. Se usa con la de una amistad YA filtrada por su visibilidad, así
+ * que una lista que esconde no aporta nada.
+ */
 export function entriesForGame(
   lists: Partial<Record<TabId, GameItem[]>>,
   slug: string,
@@ -69,6 +93,11 @@ export function entriesForGame(
   return found;
 }
 
+/**
+ * La nota que CUENTA, con las mismas reglas que el detalle de la fila: en completados siempre; en abandonados solo si
+ * se puntuó (`scored`); en curso, próximos y deseados nunca (en curso vale 0 y no dice nada; en los otros dos es un
+ * interés, no una nota). Un 0 tampoco es nota.
+ */
 function scoredGrade(tab: TabId, item: GameItem): number | null {
   if (tab === 'c' || (tab === 'v' && item.scored)) {
     const grade = resolveGrade(item);
@@ -81,6 +110,12 @@ function signalName(signal: GameSheetSignal): string {
   return signal.kind === 'library' ? signal.item.name : signal.gameName;
 }
 
+/**
+ * Junta en una sola amistad todo lo que llega de ella:
+ *  · su biblioteca MANDA en la lista (es su estado de verdad, no un aviso de hace días);
+ *  · sin biblioteca, el aviso de lista MÁS RECIENTE; una reseña sin aviso supone completados;
+ *  · la reseña pone el adelanto y, si lleva nota, la nota.
+ */
 function mergeFriends(slug: string, signals: readonly GameSheetSignal[]): GameSheetFriend[] {
   const byFriend = new Map<string, GameSheetFriend & { libraryTab: boolean; moveAt: number }>();
   for (const signal of signals) {
@@ -113,6 +148,7 @@ function mergeFriends(slug: string, signals: readonly GameSheetSignal[]): GameSh
   return [...byFriend.values()].map(({ libraryTab: _l, moveAt: _m, ...friend }) => friend);
 }
 
+/** Con reseña primero (es lo que más se quiere leer), después por nota y, a igualdad, por nombre. */
 function compareFriends(a: GameSheetFriend, b: GameSheetFriend): number {
   const byReview = Number(Boolean(b.snippet)) - Number(Boolean(a.snippet));
   if (byReview) return byReview;
@@ -121,6 +157,11 @@ function compareFriends(a: GameSheetFriend, b: GameSheetFriend): number {
   return a.name.localeCompare(b.name, 'es');
 }
 
+/**
+ * LA SAGA, con la regla de `sharedSagaName` (prefijo de palabras común que nombra de verdad una saga): las entregas de
+ * tu biblioteca y de las bibliotecas de tus amistades, sin repetir. Los deseos de las amistades no cuentan como
+ * «la tienen». Con una sola entrega no hay saga que enseñar.
+ */
 function buildSaga(
   slug: string,
   name: string,
@@ -156,6 +197,11 @@ function buildSaga(
   return saga.sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
+/**
+ * Monta la ficha de un juego. Los deseos de las amistades van aparte («lo quieren») y sin nota; la media sale con las
+ * notas que haya, por pocas que sean (F0.2), y dice cuántas son. El nombre que se enseña es el tuyo si lo tienes y,
+ * si no, el de la primera amistad que lo nombra.
+ */
 export function buildGameSheet({ slug, own, signals }: BuildGameSheetInput): GameSheet {
   const ownEntry = findOwnEntry(own, slug);
   const all = mergeFriends(slug, signals).sort(compareFriends);
