@@ -18,6 +18,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Fixed
 
+- **Los chips de años, puntos fuertes y puntos débiles se leen mejor en modo claro.** En «No puedes pasar»,
+  Persona, Portal, Grimdark y Cyberpunk su texto es un poco más oscuro, y ya contrasta lo que pide la norma de
+  accesibilidad. En Cyberpunk oscuro, los puntos débiles van un poco más claros por lo mismo.
+
 - **El tabulador va de campo a campo al añadir o editar un juego.** Ya no se detiene en cada sugerencia de debajo
   de plataformas, géneros o años. Para elegir una con el teclado, pulsa ↓ desde el campo, recórrelas con ← → y
   vuelve con ↑. Con la nota de 0 a 100, el tabulador va directo a la casilla del número, no a la barra. Desde

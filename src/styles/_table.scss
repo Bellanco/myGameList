@@ -118,7 +118,9 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
    `normal` el chip solo parte cuando ni en una línea propia cabe; el resto sigue en una línea. */
 .detail-content .chip { max-width: 100%; white-space: normal; overflow-wrap: break-word; }
 @media (hover:hover) { .chip:hover { transform: translateY(-1px); filter: brightness(1.08); } }
-.chip-generic { background: rgba(var(--warn-rgb),.16); color: var(--fg-amber); border: 1px solid rgba(var(--warn-rgb),.32); }
+/* La tinta de años, puntos fuertes y débiles la puede afinar cada tema (`--chip-generic-fg`, `--chip-pf-fg`,
+   `--chip-pd-fg` en su `_colors.scss`) cuando la común no llega a 4,5:1 sobre su velo y su papel. */
+.chip-generic { background: rgba(var(--warn-rgb),.16); color: var(--chip-generic-fg, var(--fg-amber)); border: 1px solid rgba(var(--warn-rgb),.32); }
 .chip-plat    { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border: 1px solid var(--chip-plat-border); }
 /* GÉNERO · un tono por nombre (CAPA 2b). `categoryTone()` decide cuál y el componente lo pasa en `--cat`
    (relleno) y `--cat-fg` (texto); los dos papeles van separados porque el relleno cumple 3:1 y el texto 4,5:1.
@@ -128,8 +130,8 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 .chip-genre   { background: color-mix(in srgb, var(--cat, rgb(var(--steam-rgb))) 18%, transparent);
                 color: var(--cat-fg, var(--fg-sky));
                 border: 1px solid color-mix(in srgb, var(--cat, rgb(var(--steam-rgb))) 38%, transparent); }
-.chip-pf      { background: rgba(var(--success-rgb),.15);color: var(--fg-green); border: 1px solid rgba(var(--success-rgb),.3); }
-.chip-pd      { background: rgba(var(--danger-rgb),.15);  color: var(--fg-red-soft); border: 1px solid rgba(var(--danger-rgb),.3); }
+.chip-pf      { background: rgba(var(--success-rgb),.15);color: var(--chip-pf-fg, var(--fg-green)); border: 1px solid rgba(var(--success-rgb),.3); }
+.chip-pd      { background: rgba(var(--danger-rgb),.15);  color: var(--chip-pd-fg, var(--fg-red-soft)); border: 1px solid rgba(var(--danger-rgb),.3); }
 .chip-deck    { background: var(--chip-deck-bg); color: var(--chip-deck-fg); border: 1px solid var(--chip-deck-border); }
 /* Bandeja de importados: la marca de la lista donde ya está el juego se colorea según esa lista, con los
    mismos tokens que usan los listados (verde=completados, rojo=vergüenza, amarillo=en curso, azul=próximos,
