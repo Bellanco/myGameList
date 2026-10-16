@@ -929,8 +929,8 @@ Ninguna: todas cerradas el 15-10-2026. Lo que queda son datos.
     rechaza el código inventado antes de mirar el secret. Se valida en P7.0, con un código de verdad.
   - **Redirect URI: bien.** Con la de producción y con la de `localhost:8000`, ITAD enseña la pantalla de
     autorización de la app; con una inventada, «Client authentication failed».
-  - **Pendiente en ITAD:** la pantalla de autorización dice «miListadeJuegos» y «Developer did not provide any
-    description». Es lo que verá cada usuario: ponerle el nombre «Mis Listas» y una frase.
+  - ✅ **Pantalla de autorización de ITAD:** con el nombre «Mis Listas» y su descripción, que es lo que verá cada
+    usuario (decía «miListadeJuegos» y «Developer did not provide any description»). Hecho por el usuario.
   - **Tiendas de claves:** el mejor precio de *Silksong* sale en **PlayerLand**. Confirma que elegir las tiendas desde
     administración (P0.6) tiene sentido.
 - ✅ **Medición P0, acierto por título** (`/lookup/id/title/v1` con los nombres reales de `myGames.json`):
