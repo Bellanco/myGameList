@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 
 /** Los tres anchos del panel, de más estrecho a más ancho (sus medidas, en `styles/gameSheet.scss`). */
 export const GAME_SHEET_WIDTHS = ['is-estrecho', 'is-medio', 'is-ancho'] as const;
@@ -30,8 +30,9 @@ export interface GameSheetWidthState {
  *  · al cambiar el tamaño de la ventana, que vuelve a empezar por el más estrecho.
  *
  * En el móvil el panel es siempre casi la pantalla entera: no hay ancho que elegir, pero el relleno sí se prueba.
- * Se mide después de `showModal` (el efecto de `useNativeDialog` va antes que este) y el panel entra deslizándose
- * desde fuera, así que los cambios de ancho al abrir no llegan a verse.
+ * Se mide después de `showModal` y ANTES DE PINTAR (`useLayoutEffect`): cada paso vuelve a medir en el mismo
+ * fotograma, así que el panel entra ya con su ancho. Con un efecto normal se pintaba un fotograma por paso, y el
+ * borde izquierdo saltaba de 600 a 880 px mientras el panel entraba deslizándose.
  */
 export function useGameSheetWidth(
   open: boolean,
@@ -64,7 +65,7 @@ export function useGameSheetWidth(
     return () => observador.disconnect();
   }, [open, key, contentRef]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const scroll = scrollRef.current;
     if (!open || !scroll) return;
     const esMovil = window.matchMedia?.(MOVIL).matches ?? false;

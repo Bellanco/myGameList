@@ -8,8 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ### Changed
 
 - **Cada juego tiene su ficha.** Al tocar un juego de tus listas, se abre un panel a la derecha con todo lo que
-  enseñaba el detalle: tu lista y desde cuándo, tu nota o tu interés, plataformas, géneros, años, horas, puntos
-  fuertes y débiles y el análisis. Abajo están los botones para moverlo, editarlo o borrarlo. Si tienes otras
+  enseñaba el detalle. Arriba, tu lista y desde cuándo, las horas que le has dedicado y tu nota o tu interés.
+  Debajo, plataformas, géneros y años, puntos fuertes y débiles, y tu análisis, con el mismo aspecto que las
+  reseñas de tus amistades. Abajo están los botones para moverlo, editarlo o borrarlo. El panel entra y sale
+  deslizándose. Si tienes otras
   entregas de la misma saga, salen en la ficha y llevan a la suya. La ficha queda en la dirección de la página,
   así que «atrás» la cierra y una recarga la vuelve a abrir. En el móvil se cierra deslizándola hacia la derecha o
   tocando la franja de la lista. El doble clic sigue abriendo la edición.

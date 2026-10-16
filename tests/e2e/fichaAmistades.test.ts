@@ -19,7 +19,7 @@ test.describe('la ficha de un juego · tus amistades', () => {
 
   test('salen tus amistades, con reseña primero y en renglón; quien no es amistad, no', async ({ page }) => {
     const ficha = page.getByRole('dialog', { name: `Ficha de ${JUEGO}` });
-    const filas = ficha.locator('.gs-friends article');
+    const filas = ficha.locator('.gs-sec-amistades article');
     await expect(filas).toHaveCount(2);
     await expect(filas.nth(0)).toHaveAttribute('aria-label', 'Ver el perfil de Marta');
     await expect(filas.nth(0)).toContainText('«Un mapa que se descubre a mano.»');

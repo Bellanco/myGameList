@@ -44,6 +44,10 @@ export const GAME_SHEET_UI = {
   /** Adelanto de su reseña, entre comillas latinas como el resto de citas de la app. */
   friendSnippet: (snippet: string) => `«${snippet}»`,
   friendOpenAria: (name: string) => `Ver el perfil de ${name}`,
+  /** El tiempo jugado, en las cifras de la cabecera: la cifra grande y la unidad pequeña («46 horas»). */
+  hours: (hours: number) => String(hours).replace('.', ','),
+  hoursUnit: (hours: number) => (hours === 1 ? 'hora' : 'horas'),
+  yearsAria: 'Años en los que se completó',
   saga: 'Saga',
   sagaOwn: (tab: TabId | null) => (tab ? `Tú: ${LIST_SHORT[tab]}` : 'No lo tienes'),
   sagaFriends: (count: number) => `${count} ${count === 1 ? 'amistad' : 'amistades'}`,

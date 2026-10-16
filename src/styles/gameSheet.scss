@@ -17,8 +17,16 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel {
   height: 100dvh;
   max-height: none;
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
-  animation: gsDesdeDerecha .28s cubic-bezier(.2, .9, .3, 1) both;
+  animation: gsEntra .44s cubic-bezier(.22, 1, .36, 1) both;
+  will-change: transform;
 }
+
+// ENTRAR Y SALIR COMO UN CAJÓN (16-10-2026). Entra frenando poco a poco, sin el golpe final de la curva de un modal, y
+// sale acelerando suave hacia la derecha mientras el velo se desvanece (`.is-saliendo`, que pone el panel mientras
+// dura: ver «La salida se anima» en `GameSheetPanel`). Antes desaparecía de golpe, velo incluido.
+dialog.modal-dialog.gs-dialog[open]::backdrop { animation: gsVeloEntra .36s ease-out both; }
+dialog.modal-dialog.gs-dialog.is-saliendo::backdrop { animation: gsVeloSale .32s ease-in both; }
+dialog.modal-dialog.gs-dialog.is-saliendo .gs-panel { animation: gsSale .32s cubic-bezier(.4, 0, .2, 1) both; pointer-events: none; }
 
 // EL ANCHO SE MIDE (`useGameSheetWidth`): el más estrecho de los tres en el que todo cabe sin scroll. Los dos anchos
 // de dos columnas dejan siempre unos 80 px de la lista a la vista, por donde se pulsa para cerrar.
@@ -26,10 +34,14 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
 dialog.modal-dialog.gs-dialog[open] .gs-panel.is-medio { width: min(880px, calc(100vw - 5rem)); }
 dialog.modal-dialog.gs-dialog[open] .gs-panel.is-ancho { width: min(1240px, calc(100vw - 5rem)); }
 
-@keyframes gsDesdeDerecha { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes gsEntra { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes gsSale { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes gsVeloEntra { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gsVeloSale { from { opacity: 1; } to { opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
-  dialog.modal-dialog.gs-dialog[open] .gs-panel { animation: none; }
+  dialog.modal-dialog.gs-dialog[open] .gs-panel,
+  dialog.modal-dialog.gs-dialog[open]::backdrop { animation: none; }
 }
 
 // En el móvil, casi toda la pantalla, dejando una franja de la lista a la izquierda (F0.17): se lee como algo que
@@ -172,15 +184,19 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-arrastrando { transition: none;
 .gs-cuerpo { margin-top: .9rem; }
 .gs-cuerpo > * { break-inside: avoid; margin-top: 0; margin-bottom: .9rem; }
 
-// Tus datos: el marcado del detalle de la fila, sin su relleno de celda de tabla y con cajas más estrechas.
-.gs-detail.detail-content { padding: 0; gap: .8rem 1rem; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); }
+// Tus datos: el marcado del detalle de la fila, sin su relleno de celda de tabla. Las cajas, en dos columnas IGUALES:
+// con `auto-fill` cada caja tomaba el ancho que le cuadraba y puntos fuertes y débiles quedaban descolocados.
+.gs-detail.detail-content { padding: 0; gap: .75rem 1.25rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-// Plataformas y géneros: un renglón de chips cada uno, sin etiqueta (se dan por supuestos, F0.14).
-.gs-detail .detail-box.gs-fila { grid-column: 1 / -1; }
+// Los renglones de chips —plataformas, géneros y años—, sin rótulo (F0.14) y a todo el ancho. Un filete entre uno y
+// otro: sin rótulo, un género como «Plataformas» se leía como una plataforma más. Y algo más de aire tras el último,
+// donde empiezan las cajas con título.
+.gs-detail .detail-box.gs-renglon { grid-column: 1 / -1; }
+.gs-detail .detail-box.gs-renglon + .detail-box.gs-renglon { padding-top: .75rem; border-top: 1px dashed var(--hair); }
+.gs-detail .detail-box.gs-renglon:not(:has(+ .gs-renglon)) { margin-bottom: .35rem; }
 
-// El análisis, recortado a cuatro renglones: entero, en su pantalla.
-.gs-review-box { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; }
-.gs-review { -webkit-line-clamp: 4; line-clamp: 4; }
+// Rejugar o reintentar: el rótulo y la insignia en la misma línea, a todo el ancho.
+.gs-detail .detail-box.gs-insignia { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: .7rem; }
 
 // ─── Tus amistades y quienes lo quieren ──────────────────────────────────────────────────────────────────────
 // El renglón de persona del hub (`personRow.scss`), más bajo: aquí van varios seguidos y la ficha no es un listado. Con
@@ -199,6 +215,15 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-arrastrando { transition: none;
   font-size: var(--fs-xs);
   font-style: italic;
   color: var(--text-muted);
+}
+
+// El de tu análisis, en tres renglones: es el tuyo y se lee más. Entero, en su pantalla.
+.gs-snippet.is-propio {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  white-space: normal;
 }
 
 // «Lo quieren»: solo avatar y nombre, seguidos, porque es relleno.

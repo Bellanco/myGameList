@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import type { GameSheetSignal } from '../../src/core/gameSheet/buildGameSheet';
 import { GameSheetPanel, type GameSheetPanelProps } from '../../src/view/components/gameSheet/GameSheetPanel';
@@ -75,25 +75,47 @@ describe('GameSheetPanel', () => {
   it('enseña todo lo que enseñaba el detalle, con sus reglas de completados', () => {
     pintar();
     expect(screen.getByText('Steam Deck')).toBeInTheDocument();
-    expect(screen.getByText('Años en los que se completó')).toBeInTheDocument();
-    expect(screen.getByText('46 horas')).toBeInTheDocument();
     expect(screen.getByText('Exploración')).toBeInTheDocument();
     expect(screen.getByText('Mapa de pago')).toBeInTheDocument();
     expect(screen.getByText('Rejugabilidad')).toBeInTheDocument();
     expect(screen.getByText('Tu nota')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Ver análisis de Hollow Knight' })).toHaveAttribute('href', statsReviewPath(1, 'Hollow Knight'));
   });
 
-  it('en curso no enseña nota (ahí vale 0), pero sí el análisis, como el detalle', () => {
-    pintar({ data: biblioteca({ e: [juego(3, 'Persona 5 Strikers', { score: 0, review: 'x' })] }), slug: 'persona-5-strikers' });
+  it('plataformas, géneros y años van en renglones sin rótulo, cada uno con su nombre accesible', () => {
+    pintar();
+    expect(screen.getByLabelText('Plataformas')).toHaveTextContent('Steam');
+    expect(screen.getByLabelText('Géneros')).toHaveTextContent('Metroidvania');
+    expect(screen.getByLabelText('Años en los que se completó')).toHaveTextContent('2024');
+    expect(screen.queryByText('Años en los que se completó')).toBeNull();
+  });
+
+  it('el tiempo jugado sube a las cifras de la cabecera, a la izquierda de la nota', () => {
+    pintar();
+    const cifras = [...document.querySelectorAll('.gs-head-numbers dt')].map((dt) => dt.textContent);
+    expect(cifras.slice(0, 2)).toEqual(['Tiempo jugado', 'Tu nota']);
+    expect(document.querySelector('.gs-head-numbers dd')).toHaveTextContent('46 horas');
+  });
+
+  it('tu análisis va en un renglón como el de una amistad, con el comienzo del texto y tu nota, sin nombre', () => {
+    pintar();
+    const analisis = screen.getByRole('article', { name: 'Ver análisis de Hollow Knight' });
+    expect(analisis).toHaveTextContent('«Un mapa que se descubre a mano.»');
+    expect(analisis.querySelector('h3')).toBeNull();
+    expect(analisis.querySelector('.hub-person-row-action')).not.toBeNull();
+  });
+
+  it('en curso no enseña nota (ahí vale 0) ni horas, pero sí el análisis, como el detalle', () => {
+    pintar({ data: biblioteca({ e: [juego(3, 'Persona 5 Strikers', { score: 0, hours: 12, review: 'x' })] }), slug: 'persona-5-strikers' });
     expect(screen.queryByText('Tu nota')).toBeNull();
     expect(screen.queryByText('Tu interés')).toBeNull();
-    expect(screen.getByText('Ver análisis')).toBeInTheDocument();
+    expect(screen.queryByText('Tiempo jugado')).toBeNull();
+    const analisis = screen.getByRole('article', { name: 'Ver análisis de Persona 5 Strikers' });
+    expect(analisis.querySelector('.hub-person-row-action')).toBeNull();
   });
 
   it('en próximos y deseos no hay análisis', () => {
     pintar({ data: biblioteca({ p: [juego(4, 'Hades', { grade: 70, review: 'x' })] }), slug: 'hades' });
-    expect(screen.queryByText('Ver análisis')).toBeNull();
+    expect(screen.queryByRole('article')).toBeNull();
   });
 
   it('en deseos, el rótulo de la nota es «Tu interés»', () => {
@@ -236,7 +258,7 @@ describe('GameSheetPanel · tus amistades (F3)', () => {
 
   it('enseña quién lo tiene, con reseña primero, su adelanto y dónde lo tiene; de otro juego, nada', async () => {
     await pintarConAmistades();
-    const filas = screen.getAllByRole('article');
+    const filas = within(document.querySelector('.gs-sec-amistades') as HTMLElement).getAllByRole('article');
     expect(filas.map((fila) => fila.getAttribute('aria-label'))).toEqual(['Ver el perfil de Marta', 'Ver el perfil de Nacho']);
     expect(screen.getByText('«Un mapa a mano.»')).toBeInTheDocument();
     expect(screen.getByText('En curso')).toBeInTheDocument();
@@ -256,9 +278,65 @@ describe('GameSheetPanel · tus amistades (F3)', () => {
     expect(screen.getByText('Sara')).toBeInTheDocument();
   });
 
+  it('tu análisis va sin avatar, a diferencia de tus amistades, y tocarlo lleva a él', async () => {
+    await pintarConAmistades();
+    const analisis = screen.getByRole('article', { name: 'Ver análisis de Hollow Knight' });
+    expect(analisis.querySelector('.hub-avatar')).toBeNull();
+    expect(screen.getByRole('article', { name: 'Ver el perfil de Marta' }).querySelector('.hub-avatar')).not.toBeNull();
+    fireEvent.click(analisis);
+    expect(screen.getByTestId('donde')).toHaveTextContent(statsReviewPath(1, 'Hollow Knight'));
+  });
+
   it('tocar una amistad lleva a su perfil', async () => {
     await pintarConAmistades();
     fireEvent.click(screen.getByRole('article', { name: 'Ver el perfil de Marta' }));
     expect(screen.getByTestId('donde')).toHaveTextContent('/social/profiles/p-marta');
+  });
+});
+
+describe('GameSheetPanel · la salida', () => {
+  const props: GameSheetPanelProps = {
+    open: true,
+    data: biblioteca({ c: [hollow] }),
+    slug: 'hollow-knight',
+    onClose: vi.fn(),
+    onOpenGame: vi.fn(),
+    tabActions: TAB_ACTIONS,
+    onEdit: vi.fn(),
+    onDelete: vi.fn(),
+    onMigrate: vi.fn(),
+    reviewTarget: (_tab, game) => ({ to: statsReviewPath(game.id, game.name) }),
+  };
+
+  function abrirYCerrar() {
+    const { rerender } = render(<MemoryRouter><GameSheetPanel {...props} /></MemoryRouter>);
+    rerender(<MemoryRouter><GameSheetPanel {...props} open={false} slug="" /></MemoryRouter>);
+    return document.querySelector('dialog') as HTMLDialogElement;
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('al cerrarse, el panel sigue pintado mientras sale y después se cierra el diálogo', () => {
+    vi.useFakeTimers();
+    // Los tests piden «reducir movimiento» por defecto (`tests/setup.ts`); aquí se quiere la animación.
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({ matches: false, media: query } as MediaQueryList));
+    const dialog = abrirYCerrar();
+    expect(dialog.open).toBe(true);
+    expect(dialog).toHaveClass('is-saliendo');
+    expect(screen.getByRole('heading', { name: 'Hollow Knight' })).toBeInTheDocument();
+    // Mientras sale, Esc no vuelve a cerrar: la URL ya está cerrada y sería otro «atrás».
+    fireEvent(dialog, new Event('cancel', { cancelable: true }));
+    expect(props.onClose).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(600));
+    expect(dialog.open).toBe(false);
+    expect(screen.queryByRole('heading', { name: 'Hollow Knight' })).toBeNull();
+  });
+
+  it('con «reducir movimiento», se cierra en el acto', () => {
+    const dialog = abrirYCerrar();
+    expect(dialog.open).toBe(false);
   });
 });

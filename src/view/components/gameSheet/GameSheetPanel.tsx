@@ -1,5 +1,5 @@
-import { forwardRef, useCallback, useEffect, useRef, type ReactElement } from 'react';
-import { Link, generatePath, useNavigate } from 'react-router-dom';
+import { forwardRef, useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
+import { generatePath, useNavigate } from 'react-router-dom';
 import { GAME_SHEET_UI } from '../../../core/constants/gameSheetLabels';
 import { COMMON_ICONS, TAB_ICONS } from '../../../core/constants/icons';
 import { UI_MESSAGES } from '../../../core/constants/labels';
@@ -9,7 +9,7 @@ import type { GameSheet, GameSheetFriend, GameSheetSagaEntry } from '../../../co
 import { UNPLAYED_TAB_IDS, type GameItem, type TabData, type TabId } from '../../../model/types/game';
 import { useGameSheetFriendSignals } from '../../../viewmodel/gameSheet/useGameSheetFriendSignals';
 import { useGameSheetViewModel } from '../../../viewmodel/gameSheet/useGameSheetViewModel';
-import { SOCIAL_ROUTES } from '../../../viewmodel/social/socialRoutes';
+import { SOCIAL_ROUTES } from '../../../viewmodel/social/socialRoutePaths';
 import type { TabAction } from '../../../viewmodel/useGameListViewModel';
 import { useNativeDialog } from '../../modals/useNativeDialog';
 import { useCovers } from '../../hooks/useCovers';
@@ -43,6 +43,9 @@ export interface GameSheetPanelProps {
   reviewTarget: GameSheetReviewTarget;
 }
 
+/** Lo que dura la salida del panel (`gsSale` en `styles/gameSheet.scss`). */
+const SALIDA_MS = 320;
+
 const PEDIDO_PROPIO: PedidoDePortada = { preferirConocidas: false, soloCache: false };
 const PEDIDO_AJENO: PedidoDePortada = { preferirConocidas: true, soloCache: true };
 
@@ -51,14 +54,24 @@ function juegoParaCaratula(name: string, platforms: string[]): GameItem {
   return { id: 0, _ts: 0, name, platforms, genres: [], steamDeck: false, review: '' };
 }
 
+/** ¿Es una NOTA (y no un interés)? En completados siempre; en abandonados, solo si se puntuó (`scored`). */
+function llevaNota(tab: TabId, item: GameItem): boolean {
+  return tab === 'c' || (tab === 'v' && Boolean(item.scored));
+}
+
 /**
  * ¿Lleva nota tu entrada, y con qué rótulo? Las MISMAS reglas que el detalle de la fila: nota en completados; interés
  * en próximos y deseados; en abandonados solo si se puntuó (`scored`); en curso nunca (ahí vale 0 y no dice nada).
  */
 function rotuloDeNota(tab: TabId, item: GameItem): string | null {
-  if (tab === 'c' || (tab === 'v' && item.scored)) return GAME_SHEET_UI.yourScore;
+  if (llevaNota(tab, item)) return GAME_SHEET_UI.yourScore;
   if (UNPLAYED_TAB_IDS.includes(tab)) return GAME_SHEET_UI.yourInterest;
   return null;
+}
+
+/** Las horas jugadas, con la regla del detalle: solo en completados y abandonados, y solo si las hay. */
+function horasJugadas(tab: TabId, item: GameItem): number | null {
+  return (tab === 'c' || tab === 'v') && (item.hours ?? 0) > 0 ? Number(item.hours) : null;
 }
 
 function Saga({ saga, onOpenGame, covers, className = '' }: {
@@ -122,6 +135,7 @@ function Cabecera({ sheet, covers, lado }: { sheet: GameSheet; covers: boolean; 
   const ultimoAnio = own?.tab === 'c' && item?.years?.length ? Math.max(...item.years) : null;
   const resumen = item ? [item.platforms[0], item.genres[0], ultimoAnio].filter(Boolean).join(' · ') : '';
   const rotulo = own && item ? rotuloDeNota(own.tab, item) : null;
+  const horas = own && item ? horasJugadas(own.tab, item) : null;
   const amistades = sheet.friends.length;
   return (
     <header className="gs-head">
@@ -142,8 +156,16 @@ function Cabecera({ sheet, covers, lado }: { sheet: GameSheet; covers: boolean; 
         {/* Un resumen de una línea, sin chips (F0.14): las listas enteras van en el cuerpo. */}
         {resumen ? <p className="gs-resumen">{resumen}</p> : null}
       </div>
-      {rotulo || amistades || sheet.average ? (
+      {horas || rotulo || amistades || sheet.average ? (
         <dl className="gs-numbers gs-head-numbers">
+          {horas ? (
+            <div>
+              <dt>{UI_MESSAGES.detail.playtime}</dt>
+              <dd>
+                {GAME_SHEET_UI.hours(horas)} <small>{GAME_SHEET_UI.hoursUnit(horas)}</small>
+              </dd>
+            </div>
+          ) : null}
           {rotulo && item ? (
             <div>
               <dt>{rotulo}</dt>
@@ -177,18 +199,27 @@ function Cabecera({ sheet, covers, lado }: { sheet: GameSheet; covers: boolean; 
 
 /**
  * TODO LO QUE ENSEÑABA EL DETALLE DE LA FILA (F0.12), con su mismo marcado (`detail-content`, `detail-box`, chips e
- * insignias) y sus mismas reglas por lista: años y rejugar en completados, horas en completados y abandonados, puntos
- * fuertes en c/v/e, débiles en c/e, motivos en v y reintentar en v. Sin los títulos obvios (F0.14): plataformas y
- * géneros son dos renglones de chips sin etiqueta. La nota no va aquí: sube a las cifras de la cabecera.
+ * insignias) y sus mismas reglas por lista: años y rejugar en completados, puntos fuertes en c/v/e, débiles en c/e,
+ * motivos en v y reintentar en v. La nota y las horas no van aquí: suben a las cifras de la cabecera.
+ *
+ * ORDEN, DE LO QUE ES EL JUEGO A LO QUE TE PARECIÓ (16-10-2026):
+ *  · arriba, los renglones de chips SIN TÍTULO (F0.14): plataformas, géneros y, en completados, los años. Cada uno en
+ *    su renglón y separados por un filete, porque sin rótulo un género como «Plataformas» se confundía con las
+ *    plataformas de encima;
+ *  · debajo, puntos fuertes y débiles, en dos columnas iguales;
+ *  · al final, rejugar o reintentar, con su rótulo y la insignia en la misma línea.
  */
 function TusDatos({ tab, item }: { tab: TabId; item: GameItem }) {
   const D = UI_MESSAGES.detail;
+  const fuertes = tab === 'c' || tab === 'v' || tab === 'e' ? item.strengths : undefined;
   const malos = tab === 'v' ? item.reasons : tab === 'c' || tab === 'e' ? item.weaknesses : undefined;
+  const anios = tab === 'c' ? yearsDesc(item.years) : [];
   return (
     <div className="hub-detail-metadata gs-sec-datos">
       <div className="hub-metadata-section">
+        {/* Un solo `detail-content`, como el detalle de la fila: es el que Persona, Arcade y Cyberpunk visten. */}
         <div className="detail-content gs-detail">
-          <div className="detail-box gs-fila" aria-label={GAME_SHEET_UI.platformsAria}>
+          <div className="detail-box gs-renglon" aria-label={GAME_SHEET_UI.platformsAria}>
             <div className="chips">
               {item.platforms.map((platform) => (
                 <span key={platform} className="chip chip-plat" data-text={platform}>
@@ -203,25 +234,20 @@ function TusDatos({ tab, item }: { tab: TabId; item: GameItem }) {
               ) : null}
             </div>
           </div>
-          <div className="detail-box gs-fila" aria-label={GAME_SHEET_UI.genresAria}>
-            <div>{renderTags(item.genres, 'chip-genre', undefined, true)}</div>
-          </div>
-          {tab === 'c' && item.years?.length ? (
-            <div className="detail-box">
-              <span className="detail-label">{D.yearsCompleted}</span>
-              <div>{renderTags(yearsDesc(item.years), 'chip-generic')}</div>
+          {item.genres.length ? (
+            <div className="detail-box gs-renglon" aria-label={GAME_SHEET_UI.genresAria}>
+              {renderTags(item.genres, 'chip-genre', undefined, true)}
             </div>
           ) : null}
-          {(tab === 'c' || tab === 'v') && (item.hours ?? 0) > 0 ? (
-            <div className="detail-box">
-              <span className="detail-label">{D.playtime}</span>
-              <div>{D.hoursSuffix(String(item.hours).replace('.', ','))}</div>
+          {anios.length ? (
+            <div className="detail-box gs-renglon" aria-label={GAME_SHEET_UI.yearsAria}>
+              {renderTags(anios, 'chip-generic')}
             </div>
           ) : null}
-          {(tab === 'c' || tab === 'v' || tab === 'e') && item.strengths?.length ? (
+          {fuertes?.length ? (
             <div className="detail-box detail-strong">
               <span className="detail-label">{D.strengths}</span>
-              <div>{renderTags(item.strengths, 'chip-pf')}</div>
+              <div>{renderTags(fuertes, 'chip-pf')}</div>
             </div>
           ) : null}
           {malos?.length ? (
@@ -230,16 +256,10 @@ function TusDatos({ tab, item }: { tab: TabId; item: GameItem }) {
               <div>{renderTags(malos, 'chip-pd')}</div>
             </div>
           ) : null}
-          {tab === 'c' ? (
-            <div className="detail-box">
-              <span className="detail-label">{D.replayability}</span>
-              <div>{renderBooleanBadge('replayable', Boolean(item.replayable))}</div>
-            </div>
-          ) : null}
-          {tab === 'v' ? (
-            <div className="detail-box">
-              <span className="detail-label">{D.retry}</span>
-              <div>{renderBooleanBadge('retry', Boolean(item.retry))}</div>
+          {tab === 'c' || tab === 'v' ? (
+            <div className="detail-box gs-insignia">
+              <span className="detail-label">{tab === 'c' ? D.replayability : D.retry}</span>
+              {renderBooleanBadge(tab === 'c' ? 'replayable' : 'retry', Boolean(tab === 'c' ? item.replayable : item.retry))}
             </div>
           ) : null}
         </div>
@@ -249,22 +269,34 @@ function TusDatos({ tab, item }: { tab: TabId; item: GameItem }) {
 }
 
 /**
- * El análisis, en su propio bloque para que las columnas del cuerpo lo puedan repartir aparte de los datos. Recortado
- * a cuatro renglones: entero, en su pantalla («Ver análisis», un enlace porque es navegación).
+ * TU ANÁLISIS, VESTIDO COMO EL DE UNA AMISTAD (16-10-2026): el mismo renglón de persona (`HubPersonRow`), con el
+ * comienzo del texto entre comillas, recortado a tres renglones, y tu nota a la derecha cuando la hay (la misma regla
+ * que en la cabecera). SIN AVATAR NI NOMBRE: dicen de quién es, y aquí se sabe; sin ellos el texto gana el sitio. En
+ * su propio bloque, para que las columnas del cuerpo lo puedan repartir aparte de los datos. Tocarlo lleva al análisis
+ * entero, a la misma pantalla que «Ver análisis» desde la tabla.
  */
 function Analisis({ tab, item, reviewTarget }: { tab: TabId; item: GameItem; reviewTarget: GameSheetReviewTarget }) {
   const D = UI_MESSAGES.detail;
+  const navigate = useNavigate();
   if (!item.review || UNPLAYED_TAB_IDS.includes(tab)) return null;
   const destino = reviewTarget(tab, item);
   return (
     <div className="hub-detail-metadata gs-sec-analisis">
-      <div className="hub-metadata-section gs-review-box">
-        <span className="detail-label">{D.review}</span>
-        <p className="hub-feed-review-text gs-review">{item.review}</p>
-        <Link className="btn btn-open" to={destino.to} state={destino.state} aria-label={D.reviewLinkAria(item.name)}>
-          <Icon name={COMMON_ICONS.arrowsToEye} />
-          <span>{D.reviewLink}</span>
-        </Link>
+      <div className="hub-metadata-section">
+        <strong>{D.review}</strong>
+        <ul className="gs-friends">
+          <li>
+            <HubPersonRow
+              name=""
+              showAvatar={false}
+              status={<span className="gs-snippet is-propio">{GAME_SHEET_UI.friendSnippet(item.review)}</span>}
+              onOpen={() => { void navigate(destino.to, { state: destino.state }); }}
+              openAriaLabel={D.reviewLinkAria(item.name)}
+            >
+              {llevaNota(tab, item) ? <ScoreDisplay game={item} /> : null}
+            </HubPersonRow>
+          </li>
+        </ul>
       </div>
     </div>
   );
@@ -394,20 +426,57 @@ export function GameSheetPanel({
   const signals = useGameSheetFriendSignals(open);
   const sheet = useGameSheetViewModel({ data, slug, signals });
   const visible = open && sheet !== null;
-  const dialogRef = useNativeDialog(visible, onClose);
+
+  /* LA SALIDA SE ANIMA (16-10-2026). La ficha la cierra la URL —se va el `?juego=`, y con él la ficha—, así que el
+     panel guarda la última que enseñó y la sigue pintando mientras sale por la derecha (`.is-saliendo`); al terminar,
+     se cierra el `<dialog>` y el foco vuelve a la fila. Se ajusta durante el render y no en un efecto: un efecto
+     llegaría tarde, con el `<dialog>` ya cerrado y el panel desaparecido de golpe. Volver a abrir en mitad de la
+     salida la corta y el panel entra otra vez. */
+  const [mostrada, setMostrada] = useState<GameSheet | null>(null);
+  const [saliendo, setSaliendo] = useState(false);
+  if (visible && sheet && (mostrada !== sheet || saliendo)) {
+    setMostrada(sheet);
+    setSaliendo(false);
+  }
+  if (!visible && mostrada && !saliendo) setSaliendo(true);
+  const ficha = visible ? sheet : mostrada;
+  const terminarSalida = useCallback(() => {
+    setSaliendo(false);
+    setMostrada(null);
+  }, []);
+  // Mientras sale, ni Esc, ni pulsar fuera, ni la X vuelven a cerrar: la URL ya está cerrada y sería otro «atrás».
+  const cerrar = useCallback(() => {
+    if (visible) onClose();
+  }, [visible, onClose]);
+
+  const dialogRef = useNativeDialog(visible || saliendo, cerrar);
   const panelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLElement>(null);
   const { covers } = useCovers();
-  const key = sheet?.slug ?? '';
-  const { width, showFiller } = useGameSheetWidth(visible, key, scrollRef, contentRef, Boolean(sheet?.wishers.length));
+  const key = ficha?.slug ?? '';
+  const { width, showFiller } = useGameSheetWidth(visible, key, scrollRef, contentRef, Boolean(ficha?.wishers.length));
   const navigate = useNavigate();
   // Su perfil (F0.7). Con el juego abierto llegará en la F5, cuando su perfil abra la ficha.
   const openFriend = useCallback((profileId: string) => {
     void navigate(generatePath(SOCIAL_ROUTES.profileDetail, { profileId }));
   }, [navigate]);
-  const swipe = useSwipeToClose(panelRef, onClose);
+  const swipe = useSwipeToClose(panelRef, cerrar);
+
+  /* Si no hay animación que esperar, la salida termina ya: con «reducir movimiento», o si el panel ya se fue
+     deslizándolo con el dedo (`.is-gesto` lo deja fuera y apaga la animación). Y, por si `animationend` no llega
+     (una pestaña en segundo plano no anima), un tope un poco más largo que la animación. */
+  useEffect(() => {
+    if (!saliendo) return undefined;
+    const sinMovimiento = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (sinMovimiento || panelRef.current?.classList.contains('is-gesto')) {
+      terminarSalida();
+      return undefined;
+    }
+    const tope = window.setTimeout(terminarSalida, SALIDA_MS + 150);
+    return () => window.clearTimeout(tope);
+  }, [saliendo, terminarSalida]);
 
   /* EL HUECO DE LOS BOTONES SE MIDE: el cuerpo reserva abajo justo lo que ocupan (más un respiro), sea cual sea el
      tema, el tamaño de letra o si en el móvil las dianas son de 48 px. Fijo, se quedaba corto y tapaban lo último. */
@@ -422,37 +491,44 @@ export function GameSheetPanel({
     return () => observador.disconnect();
   }, [visible, key]);
 
-  const own = sheet?.own ?? null;
+  const own = ficha?.own ?? null;
   return (
     <dialog
       ref={dialogRef}
-      className="modal-dialog gs-dialog"
-      aria-label={sheet ? GAME_SHEET_UI.panelAria(sheet.name) : undefined}
+      className={`modal-dialog gs-dialog${saliendo ? ' is-saliendo' : ''}`}
+      aria-label={ficha ? GAME_SHEET_UI.panelAria(ficha.name) : undefined}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) cerrar();
       }}
     >
-      {visible && sheet ? (
-        <div ref={panelRef} className={`modal gs-panel ${width}`} {...swipe}>
+      {ficha && (visible || saliendo) ? (
+        <div
+          ref={panelRef}
+          className={`modal gs-panel ${width}`}
+          {...swipe}
+          onAnimationEnd={(event) => {
+            if (saliendo && event.target === event.currentTarget && event.animationName === 'gsSale') terminarSalida();
+          }}
+        >
           <span className="gs-asa-lateral" aria-hidden="true" />
-          <button className="btn-icon gs-close" type="button" onClick={onClose} aria-label={GAME_SHEET_UI.close} title={GAME_SHEET_UI.close}>
+          <button className="btn-icon gs-close" type="button" onClick={cerrar} aria-label={GAME_SHEET_UI.close} title={GAME_SHEET_UI.close}>
             <Icon name={COMMON_ICONS.close} />
           </button>
-          <div className="gs-scroll" key={sheet.slug} ref={scrollRef}>
+          <div className="gs-scroll" key={ficha.slug} ref={scrollRef}>
             <div className="gs-contenido" ref={contentRef}>
               {/* Con ancho, el lado de la cabecera es la saga (sin precio, ese hueco quedaba vacío); en estrecho, la
                   saga va al final del cuerpo. Se pinta en los dos sitios y el CSS esconde la que no toca. */}
               <Cabecera
-                sheet={sheet}
+                sheet={ficha}
                 covers={covers}
-                lado={sheet.saga.length ? <Saga saga={sheet.saga} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
+                lado={ficha.saga.length ? <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
               />
               <div className="gs-cuerpo">
                 {own ? <TusDatos tab={own.tab} item={own.item} /> : null}
                 {own ? <Analisis tab={own.tab} item={own.item} reviewTarget={reviewTarget} /> : null}
-                <Amistades friends={sheet.friends} onOpenFriend={openFriend} />
-                {showFiller ? <LoQuieren wishers={sheet.wishers} /> : null}
-                <Saga saga={sheet.saga} onOpenGame={onOpenGame} covers={covers} className="is-solo-estrecho" />
+                <Amistades friends={ficha.friends} onOpenFriend={openFriend} />
+                {showFiller ? <LoQuieren wishers={ficha.wishers} /> : null}
+                <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-solo-estrecho" />
               </div>
             </div>
           </div>

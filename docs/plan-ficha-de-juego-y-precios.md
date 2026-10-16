@@ -84,13 +84,16 @@ aciertan siempre con su precio porque llegan con su id.
    tus amistades y cuántas lo tienen. A la derecha, con ancho, el precio si es un deseo y si no la saga.
 2. **Tus datos (F0.12), sin título:** todo lo que hoy enseña el detalle de la fila (`GameTable.tsx:1414-1505`), con su
    mismo marcado (`detail-content`, `detail-box`, chips e insignias) y sus mismas reglas por lista:
-   - plataformas, con Steam Deck, y géneros, en todas, en dos renglones de chips sin etiqueta;
-   - años y rejugar, en completados;
-   - horas, en completados y abandonados;
-   - puntos fuertes, en c/v/e; débiles, en c/e; motivos, en v;
-   - reintentar, en v;
-   - el análisis, en su propio bloque (para que las columnas lo puedan repartir), recortado a cuatro renglones, con
-     «Ver análisis» a `statsReviewPath`.
+   - plataformas, con Steam Deck, y géneros, en todas, y los años en completados: renglones de chips sin etiqueta,
+     separados por un filete (sin él, el género «Plataformas» se leía como una plataforma más);
+   - las horas, en completados y abandonados, **en las cifras de la cabecera, a la izquierda de la nota**, y solo si
+     las hay (revisión del 16-10-2026);
+   - puntos fuertes, en c/v/e, y débiles, en c/e (motivos, en v), en dos columnas iguales;
+   - rejugar en c y reintentar en v, con el rótulo y la insignia en la misma línea;
+   - el análisis, en su propio bloque (para que las columnas lo puedan repartir), **vestido como el de una amistad**:
+     el renglón de persona con el comienzo del texto en tres renglones y tu nota a la derecha (si es nota: c, y v con
+     `scored`), **sin avatar ni nombre** (ya se sabe de quién es y el texto gana el sitio; las amistades sí los
+     llevan). Tocarlo lleva al análisis entero (`statsReviewPath`).
 
    Respeta las mismas columnas ocultas (`visibility`).
    **Acciones, las mismas del detalle:** los movimientos de `TAB_ACTIONS` con sus colores, «Editar», «Compartir» (con
@@ -294,6 +297,11 @@ dependen del layout y jsdom no los ve.
 
 - **Medido** (`npm run build` + `npm run validate`): el crítico pasa de 192,4 a 193,3 kB (de 195). El panel no entra:
   va diferido y precacheado (`DEFERRED_MODULES` en `vite.config.ts`), y cuenta solo en el total (234,1 de 240).
+- **Revisión del 16-10-2026:** las horas suben a la cabecera, los años pierden su rótulo, el orden de las cajas
+  (renglones de chips, fuertes y débiles en dos columnas, rejugar en línea), el análisis vestido como el de una
+  amistad y **la salida animada**: el panel guarda la última ficha y sale por la derecha mientras el velo se
+  desvanece (320 ms), y solo entonces se cierra el `<dialog>`. Con «reducir movimiento», o si se cerró deslizándolo,
+  se cierra en el acto. El ancho se mide antes de pintar (`useLayoutEffect`), para que no salte mientras entra.
 - **Doble clic:** con ratón, la fila espera 250 ms (`DOBLE_CLIC_MS`) antes de abrir la ficha, para que el doble clic
   edite sin abrirla; con el dedo o el teclado abre al momento.
 - **Al cambiar de lista, la ficha se cierra** (`App.tsx`, con `ownGameSheetTab`): es lo que hacía el detalle, que se
@@ -375,7 +383,9 @@ dependen del layout y jsdom no los ve.
 - **Estilos del renglón, en su hoja:** `styles/personRow.scss`, que importan `HubPersonRow` y `HubUserCard`.
   Importar `social.scss` desde la ficha metía el hub entero en el precache. Comprobado con la maqueta social: 48
   capturas (amigos, solicitudes y perfil; 8 temas, claro y oscuro) idénticas píxel a píxel antes y después.
-- **Medido:** lo diferido pasa de 7,5 a 12,8 kB y **el total del precache queda en 239,6 de 240 kB**. La P5 (precio
+- **Medido:** lo diferido pasa de 7,5 a 12,8 kB y **el total del precache queda en 239,6 de 240 kB**. La revisión
+  del 16-10-2026 (salida animada, análisis como renglón) lo llevó a 240,1; lo devolvió a 239,6 sacar las direcciones
+  del hub a `viewmodel/social/socialRoutePaths.ts`, para que la ficha no arrastre `socialRoutes` con su `matchPath`. La P5 (precio
   en la ficha) no cabe sin decidir antes: cargar las amistades aparte y sin precache (son opcionales, F0.10) o
   rehacer las mediciones del tope.
 - **Tests:** `tests/unit/gameSheetFriendSignals.test.ts`, los de amistades de `GameSheetPanel.test.tsx`, el e2e
