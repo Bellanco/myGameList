@@ -76,8 +76,8 @@ export async function fetchWishlistPrices(titles: readonly string[]): Promise<Pr
 /**
  * LOS PRECIOS DE TU LISTA DE DESEOS, con la caché local por delante: se pide solo lo que no tiene precio o lo tiene
  * más viejo que `ttlMs` (el plazo del rango de quien mira), por partes de 400, y lo que llega se mezcla con lo
- * guardado (apuntando el precio anterior de cada juego para las bajadas, P4). Lo que ya no está en la lista sale de
- * la caché. Si una tanda falla, las siguientes no se piden: lo guardado vale hasta el siguiente intento.
+ * guardado. Lo que ya no está en la lista sale de la caché. Si una tanda falla, las siguientes no se piden: lo
+ * guardado vale hasta el siguiente intento.
  */
 export async function loadWishlistPrices(titles: readonly string[], ttlMs: number, now: number = Date.now()): Promise<WishlistPrices> {
   let cache: PriceCache = (await getPriceCache<PriceCache>()) ?? {};

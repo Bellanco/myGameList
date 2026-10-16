@@ -31,7 +31,7 @@ export interface PrecioItad {
   };
   /** La página del juego en ITAD (crédito y «ver más»), tal cual la da ITAD. */
   urlFicha: string | null;
-  /** Los packs activos que lo contienen (para el aviso de la P4). */
+  /** Los packs activos que lo contienen. Eran para el aviso de la P4, aparcada; llegan sin coste en `overview`. */
   bundles: Array<{ titulo: string; url: string; expira: string | null }>;
 }
 

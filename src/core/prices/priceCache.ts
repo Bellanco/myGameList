@@ -5,15 +5,10 @@ import type { PrecioItad } from '../../model/types/prices';
 /** Títulos por petición a `/api/precios` (su `MAX_TITULOS`): una lista mayor se pide por partes (P3). */
 export const PRICE_REQUEST_MAX_TITLES = 400;
 
-/** Lo guardado de un juego: su precio (o `null`, ITAD no lo tiene), cuándo se pidió y el anterior, para las bajadas. */
+/** Lo guardado de un juego: su precio (o `null`, ITAD no lo tiene) y cuándo se pidió. */
 export interface PriceCacheEntry {
   precio: PrecioItad | null;
   pedidoEn: number;
-  /**
-   * El MEJOR precio que había antes de esta respuesta y cuándo se vio, para detectar una bajada (P4). Solo se apunta
-   * cuando cambia: un refresco con el mismo precio deja el anterior como estaba.
-   */
-  anterior?: { precio: number; vistoEn: number };
 }
 
 /** La caché entera, por título tal y como está en tu lista de deseos. */
@@ -36,23 +31,12 @@ export function titlesToRequest(cache: PriceCache, titles: readonly string[], tt
 }
 
 /**
- * Mezcla lo que llega de `/api/precios` con lo guardado. Cada título recibido pasa a tener su precio nuevo con la hora
- * de ahora; si su mejor precio cambia, el que había se apunta como `anterior` (P4). Lo que no se pidió, o no llegó, se
- * queda como estaba. Inmutable: devuelve una caché nueva.
+ * Mezcla lo que llega de `/api/precios` con lo guardado: cada título recibido pasa a tener su precio nuevo con la hora
+ * de ahora. Lo que no se pidió, o no llegó, se queda como estaba. Inmutable: devuelve una caché nueva.
  */
 export function mergePrices(cache: PriceCache, received: Record<string, PrecioItad | null>, now: number): PriceCache {
   const next: PriceCache = { ...cache };
-  for (const [title, precio] of Object.entries(received)) {
-    const previous = cache[title];
-    const antes = previous?.precio?.mejor?.precio;
-    const ahora = precio?.mejor?.precio;
-    const cambio = typeof antes === 'number' && antes !== ahora;
-    next[title] = {
-      precio,
-      pedidoEn: now,
-      ...(cambio ? { anterior: { precio: antes, vistoEn: previous.pedidoEn } } : previous?.anterior ? { anterior: previous.anterior } : {}),
-    };
-  }
+  for (const [title, precio] of Object.entries(received)) next[title] = { precio, pedidoEn: now };
   return next;
 }
 

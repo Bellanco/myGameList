@@ -1,8 +1,7 @@
 // LOS PRECIOS EN EL CLIENTE (P2 del plan de la ficha y los precios): el formato del importe, la caché local pura y el
 // repositorio que habla con `/api/precios`. Lo que se protege aquí:
 //  · que se pida SOLO lo caducado o sin precio, con el plazo del rango de quien mira, y por partes de 400;
-//  · que un fallo (sin sesión, sin cupo, sin red) devuelva lo guardado, aunque sea viejo, y nunca lance;
-//  · que se apunte el precio anterior cuando cambia, para el aviso de bajada (P4).
+//  · que un fallo (sin sesión, sin cupo, sin red) devuelva lo guardado, aunque sea viejo, y nunca lance.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const idb = vi.hoisted(() => ({ cache: null as unknown }));
@@ -81,19 +80,11 @@ describe('caché de precios (pura)', () => {
     expect(titlesToRequest(cache, ['Sin precio'], 18 * HORA, ahora)).toEqual([]);
   });
 
-  it('al mezclar apunta el precio anterior solo si cambia, y lo conserva en un refresco igual', () => {
-    const bajada = mergePrices(cache, { Viejo: precio('Viejo', 4) }, ahora);
-    expect(bajada.Viejo).toEqual({ precio: precio('Viejo', 4), pedidoEn: ahora, anterior: { precio: 10, vistoEn: ahora - 20 * HORA } });
-    expect(bajada.Fresco).toBe(cache.Fresco);
-
-    const igual = mergePrices(bajada, { Viejo: precio('Viejo', 4) }, ahora + HORA);
-    expect(igual.Viejo.anterior).toEqual({ precio: 10, vistoEn: ahora - 20 * HORA });
-    expect(igual.Viejo.pedidoEn).toBe(ahora + HORA);
-  });
-
-  it('no inventa un anterior cuando antes no había precio', () => {
-    const nuevo = mergePrices(cache, { 'Sin precio': precio('Sin precio', 7) }, ahora);
-    expect(nuevo['Sin precio'].anterior).toBeUndefined();
+  it('al mezclar, lo recibido entra con la hora de ahora y lo demás se queda como estaba', () => {
+    const mezcla = mergePrices(cache, { Viejo: precio('Viejo', 4), Nuevo: null }, ahora);
+    expect(mezcla.Viejo).toEqual({ precio: precio('Viejo', 4), pedidoEn: ahora });
+    expect(mezcla.Nuevo).toEqual({ precio: null, pedidoEn: ahora });
+    expect(mezcla.Fresco).toBe(cache.Fresco);
   });
 
   it('no muta la caché que recibe', () => {
@@ -161,7 +152,7 @@ describe('loadWishlistPrices', () => {
     expect(titulosPedidos(0)).toEqual(['Viejo']);
     const guardado = await readCachedPrices();
     expect(Object.keys(guardado).sort()).toEqual(['Fresco', 'Viejo']);
-    expect(guardado.Viejo.anterior).toEqual({ precio: 5, vistoEn: 50 * HORA });
+    expect(guardado.Viejo).toEqual({ precio: precio('Viejo', 3), pedidoEn: 100 * HORA });
   });
 
   it('una lista de más de 400 se pide por partes', async () => {

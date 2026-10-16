@@ -8,8 +8,8 @@
 //    los números romanos pasados a arábigos y al revés (medido en P0: recupera *Hades 2*, *The Witcher III*…);
 //  · `/games/prices/v3`: las ofertas de ahora y los mínimos de 1 año y de 3 meses;
 //  · `/games/overview/v2`: el mínimo histórico CON SU FECHA, el enlace a la página del juego en ITAD y los packs
-//    (bundles) que lo contienen. Hace falta para el recuadro de la ficha (F0.15), así que va siempre, y el aviso de
-//    pack de la P4 sale de aquí sin una llamada más.
+//    (bundles) que lo contienen. Hace falta para el recuadro de la ficha (F0.15), así que va siempre; los packs
+//    vienen en la misma respuesta y eran para el aviso de la P4, aparcada (16-10-2026).
 // España y euros, fijos (P0.3). Solo títulos: nada de quien pide llega a ITAD, y sale desde el borde.
 //
 // Esta carpeta la compila Cloudflare Pages: nada del bundle salvo módulos sin dependencias.

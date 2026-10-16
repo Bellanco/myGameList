@@ -21,8 +21,8 @@ Tres piezas que se tocan entre sí:
    no tiene vista propia: la fila de la tabla se despliega y el nombre en una reseña es un chip sin acción
    (`ReviewDetailHead.tsx:102-105`).
 2. **Precios en Deseados**. Junto a cada juego de la lista de deseos, el mejor precio actual, el descuento, la tienda y
-   si está en su mínimo histórico, sacados de ITAD a través de un proxy propio. Al abrir la app, un aviso si algo que
-   deseas ha bajado.
+   si está en su mínimo histórico, sacados de ITAD a través de un proxy propio. El aviso de bajada (P4) está
+   aparcado: sin notificaciones por ahora.
 3. **Traer tu lista de ITAD a Deseados** (Fase P7). Entras en ITAD y tu lista de seguimiento llega a la misma bandeja
    que usa Playnite, para pasarla a Deseados en bloque. Qué se puede traer depende del rango.
 
@@ -532,10 +532,10 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
 | P0.8 | **Si el servicio no está, el precio no se muestra** (15-10-2026). Sin conexión, con ITAD caído o sin cupo, el bloque no sale, aunque haya un precio guardado. Con conexión y dentro del plazo de su rango, el guardado vale: es el funcionamiento normal, y no se pregunta a ITAD |
 | P0.3 | **España y euros, fijos** (15-10-2026). La preferencia de región, más adelante (P8) |
 | P0.4 | **La preferencia se sincroniza entre dispositivos** (15-10-2026): campo nuevo en `FirestorePublicConfig` y en el `hasOnly` de `publicConfig` en `firestore.rules`, con su despliegue de reglas y `npm run test:rules`, como `covers` |
-| P0.5 | **Aviso de bajada: desde plata, con casilla propia y llevando a la ficha** (15-10-2026). Solo avisa de tres cosas: **un mínimo histórico nuevo, un descuento de al menos el 75 % o que el juego entre en un bundle**. La cápsula y la campana abren la ficha del juego. Bajo el interruptor «IsThereAnyDeal», una casilla «Avisarme cuando baje» que solo ven plata, oro y mithril. Sin la casilla marcada, no hay aviso ni refresco en segundo plano |
+| P0.5 | **Aparcado (16-10-2026):** el usuario quita los avisos de precios, «no entrarían por ahora». Lo decidido entonces, por si vuelve: **Aviso de bajada: desde plata, con casilla propia y llevando a la ficha** (15-10-2026). Solo avisa de tres cosas: **un mínimo histórico nuevo, un descuento de al menos el 75 % o que el juego entre en un bundle**. La cápsula y la campana abren la ficha del juego. Bajo el interruptor «IsThereAnyDeal», una casilla «Avisarme cuando baje» que solo ven plata, oro y mithril. Sin la casilla marcada, no hay aviso ni refresco en segundo plano |
 | P0.6 | **Las tiendas, elegibles desde administración** (15-10-2026). En `/admin`, la lista de tiendas de ITAD (`/service/shops/v1`) con una casilla cada una; por defecto, todas. Se guarda en KV, como el aviso del administrador (memoria `avisos-admin-decisiones`), y `/api/precios` la pasa a ITAD como `shops=`. Una escritura de KV por cambio; leerla, una lectura por petición, de las 100.000 diarias |
-| P0.9 | **La casilla «Avisarme cuando baje» viene apagada** (15-10-2026), como el interruptor de ITAD |
-| P0.10 | **El aviso de bundle se queda** (comprobado en la especificación de ITAD, 15-10-2026). `/games/prices/v3` no trae bundles, pero `POST /games/overview/v2` devuelve los **bundles activos que contienen alguno de los juegos consultados**, y en cada uno, por tramos (`tiers[].games[]`), los juegos con su id: así se sabe cuál de tus deseos está en cuál. Cuesta **una llamada más por refresco** (hasta 200 juegos a la vez), solo para quien tiene la casilla de aviso marcada (desde plata), y pasa por la misma caché del borde |
+| P0.9 | **Aparcado con la P4 (16-10-2026).** La casilla «Avisarme cuando baje» venía apagada (15-10-2026), como el interruptor de ITAD |
+| P0.10 | **Aparcado con la P4 (16-10-2026);** los packs siguen llegando en `overview` sin coste, pero nada los pinta. Lo comprobado: **El aviso de bundle se queda** (comprobado en la especificación de ITAD, 15-10-2026). `/games/prices/v3` no trae bundles, pero `POST /games/overview/v2` devuelve los **bundles activos que contienen alguno de los juegos consultados**, y en cada uno, por tramos (`tiers[].games[]`), los juegos con su id: así se sabe cuál de tus deseos está en cuál. Cuesta **una llamada más por refresco** (hasta 200 juegos a la vez), solo para quien tiene la casilla de aviso marcada (desde plata), y pasa por la misma caché del borde |
 | P0.7 | **Precios para todos los rangos, desde bronce. El refresco depende del rango:** bronce 18 h, plata 12 h, oro 6 h y mithril 15 min. Ver «Límites por rango» |
 
 **Preparación (la hace el usuario):** registrar la app en ITAD, guardar la clave como secreto de Pages
@@ -556,7 +556,7 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
 
 - **`/games/overview/v2` va en cada refresco, no solo con el aviso.** Leída la API: `/games/prices/v3` no trae la
   fecha del mínimo histórico ni el enlace a la página de ITAD, y el recuadro (F0.15) los pide. `overview` los da
-  (`lowest.timestamp`, `urls.game`) y trae además los packs, así que el aviso de pack de la P4 sale sin una llamada
+  (`lowest.timestamp`, `urls.game`) y trae además los packs, así que el aviso de pack de la P4 (aparcada) saldría sin una llamada
   más. Cada petición cuesta como mucho la búsqueda de lo que falte (y su segunda pasada) más dos llamadas por cada
   200 juegos, y solo por lo que no esté en caché.
 - **El título de ITAD** no lo da ninguna de las tres llamadas: `/lookup/id/title/v1` solo devuelve el id. Como el
@@ -660,8 +660,8 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
 
   Arrastra Firebase por las cabeceras, así que se carga con `import()` desde la P3, nunca en el arranque.
 - **La lógica de la caché es pura** (`core/prices/priceCache.ts`): `titlesToRequest`, `mergePrices`, `pruneCache` y
-  `chunk`. Cada juego guarda su precio, cuándo se pidió y, si el mejor precio cambia, el **anterior** con su fecha,
-  para detectar bajadas (P4).
+  `chunk`. Cada juego guarda su precio y cuándo se pidió. El precio anterior, que era para detectar bajadas, salió
+  al aparcar la P4.
 - **Sin almacén nuevo ni `DB_VERSION` 5 → 6:** la caché es un registro (`__precios__`) dentro de `profileCache`, por
   `getPriceCache` y `putPriceCache` de `indexedDbRepository.ts`. Subir la versión sin un manejador de
   `versionchange` dejaba una pestaña vieja abierta bloqueando la apertura de IndexedDB en la nueva. Y el cierre de
@@ -710,16 +710,12 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
 - **Atribución:** una línea discreta al pie de Deseados, «Precios de IsThereAnyDeal», con enlace. También en `CREDITS`.
 - **Carga:** todo el código de precios en un chunk que solo se pide con el interruptor encendido y Deseados abierto.
 
-## Fase P4 · Aviso de bajada · S (decidido en P0.5)
+## Fase P4 · Aviso de bajada · aparcada (16-10-2026)
 
-- Al refrescar los precios, comparar con el último visto: hay aviso con un **mínimo histórico nuevo** o una bajada
-  ≥ 50 % (P0.5).
-- Cápsula del carril (armazón de `useLaneToast`), por ejemplo «*Hollow Knight* está en su mínimo: 7,49 €», y una
-  entrada en la campana, que solo enseña lo nuevo (memoria `notificaciones-y-buscador-decisiones`).
-- **Un solo aviso por juego y bajada:** no se repite mientras el precio no vuelva a subir.
-- Los precios solo se refrescan al abrir Deseados. Para que el aviso salga sin entrar allí: un refresco silencioso
-  en segundo plano, como mucho una vez cada 12 h, solo con el interruptor encendido y en reposo
-  (`requestIdleCallback`).
+**No se hace por ahora** (decisión del usuario: las notificaciones «no entrarían por ahora»). Ni cápsula, ni entrada
+en la campana, ni casilla «Avisarme cuando baje», ni refresco en segundo plano: los precios solo se piden al abrir
+Deseados (P3) o la ficha (P5). Lo decidido para ella sigue en P0.5, P0.9 y P0.10 por si vuelve. Si vuelve, la caché
+tendrá que guardar otra vez el último precio visto de cada juego (salió de `priceCache.ts` al aparcarla).
 
 ## Fase P5 · Precio en la ficha · S (depende de F2 y P2)
 
@@ -926,7 +922,7 @@ hay (`PROFILE_TIER_SHARE_MAX_ACTIVE`, `PROFILE_TIER_FEED_TTL_MS`).
 | Precios: refresco cada | — | **18 h** | **12 h** | **6 h** | **15 min** | **Decidido** (P0.7) |
 | `/api/precios`: peticiones por usuario y hora (red de seguridad; lo normal lo limita el refresco) | — | **30** | **60** | **120** | **1.200** | **Decidido** (16-10-2026): que dependa del rango, como todo; mithril, todo lo que se pueda sin quitar la red de seguridad |
 | Deseados: tope de juegos | 100 | 100 | 100 | 100 | **Sin tope** | **Decidido** (16-10-2026). Con el claim `admin`, 400 (ya existía). Ver P3 |
-| Precios: aviso de bajada al abrir (P4), con su casilla | — | No | Sí | Sí | Sí | **Decidido** (P0.5) |
+| Precios: aviso de bajada al abrir (P4), con su casilla | — | — | — | — | — | **Aparcado** (16-10-2026) |
 | Precios: otras tiendas y mínimos de 1 año y 3 meses en el recuadro | — | Sí | Sí | Sí | Sí | **Decidido:** para todos los que tienen precios (F0.15) |
 | Importar de ITAD | **No** | **No** | Sí | Sí | Sí | **Decidido** (D8) |
 | Importar: DLC y paquetes | — | — | No | Sí | Sí | **Decidido** (D8b) |
@@ -967,7 +963,7 @@ cada precio y es cada petición la que decide si le vale (P1).
 | 2 | F1, F2, F3 | Ficha útil con coste cero |
 | 3 | P1, P2, P3 | Precios en Deseados |
 | 4 | F4, F5, F6 | Ficha completa y con sus entradas |
-| 5 | P4, P5 | Aviso y cruce ficha ↔ precio |
+| 5 | P5 | Cruce ficha ↔ precio (P4, el aviso, aparcada) |
 | 6 | P6 | Si la medición de P0 lo pide |
 | — | P7 (P7.0 → P7.3) | No depende de los precios: puede ir en cualquier momento, incluso antes que P1 |
 
