@@ -37,8 +37,46 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92
 }
 
 // En el móvil, la pantalla entera: el panel sigue entrando por la derecha. Se cierra con la X, con «atrás» o con Esc.
+// En el móvil, casi toda la pantalla, pero dejando una franja de la lista a la izquierda: se lee como algo que está
+// ENCIMA y no como una pantalla nueva, y tocar la franja cierra, como pulsar fuera en escritorio.
 @media (max-width: 600px) {
-  dialog.modal-dialog.gs-dialog[open] .gs-panel:is(.is-estrecho, .is-medio, .is-ancho) { width: 100%; border-radius: 0; }
+  dialog.modal-dialog.gs-dialog[open] .gs-panel:is(.is-estrecho, .is-medio, .is-ancho) {
+    width: calc(100% - 1.25rem);
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  }
+}
+
+// ─── Deslizar hacia la derecha para cerrar (ver `useDeslizarParaCerrar`) ─────────────────────────────────────
+// El scroll vertical se lo queda el navegador; el horizontal llega al panel como eventos de puntero.
+.gs-panel,
+.gs-scroll { touch-action: pan-y; }
+
+// Mientras dura el gesto, fuera la animación de entrada (con `both` pisaría el `transform` que pone el dedo) y, al
+// soltar, una transición corta para cerrarse o volver a su sitio.
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-gesto { animation: none; transition: transform .22s cubic-bezier(.2, .9, .3, 1); }
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-arrastrando { transition: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.modal-dialog.gs-dialog[open] .gs-panel.is-gesto { transition: none; }
+}
+
+// El asa lateral, en el borde izquierdo y a media altura: solo en pantallas táctiles, que es donde está el gesto.
+.gs-asa-lateral { display: none; }
+
+@media (pointer: coarse) {
+  .gs-asa-lateral {
+    position: absolute;
+    top: 50%;
+    left: .35rem;
+    z-index: 2;
+    display: block;
+    width: .3rem;
+    height: 2.5rem;
+    margin-top: -1.25rem;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--text) 30%, transparent);
+    pointer-events: none;
+  }
 }
 
 // Lo que se desplaza es el cuerpo; la barra de botones se queda abajo.

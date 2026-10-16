@@ -74,6 +74,7 @@ aciertan siempre con su precio porque llegan con su id.
 | F0.8 | **De los estilos del detalle antiguo, solo se borra lo de la fila desplegada** (15-10-2026): el filo de color de Arcade (`.detail-row.open`) y la animación de cierre de Persona (`tr.detail-row.is-leaving`). Lo de las cajas, las etiquetas y los chips (`detail-box`, `detail-label`, `.detail-content .chip` en Persona, Arcade y Cyberpunk) **se queda**: la ficha usa ese mismo marcado y así cada tema la viste igual |
 | F0.9 | **Saltar de una ficha a otra no suma pasos a «atrás»** (15-10-2026): se **reemplaza** el `?juego=`, así que «atrás» siempre vuelve a la lista |
 | F0.16 | **Nada más de la ficha depende del rango** (15-10-2026): solo el índice de bibliotecas (F4) |
+| F0.17 | **En el móvil, el mismo panel lateral y se cierra deslizándolo hacia la derecha** (16-10-2026), como una hoja de Android o iOS pero en horizontal, para no tocar el scroll vertical. El panel deja una franja de unos 20 px de la lista a la izquierda (se lee como algo que está encima, no como una pantalla nueva) y tocarla cierra. Ver «Diseño» |
 | F0.10 | **La ficha abre siempre, con o sin red.** Lo tuyo (datos, acciones, saga de tu biblioteca) sale siempre. Lo que viene de fuera (amistades, índice, precios, carátulas) es opcional: si no llega, por falta de conexión, un servicio caído o un cupo agotado, **esa sección no se pinta**, sin error ni hueco. Vale para todas las piezas de fuera. Ver «Sin conexión y servicios caídos» |
 
 ## Qué enseña la ficha
@@ -148,7 +149,18 @@ con «Añadir a deseados».
   - El panel entra deslizándose desde fuera, así que los cambios de ancho al abrir no llegan a verse.
 
   El velo es ligero (40 %), para seguir viendo la lista.
-- **Móvil (≤ 600 px):** la pantalla entera, también desde la derecha. Se cierra con la X, «atrás» o Esc.
+- **Móvil (≤ 600 px), F0.17:** el mismo panel desde la derecha, con `calc(100% - 1.25rem)` de ancho (una franja de la
+  lista a la izquierda) y un asa vertical en su borde izquierdo, solo en pantallas táctiles. Se cierra:
+  - **deslizándolo hacia la derecha** (`useDeslizarParaCerrar`):
+    - solo con el dedo o el lápiz (`pointerType`), nunca con el ratón, para no estorbar al seleccionar texto;
+    - el eje se decide en los primeros 10 px: horizontal y hacia la derecha es del panel; vertical es del scroll, que
+      se queda el navegador (`touch-action: pan-y`);
+    - si empieza en algo que se desplaza en horizontal (la tira de la saga) y aún puede moverse, se mueve la tira;
+    - al soltar, se cierra con más de un 30 % del ancho o con un gesto rápido (> 0,6 px/ms), y si no vuelve a su sitio;
+    - mientras dura, la animación de entrada se apaga (con `both` pisaría el `transform` del dedo); con «reducir
+      movimiento», sin transición;
+  - tocando la franja de la izquierda, con la X, con Esc o con «atrás», también el gesto de «atrás» del sistema desde
+    el borde (iOS y Android), que quita el `?juego=`.
 - **Sin cabecera de modal:** el nombre va en la ficha, junto a la carátula. La X queda en la esquina, fuera del
   scroll.
 - **Botones anclados abajo, sin barra:**
@@ -273,7 +285,10 @@ las peticiones con `page.route`.
 
 - **El panel** (F0.11). `view/components/gameSheet/GameSheetPanel.tsx`, con `<dialog>` nativo y `useNativeDialog`.
   El ancho se mide con un hook propio (`useGameSheetWidth`: los tres pasos, el `ResizeObserver` que solo ensancha y
-  el reinicio al cambiar la ventana), con su test de componente. Va lazy
+  el reinicio al cambiar la ventana), con su test de componente. El gesto de cerrar, con otro
+  (`useSwipeToClose`, F0.17), con tests de componente que disparen `PointerEvent` sintéticos: rápido a la derecha
+  cierra, corto y lento vuelve, vertical no mueve el panel, ratón no hace nada y la tira de la saga desplazada se
+  respeta. Va lazy
   en `App.tsx`, montado **una vez** para toda la app, como la ruleta, y **precacheado** por el service worker
   (ver «Sin conexión y servicios caídos»): sin eso, sin red tras un despliegue no se abriría. El `<dialog>` se queda montado, como pide el
   hook, para devolver el foco a la fila al cerrar. Mientras carga el chunk la primera vez, la fila no se mueve. El
@@ -372,6 +387,8 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
   - Esc cierra y el foco vuelve a la fila;
   - en el mosaico, igual;
   - **sin red** y con el service worker recién instalado, la ficha abre con lo propio y sin las secciones de fuera;
+  - en un móvil emulado (`hasTouch`, `isMobile`), deslizar a la derecha cierra y quita `?juego=`, y el scroll vertical
+    sigue funcionando;
   - el modal entra en el barrido de axe de `tests/e2e/a11y.test.ts`.
 - Medir que el arranque crítico no sube más que `gameSheetPath` y la lectura de `?juego=` (skill `medir`). Quitar
   el detalle de `GameTable` debería **bajarlo**: medirlo también.

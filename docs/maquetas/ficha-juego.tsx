@@ -11,7 +11,7 @@
 //
 // Carátulas: la ficha las pide en `solo-cache` al gemelo `localCoverApi`, que sirve lo ya resuelto en
 // `.covers.local.json`. Sin ese fichero sale la portada de casa, que también vale para ver la composición.
-import { useCallback, useEffect, useRef, useState, type ReactElement, type Ref } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactElement, type Ref, type RefObject } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import '../../src/styles/index.scss';
@@ -591,6 +591,87 @@ function BarraDeAcciones({ g, tab, ref }: { g: GameItem; tab: Lista; ref?: Ref<H
   );
 }
 
+/**
+ * DESLIZAR HACIA LA DERECHA PARA CERRAR, como una hoja de Android o iOS pero en horizontal: el panel vuelve por donde
+ * vino. Así no se lee como una pantalla nueva y el scroll vertical de la ficha queda intacto.
+ *
+ *  · Solo con el dedo o el lápiz (`pointerType`): con el ratón estorbaría al seleccionar texto en escritorio.
+ *  · El eje se decide en los primeros 10 px: si el gesto es horizontal y hacia la derecha, es del panel; si es
+ *    vertical, es del scroll y aquí no se hace nada (`touch-action: pan-y` deja el vertical al navegador).
+ *  · Lo que se desplaza en horizontal (la tira de la saga) se respeta: si el gesto empieza ahí y la tira aún puede
+ *    moverse hacia ese lado, se mueve la tira.
+ *  · Al soltar: se cierra si se ha llevado más de un 30 % del ancho o con un gesto rápido; si no, vuelve a su sitio.
+ *  · El gesto de «atrás» del sistema desde el borde (iOS, Android) también cierra: quita el `?juego=` de la URL.
+ */
+function useDeslizarParaCerrar(panelRef: RefObject<HTMLDivElement | null>, onClose: () => void) {
+  const gesto = useRef<{ x: number; y: number; t: number; eje: 'x' | 'y' | null; id: number } | null>(null);
+
+  const devolver = useCallback(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    panel.style.transform = '';
+    window.setTimeout(() => panel.classList.remove('is-gesto'), 240);
+  }, [panelRef]);
+
+  const onPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse') return;
+    for (let n = e.target as HTMLElement | null; n && n !== e.currentTarget; n = n.parentElement) {
+      if (n.scrollWidth > n.clientWidth + 1 && n.scrollLeft > 0 && getComputedStyle(n).overflowX !== 'visible') return;
+    }
+    gesto.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, eje: null, id: e.pointerId };
+  }, []);
+
+  const onPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const g = gesto.current;
+    const panel = panelRef.current;
+    if (!g || !panel || e.pointerId !== g.id) return;
+    const dx = e.clientX - g.x;
+    const dy = e.clientY - g.y;
+    if (!g.eje) {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      g.eje = dx > 0 && Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
+      if (g.eje === 'x') {
+        // Puede fallar si el puntero ya no está (se levantó entre medias): el gesto sigue igual sin la captura.
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          /* sin captura */
+        }
+        panel.classList.add('is-gesto', 'is-arrastrando');
+      }
+    }
+    if (g.eje === 'x') panel.style.transform = `translateX(${Math.max(0, dx)}px)`;
+  }, [panelRef]);
+
+  const onPointerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const g = gesto.current;
+    const panel = panelRef.current;
+    gesto.current = null;
+    if (!g || !panel || g.eje !== 'x') return;
+    panel.classList.remove('is-arrastrando');
+    const dx = Math.max(0, e.clientX - g.x);
+    const velocidad = dx / Math.max(1, e.timeStamp - g.t);
+    if (dx > panel.offsetWidth * 0.3 || velocidad > 0.6) {
+      const sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      panel.style.transform = 'translateX(100%)';
+      window.setTimeout(onClose, sinMovimiento ? 0 : 220);
+    } else {
+      devolver();
+    }
+  }, [panelRef, onClose, devolver]);
+
+  const onPointerCancel = useCallback(() => {
+    const g = gesto.current;
+    gesto.current = null;
+    if (g?.eje === 'x') {
+      panelRef.current?.classList.remove('is-arrastrando');
+      devolver();
+    }
+  }, [panelRef, devolver]);
+
+  return { onPointerDown, onPointerMove, onPointerUp, onPointerCancel };
+}
+
 function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () => void; onOpen: (id: number) => void }) {
   const open = id !== null;
   const dialogRef = useNativeDialog(open, onClose);
@@ -682,6 +763,8 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
     if (estadoQuieren === null && amistades.some((a) => a.tab === 'd')) setQuieren({ id: g.id, estado: 'probando' });
   }, [open, g, etapa, pasada, quieren, amistades]);
 
+  const gestoCerrar = useDeslizarParaCerrar(panelRef, onClose);
+
   return (
     <dialog
       ref={dialogRef}
@@ -692,7 +775,9 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
       }}
     >
       {open && g ? (
-        <div ref={panelRef} className={`modal gs-panel ${['is-estrecho', 'is-medio', 'is-ancho'][etapa]}`}>
+        <div ref={panelRef} className={`modal gs-panel ${['is-estrecho', 'is-medio', 'is-ancho'][etapa]}`} {...gestoCerrar}>
+          {/* El asa lateral: dice «esto se aparta hacia la derecha». Solo en pantallas táctiles. */}
+          <span className="gs-asa-lateral" aria-hidden="true" />
           <button className="btn-icon gs-close" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
             <Icon name="close" />
           </button>
