@@ -24,7 +24,6 @@ import '../../../styles/personRow.scss';
 export function HubPersonRow({
   name,
   photoURL,
-  showAvatar = true,
   status,
   lastSeen,
   coverUrl,
@@ -37,11 +36,6 @@ export function HubPersonRow({
 }: {
   name: string;
   photoURL?: string;
-  /**
-   * Sin avatar: el renglón de tu propio análisis en la ficha de un juego, donde ya se sabe de quién es. Ahí tampoco
-   * va nombre (`name` vacío): quién es lo dice `openAriaLabel`.
-   */
-  showAvatar?: boolean;
   /** La línea de debajo del nombre: a qué juega, o en qué punto está la solicitud. */
   status?: React.ReactNode;
   /** «Última conexión: …». Solo llega para la administración (lo marca el punto del mithril). */
@@ -70,9 +64,9 @@ export function HubPersonRow({
       {coverUrl ? (
         <span ref={refEntradaDeFondo(coverUrl)} className="hub-person-row-cover" style={{ '--person-cover': `url("${coverUrl}")` } as React.CSSProperties} aria-hidden="true" />
       ) : null}
-      {showAvatar ? <HubAvatar photoURL={photoURL} /> : null}
+      <HubAvatar photoURL={photoURL} />
       <div className="hub-person-row-text">
-        {name ? <h3 className="hub-user-card-name" title={name}>{name}</h3> : null}
+        <h3 className="hub-user-card-name" title={name}>{name}</h3>
         {status}
         {lastSeen ? <span className="hub-person-row-seen tier-mithril">{lastSeen}</span> : null}
       </div>

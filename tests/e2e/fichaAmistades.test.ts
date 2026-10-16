@@ -43,3 +43,23 @@ test.describe('la ficha de un juego · tus amistades', () => {
     await expect(page.locator('dialog.gs-dialog[open]')).toHaveCount(0);
   });
 });
+
+// EL ÍNDICE DE SUS BIBLIOTECAS (F4): llega en su propio chunk, fuera del precache, y dentro del plazo del rango no
+// pregunta a GitHub. Lucía lo tiene en su biblioteca sin haberlo reseñado ni movido: solo el índice la trae.
+test.describe('la ficha de un juego · el índice de las bibliotecas de tus amistades', () => {
+  test('quien lo tiene sin reseñarlo ni moverlo también sale, sin una sola petición a GitHub', async ({ page }) => {
+    const aGitHub: string[] = [];
+    page.on('request', (peticion) => {
+      if (peticion.url().includes('api.github.com')) aGitHub.push(peticion.url());
+    });
+    await sembrarBiblioteca(page);
+    await page.goto('/completados');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Lista del completista');
+    await sembrarAmistades(page, JUEGO, { indice: true });
+    await page.locator('button[aria-haspopup="dialog"]', { hasText: JUEGO }).first().click();
+    const ficha = page.getByRole('dialog', { name: `Ficha de ${JUEGO}` });
+    await expect(ficha.getByRole('article', { name: 'Ver el perfil de Lucía' })).toBeVisible();
+    await expect(ficha.locator('.gs-sec-amistades article')).toHaveCount(3);
+    expect(aGitHub).toEqual([]);
+  });
+});

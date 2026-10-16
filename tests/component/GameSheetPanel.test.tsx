@@ -8,9 +8,13 @@ import { statsReviewPath } from '../../src/core/utils/reviewPath';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 // Las señales de tus amistades salen de la copia del directorio social en IndexedDB (F3): aquí se dan hechas.
-const senales = vi.hoisted(() => ({ actuales: [] as GameSheetSignal[] }));
+const senales = vi.hoisted(() => ({ actuales: [] as GameSheetSignal[], indice: [] as GameSheetSignal[], faltan: 0 }));
 vi.mock('../../src/viewmodel/gameSheet/gameSheetFriendSignals', () => ({
   loadGameSheetFriendSignals: () => Promise.resolve(senales.actuales),
+}));
+// El índice de sus bibliotecas (F4) llega aparte, con su `import()`.
+vi.mock('../../src/viewmodel/gameSheet/friendLibraryIndex', () => ({
+  loadFriendLibraryIndex: () => Promise.resolve({ signals: senales.indice, missing: senales.faltan }),
 }));
 
 // LA FICHA DE UN JUEGO (F2 del plan de la ficha): el panel que sustituye al detalle de la fila. jsdom no maqueta,
@@ -221,6 +225,8 @@ describe('GameSheetPanel · tus amistades (F3)', () => {
 
   afterEach(() => {
     senales.actuales = [];
+    senales.indice = [];
+    senales.faltan = 0;
   });
 
   function Donde() {
@@ -284,6 +290,32 @@ describe('GameSheetPanel · tus amistades (F3)', () => {
     expect(analisis.querySelector('.hub-avatar')).toBeNull();
     expect(screen.getByRole('article', { name: 'Ver el perfil de Marta' }).querySelector('.hub-avatar')).not.toBeNull();
     fireEvent.click(analisis);
+    expect(screen.getByTestId('donde')).toHaveTextContent(statsReviewPath(1, 'Hollow Knight'));
+  });
+
+  it('del índice de bibliotecas entra quien lo tiene sin haberlo reseñado, con el mes en que lo terminó', async () => {
+    senales.indice = [{
+      kind: 'library',
+      friend: { id: 'p-lucia', name: 'Lucía' },
+      tab: 'c',
+      item: { ...juego(50, 'Hollow Knight', { grade: 70 }), finishedOn: '2025-09' },
+    }];
+    senales.faltan = 2;
+    await pintarConAmistades();
+    const lucia = await screen.findByRole('article', { name: 'Ver el perfil de Lucía' });
+    expect(lucia).toHaveTextContent(/Completado · sept\.? 2025/);
+    expect(screen.getByText('No se ha podido consultar la biblioteca de 2 amistades.')).toBeInTheDocument();
+  });
+
+  it('con el teclado, Intro sobre una amistad lleva a su perfil', async () => {
+    await pintarConAmistades();
+    fireEvent.keyDown(screen.getByRole('article', { name: 'Ver el perfil de Marta' }), { key: 'Enter' });
+    expect(screen.getByTestId('donde')).toHaveTextContent('/social/profiles/p-marta');
+  });
+
+  it('con el teclado, Espacio sobre tu análisis lleva a él', async () => {
+    await pintarConAmistades();
+    fireEvent.keyDown(screen.getByRole('article', { name: 'Ver análisis de Hollow Knight' }), { key: ' ' });
     expect(screen.getByTestId('donde')).toHaveTextContent(statsReviewPath(1, 'Hollow Knight'));
   });
 

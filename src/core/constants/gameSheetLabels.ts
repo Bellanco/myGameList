@@ -24,6 +24,7 @@ const LIST_SHORT: Record<TabId, string> = {
 };
 
 const MONTH_YEAR = new Intl.DateTimeFormat(APP_LOCALE, { month: 'long', year: 'numeric' });
+const SHORT_MONTH_YEAR = new Intl.DateTimeFormat(APP_LOCALE, { month: 'short', year: 'numeric' });
 
 export const GAME_SHEET_UI = {
   /** Nombre accesible del panel. */
@@ -44,6 +45,14 @@ export const GAME_SHEET_UI = {
   /** Adelanto de su reseña, entre comillas latinas como el resto de citas de la app. */
   friendSnippet: (snippet: string) => `«${snippet}»`,
   friendOpenAria: (name: string) => `Ver el perfil de ${name}`,
+  /** El mes en que lo terminó (`finishedOn`, `AAAA-MM`), tras su lista: «Completado · sept. 2025». */
+  finishedOn: (yearMonth: string) => {
+    const [year, month] = yearMonth.split('-').map(Number);
+    return year && month ? SHORT_MONTH_YEAR.format(new Date(year, month - 1, 1)) : '';
+  },
+  /** Cuando alguna biblioteca no se pudo leer (sin red, un gist caído): se dice, sin error, y la ficha sigue. */
+  friendsMissing: (count: number) =>
+    count === 1 ? 'No se ha podido consultar la biblioteca de una amistad.' : `No se ha podido consultar la biblioteca de ${count} amistades.`,
   /** El tiempo jugado, en las cifras de la cabecera: la cifra grande y la unidad pequeña («46 horas»). */
   hours: (hours: number) => String(hours).replace('.', ','),
   hoursUnit: (hours: number) => (hours === 1 ? 'hora' : 'horas'),

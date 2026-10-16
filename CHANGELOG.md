@@ -17,8 +17,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   tocando la franja de la lista. El doble clic sigue abriendo la edición.
 
 - **La ficha te dice qué han hecho tus amistades con el juego.** Si tienes espacio social, verás quién lo tiene y en
-  qué lista, su nota y el comienzo de su reseña, la media de sus notas y quién lo quiere. Sale de lo último que
-  cargó tu actividad social, así que funciona sin conexión. Toca a una persona para ir a su perfil.
+  qué lista, cuándo lo terminó, su nota y el comienzo de su reseña, la media de sus notas y quién lo quiere. Pueden
+  salir también quienes lo tienen aunque no lo hayan reseñado. Toca a una persona para ir a su perfil.
 
 - **«No puedes pasar» estrena colores.** De noche, el fondo es el verde hondo del bosque de Lórien, la hoja es más
   luminosa y el oro más vivo, y la pestaña activa y las letras de los títulos van en plata. De día, el pergamino

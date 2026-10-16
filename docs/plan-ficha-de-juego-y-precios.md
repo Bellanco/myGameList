@@ -383,7 +383,8 @@ dependen del layout y jsdom no los ve.
 - **Estilos del renglón, en su hoja:** `styles/personRow.scss`, que importan `HubPersonRow` y `HubUserCard`.
   Importar `social.scss` desde la ficha metía el hub entero en el precache. Comprobado con la maqueta social: 48
   capturas (amigos, solicitudes y perfil; 8 temas, claro y oscuro) idénticas píxel a píxel antes y después.
-- **Medido:** lo diferido pasa de 7,5 a 12,8 kB y **el total del precache queda en 239,6 de 240 kB**. La revisión
+- **Medido:** lo diferido pasa de 7,5 a 12,8 kB y el total del precache queda en 239,6 de 240 kB (resuelto en la
+  F4: lo social sale del precache). La revisión
   del 16-10-2026 (salida animada, análisis como renglón) lo llevó a 240,1; lo devolvió a 239,6 sacar las direcciones
   del hub a `viewmodel/social/socialRoutePaths.ts`, para que la ficha no arrastre `socialRoutes` con su `matchPath`. La P5 (precio
   en la ficha) no cabe sin decidir antes: cargar las amistades aparte y sin precache (son opcionales, F0.10) o
@@ -391,28 +392,39 @@ dependen del layout y jsdom no los ve.
 - **Tests:** `tests/unit/gameSheetFriendSignals.test.ts`, los de amistades de `GameSheetPanel.test.tsx`, el e2e
   `fichaAmistades.test.ts` y la pantalla «ficha con amistades» del recorrido de accesibilidad.
 
-## Fase F4 · Índice de las bibliotecas de tus amistades · M
+## Fase F4 · Índice de las bibliotecas de tus amistades · M · ✅ hecha (16-10-2026)
 
 Para que «quién lo tiene» incluya también a quien lo tiene sin reseñar ni haberlo movido hace poco.
 
-- `viewmodel/gameSheet/useFriendLibraryIndex.ts` recorre las amistades activas (no `socialSkipped`) que tienen
-  `gamesGistId`:
-  - las lee con `foreignProfileRepository`, de 3 en 3, con el token de `getSocialSyncConfig()`;
-  - les aplica `applyProfileVisibility`;
-  - construye en memoria `slug → [{ friend, tab, item }]`.
-- **Cuándo:** al abrir la primera ficha de la sesión, en segundo plano. Mientras tanto, se pinta lo de F3, y lo
-  demás va entrando con fundido.
-- **Coste:**
-  - **GitHub:** una lectura por amistad en cada refresco, con el plazo del rango: plata 24 h, oro 12 h y mithril
-    30 min. Bronce no tiene índice: su ficha se queda con lo de F3. Las lecturas son condicionales (ETag), así que
-    casi siempre vuelve un 304. `foreignProfileRepository` ya pregunta siempre con `If-None-Match` cuando hay token,
-    de modo que un plazo más corto que las 24 h de `profileCache` no obliga a cambiar la caché: el índice decide
-    cuándo volver a preguntar. Mithril con 100 amistades: unas 200 peticiones por hora, frente a las 5.000 del token.
-  - **Firestore, KV y Functions:** 0.
-- **Sin almacén nuevo:** el índice se deriva de `profileCache`, que ya persiste los gists.
-- **Regla 1 intacta:** solo amistades. Lo vigila un test que pase un perfil `'none'` y compruebe que no se lee.
-- **Sin red:** la caché caducada vale (como en `foreignProfileRepository`). Si falta, la sección dice que faltan
-  datos y no da un error.
+- `viewmodel/gameSheet/friendLibraryIndex.ts`: `planFriendIndex` (a quién se lee y con qué plazo, puro),
+  `librarySignals` (su biblioteca filtrada, como señales) y `loadFriendLibraryIndex` (la carga, de 3 en 3).
+  - **A quién:** tus amistades por la huella de amistades de la copia del directorio, activas (no `socialSkipped`) y
+    con `gamesGistId`. Sin huella no hay índice: aquí no vale el atajo de la F3, que da por amistad a quien trae algo
+    de su canal.
+  - **Visibilidad:** la de su entrada, con `applyProfileVisibility`; si su canal no se pudo leer, `LOCKED_VISIBILITY`.
+    La ficha no conoce el claim de quien mira, así que no hay excepción de administración: falla cerrado.
+  - **Plazo:** `PROFILE_TIER_FRIEND_INDEX_TTL_MS` en `core/constants/tiers.ts` (bronce sin índice, plata 24 h, oro
+    12 h, mithril 30 min), con el rango de tu propia entrada en la copia. Por cada amistad, si la última pregunta a
+    GitHub (`cachedAt` de `profileCache`, que ahora devuelve `getCachedProfileGamesEntry`) es más nueva que el plazo,
+    se sirve la guardada; si no, `loadForeignProfileGames` (condicional, y sin red sirve la caducada).
+  - **En memoria** para la sesión mientras no venza el plazo; si alguna no se pudo leer, solo 5 minutos.
+- **Sin red o con un gist caído:** se cuenta (`missing`) y la sección lo dice en una línea («No se ha podido consultar
+  la biblioteca de 2 amistades.»), sin error.
+- **Lo que trae de más:** el mes en que lo terminó (`finishedOn`, que ya calculaba `applyProfileVisibility`), tras
+  la lista: «Completado · sept. 2025». Y la saga cuenta también las entregas de sus bibliotecas.
+- **Al precache, nada de lo social (16-10-2026).** Con el índice dentro, el total pasaba de 240 kB. Como preveía la
+  F3, lo de tus amistades es opcional (F0.10) y sale entero del precache: la carga del canal y la del índice van con
+  `import()` desde `useGameSheetFriendSignals`, y la sección con `lazy()` (`GameSheetFriends`, con `HubPersonRow`,
+  `HubAvatar` y `googlePhoto`), que solo se pide si hay amistades. Tu análisis sigue en el panel con el marcado del
+  renglón escrito a mano, sin avatar. **Medido:** lo diferido baja de 12,8 a 11,1 kB y el total, de 239,6 a 237,9.
+  De paso, el plugin del precache (`vite.config.ts`) deja fuera los `.js` que Vite vacía y borra al final (el de una
+  hoja que importan varios módulos, como `personRow.scss`): uno así en la lista tumbaba la instalación del service
+  worker.
+- **Teclado:** los renglones de la ficha (tus amistades y tu análisis) se abren con Intro y Espacio
+  (`activarConTeclado`), como los del hub. Faltaba desde la F3.
+- **Tests:** `tests/unit/friendLibraryIndex.test.ts` (regla 1 con alguien que no es amistad y no se lee, el plazo por
+  rango, bronce, inactivos, visibilidad, lo que falta y la memoria de la sesión), los del panel y el e2e
+  `fichaAmistades.test.ts`, que comprueba sobre el build que dentro del plazo no sale ni una petición a GitHub.
 
 ## Fase F5 · Puntos de entrada · S
 

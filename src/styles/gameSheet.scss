@@ -205,6 +205,18 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel.is-arrastrando { transition: none;
 .gs-friends { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
 .gs-friends .hub-user-card.hub-person-row { padding-block: .4rem; min-height: 0; }
 
+// Lo que llega después (el índice de sus bibliotecas, tras el canal social) entra con un fundido, no de golpe.
+.gs-sec-amistades li,
+.gs-sec-quieren li { animation: gsFundido .3s ease-out both; }
+@keyframes gsFundido { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .gs-sec-amistades li,
+  .gs-sec-quieren li { animation: none; }
+}
+
+// Alguna biblioteca no se pudo leer: una línea discreta bajo la lista, sin aspecto de error (F0.10).
+.gs-faltan { margin: .5rem 0 0; font-size: var(--fs-xs); color: var(--text-muted); }
+
 // El adelanto de su reseña, en un renglón: entera, en su perfil.
 .gs-snippet {
   display: block;

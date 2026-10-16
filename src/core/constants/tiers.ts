@@ -85,6 +85,24 @@ export const PROFILE_TIER_DIRECTORY_TTL_MS: Record<ProfileTier, number> = {
 };
 
 /**
+ * CADA CUÁNTO SE VUELVE A PREGUNTAR POR LA BIBLIOTECA DE CADA AMISTAD para la ficha de un juego (F4 del plan de la
+ * ficha, `docs/plan-ficha-de-juego-y-precios.md`): el índice de «quién lo tiene» que va más allá de reseñas y avisos.
+ * `null` = sin índice: la ficha se queda con lo que cuenta el canal social (F3).
+ *
+ * Gasta del token de GitHub de quien mira, una lectura condicional por amistad (casi siempre un 304), así que se
+ * aplica solo en el cliente: quien se lo salte solo gasta de lo suyo. Ninguna pantalla lo explica ni nombra el rango
+ * (memoria `rangos-ocultos-al-usuario`): se nota como un refresco más o menos espaciado.
+ *
+ * Decisión del usuario (15-10-2026). Manda el rango de QUIEN MIRA.
+ */
+export const PROFILE_TIER_FRIEND_INDEX_TTL_MS: Record<ProfileTier, number | null> = {
+  bronze: null,
+  silver: 24 * 60 * 60 * 1000,
+  gold: 12 * 60 * 60 * 1000,
+  mithril: 30 * 60 * 1000,
+};
+
+/**
  * Lo mismo para la CLASIFICACIÓN DE PREMIOS, que pide hasta 60 perfiles solo para enlazar cada fila con el suyo
  * (`usePremiosProfiles`). Antes lo hacía en CADA visita, porque la única caché era la de 30 s en memoria. Aquí
  * lo único que se retrasa es el enlace de alguien que acabe de crear su perfil, así que la copia dura más.

@@ -525,11 +525,18 @@ export async function getCachedProfileGames(
 export async function getCachedProfileGamesEntry(
   profileId: string,
   gamesGistId: string,
-): Promise<{ games: TabData; etag: string | null; fresh: boolean } | null> {
+): Promise<{ games: TabData; etag: string | null; fresh: boolean; cachedAt: number } | null> {
   try {
     const rec = await idbGet<CachedProfileGames>(PROFILE_CACHE_STORE, profileId);
     if (!rec || rec.gamesGistId !== gamesGistId) return null;
-    return { games: rec.games, etag: rec.etag ?? null, fresh: Date.now() - rec.cachedAt < PROFILE_GAMES_TTL_MS };
+    // `cachedAt` es la hora de la última pregunta a GitHub (un 304 la renueva): con ella, el índice de la ficha decide
+    // si toca volver a preguntar con el plazo de su rango (`PROFILE_TIER_FRIEND_INDEX_TTL_MS`).
+    return {
+      games: rec.games,
+      etag: rec.etag ?? null,
+      fresh: Date.now() - rec.cachedAt < PROFILE_GAMES_TTL_MS,
+      cachedAt: rec.cachedAt,
+    };
   } catch {
     return null;
   }

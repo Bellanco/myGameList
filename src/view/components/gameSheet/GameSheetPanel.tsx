@@ -1,11 +1,11 @@
-import { forwardRef, useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
+import { Suspense, forwardRef, lazy, useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 import { GAME_SHEET_UI } from '../../../core/constants/gameSheetLabels';
 import { COMMON_ICONS, TAB_ICONS } from '../../../core/constants/icons';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { coverDeCaja, type PedidoDePortada } from '../../../core/utils/coverDelListado';
 import { starsFromGrade } from '../../../core/utils/scoreScale';
-import type { GameSheet, GameSheetFriend, GameSheetSagaEntry } from '../../../core/gameSheet/buildGameSheet';
+import type { GameSheet, GameSheetSagaEntry } from '../../../core/gameSheet/buildGameSheet';
 import { UNPLAYED_TAB_IDS, type GameItem, type TabData, type TabId } from '../../../model/types/game';
 import { useGameSheetFriendSignals } from '../../../viewmodel/gameSheet/useGameSheetFriendSignals';
 import { useGameSheetViewModel } from '../../../viewmodel/gameSheet/useGameSheetViewModel';
@@ -18,12 +18,18 @@ import { GameCover } from '../GameCover';
 import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { StarRating } from '../StarRating';
-import { HubAvatar } from '../socialhub/HubAvatar';
-import { HubPersonRow } from '../socialhub/HubPersonRow';
 import { renderBooleanBadge, renderTags, yearsDesc } from '../gameTags';
 import { useGameSheetWidth } from './useGameSheetWidth';
 import { useSwipeToClose } from './useSwipeToClose';
+import { activarConTeclado } from './activarConTeclado';
+// El renglón de persona del hub, para tu análisis. Lo de tus amistades llega con su propio chunk (`GameSheetFriends`).
+import '../../../styles/personRow.scss';
 import '../../../styles/gameSheet.scss';
+
+/* LO DE TUS AMISTADES, PEREZOSO Y FUERA DEL PRECACHE (F3 y F4): solo se pide si hay amistades que enseñar. Es una
+   pieza de fuera, opcional (F0.10): si no llega, la sección no se pinta. Con ella dentro, el panel no cabía en el
+   presupuesto total del precache. */
+const GameSheetFriends = lazy(() => import('./GameSheetFriends').then((module) => ({ default: module.GameSheetFriends })));
 
 /** A dónde lleva «Ver análisis» desde la ficha (el mismo destino que desde la tabla). */
 export type GameSheetReviewTarget = (tab: TabId, game: GameItem) => { to: string; state?: unknown };
@@ -269,7 +275,7 @@ function TusDatos({ tab, item }: { tab: TabId; item: GameItem }) {
 }
 
 /**
- * TU ANÁLISIS, VESTIDO COMO EL DE UNA AMISTAD (16-10-2026): el mismo renglón de persona (`HubPersonRow`), con el
+ * TU ANÁLISIS, VESTIDO COMO EL DE UNA AMISTAD (16-10-2026): el mismo renglón de persona (el de `HubPersonRow`), con el
  * comienzo del texto entre comillas, recortado a tres renglones, y tu nota a la derecha cuando la hay (la misma regla
  * que en la cabecera). SIN AVATAR NI NOMBRE: dicen de quién es, y aquí se sabe; sin ellos el texto gana el sitio. En
  * su propio bloque, para que las columnas del cuerpo lo puedan repartir aparte de los datos. Tocarlo lleva al análisis
@@ -280,80 +286,32 @@ function Analisis({ tab, item, reviewTarget }: { tab: TabId; item: GameItem; rev
   const navigate = useNavigate();
   if (!item.review || UNPLAYED_TAB_IDS.includes(tab)) return null;
   const destino = reviewTarget(tab, item);
+  const abrir = () => { void navigate(destino.to, { state: destino.state }); };
   return (
     <div className="hub-detail-metadata gs-sec-analisis">
       <div className="hub-metadata-section">
         <strong>{D.review}</strong>
         <ul className="gs-friends">
           <li>
-            <HubPersonRow
-              name=""
-              showAvatar={false}
-              status={<span className="gs-snippet is-propio">{GAME_SHEET_UI.friendSnippet(item.review)}</span>}
-              onOpen={() => { void navigate(destino.to, { state: destino.state }); }}
-              openAriaLabel={D.reviewLinkAria(item.name)}
+            {/* El marcado del renglón de persona (`HubPersonRow`) sin avatar ni nombre, escrito aquí para no arrastrar
+                al panel el avatar del hub, que solo usan tus amistades y va en su chunk. */}
+            <article
+              className="hub-feed-card hub-user-card hub-person-row is-clickable"
+              tabIndex={0}
+              aria-label={D.reviewLinkAria(item.name)}
+              onClick={abrir}
+              onKeyDown={activarConTeclado(abrir)}
             >
-              {llevaNota(tab, item) ? <ScoreDisplay game={item} /> : null}
-            </HubPersonRow>
+              <div className="hub-person-row-text">
+                <span className="gs-snippet is-propio">{GAME_SHEET_UI.friendSnippet(item.review)}</span>
+              </div>
+              {llevaNota(tab, item) ? (
+                <div className="hub-person-row-action">
+                  <ScoreDisplay game={item} />
+                </div>
+              ) : null}
+            </article>
           </li>
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-/**
- * TUS AMISTADES QUE LO TIENEN (F3): una fila por persona con su avatar, su nombre, dónde lo tiene y, si lo reseñó, el
- * adelanto y la nota. Ya vienen ordenadas (con reseña primero, después por nota: `buildGameSheet`). Es el renglón de
- * persona del hub (`HubPersonRow`), para que cada tema la vista igual que en «Perfiles». Tocarla lleva a su perfil.
- */
-function Amistades({ friends, onOpenFriend }: { friends: GameSheetFriend[]; onOpenFriend: (id: string) => void }) {
-  if (!friends.length) return null;
-  return (
-    <div className="hub-detail-metadata gs-sec-amistades">
-      <div className="hub-metadata-section">
-        <strong>{GAME_SHEET_UI.friendsTitle}</strong>
-        <ul className="gs-friends">
-          {friends.map((friend) => (
-            <li key={friend.id}>
-              <HubPersonRow
-                name={friend.name}
-                photoURL={friend.photoURL}
-                status={
-                  <>
-                    <span className={`hub-person-row-status is-${friend.tab}`}>
-                      <b>{GAME_SHEET_UI.listPill(friend.tab)}</b>
-                    </span>
-                    {friend.snippet ? <span className="gs-snippet">{GAME_SHEET_UI.friendSnippet(friend.snippet)}</span> : null}
-                  </>
-                }
-                onOpen={() => onOpenFriend(friend.id)}
-                openAriaLabel={GAME_SHEET_UI.friendOpenAria(friend.name)}
-              >
-                {friend.grade !== null ? <ScoreDisplay game={{ grade: friend.grade }} /> : null}
-              </HubPersonRow>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-/** QUIENES LO QUIEREN: sus deseos, aparte y sin nota. Es relleno (F0.4): solo sale si cabe sin scroll. */
-function LoQuieren({ wishers }: { wishers: GameSheetFriend[] }) {
-  if (!wishers.length) return null;
-  return (
-    <div className="hub-detail-metadata gs-sec-quieren">
-      <div className="hub-metadata-section">
-        <strong>{GAME_SHEET_UI.wishersTitle}</strong>
-        <ul className="gs-wanters">
-          {wishers.map((friend) => (
-            <li key={friend.id} className="gs-wanter">
-              <HubAvatar photoURL={friend.photoURL} />
-              {friend.name}
-            </li>
-          ))}
         </ul>
       </div>
     </div>
@@ -423,7 +381,7 @@ export function GameSheetPanel({
   onMigrate,
   reviewTarget,
 }: GameSheetPanelProps) {
-  const signals = useGameSheetFriendSignals(open);
+  const { signals, missing } = useGameSheetFriendSignals(open);
   const sheet = useGameSheetViewModel({ data, slug, signals });
   const visible = open && sheet !== null;
 
@@ -526,8 +484,17 @@ export function GameSheetPanel({
               <div className="gs-cuerpo">
                 {own ? <TusDatos tab={own.tab} item={own.item} /> : null}
                 {own ? <Analisis tab={own.tab} item={own.item} reviewTarget={reviewTarget} /> : null}
-                <Amistades friends={ficha.friends} onOpenFriend={openFriend} />
-                {showFiller ? <LoQuieren wishers={ficha.wishers} /> : null}
+                {ficha.friends.length || ficha.wishers.length ? (
+                  <Suspense fallback={null}>
+                    <GameSheetFriends
+                      friends={ficha.friends}
+                      wishers={ficha.wishers}
+                      showWishers={showFiller}
+                      missing={missing}
+                      onOpenFriend={openFriend}
+                    />
+                  </Suspense>
+                ) : null}
                 <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-solo-estrecho" />
               </div>
             </div>

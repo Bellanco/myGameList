@@ -398,19 +398,36 @@ export const AMISTADES_DE_LA_FICHA = ['Marta', 'Nacho', 'Sara'] as const;
  *
  * Se llama con la app ya cargada (la base la crea ella) y antes de abrir la ficha, que lee la copia al abrirse.
  */
-export async function sembrarAmistades(page: Page, juego: string): Promise<void> {
-  await page.evaluate(async (nombre) => {
+export async function sembrarAmistades(page: Page, juego: string, opciones: { indice?: boolean } = {}): Promise<void> {
+  await page.evaluate(async ([nombre, conIndice]) => {
     const GIST_SOCIAL = 'e2e0social0gist';
     localStorage.setItem('mis-listas-social-gist-config', JSON.stringify({ gistId: GIST_SOCIAL, etag: null, lastRemoteUpdatedAt: 0 }));
     const ahora = Date.now();
-    const entrada = (uid: string, displayName: string, extra: object) => ({ id: `p-${uid}`, uid, displayName, photoURL: '', activity: [], moves: [], ...extra });
+    // Con su visibilidad, como toda entrada hidratada: sin ella, el índice falla cerrado y no enseña nada (regla 2).
+    const visibility = { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true };
+    const entrada = (uid: string, displayName: string, extra: object) => ({ id: `p-${uid}`, uid, displayName, photoURL: '', visibility, activity: [], moves: [], ...extra });
     const entries = [
       entrada('marta', 'Marta', { activity: [{ gameName: nombre, grade: 94, snippet: 'Un mapa que se descubre a mano.', updatedAt: ahora }] }),
       entrada('nacho', 'Nacho', { moves: [{ gameName: nombre, tab: 'e', at: ahora }] }),
       entrada('sara', 'Sara', { moves: [{ gameName: nombre, tab: 'd', at: ahora }] }),
       entrada('ajeno', 'No es amistad', { activity: [{ gameName: nombre, grade: 10, snippet: 'No debe salir.', updatedAt: ahora }] }),
     ];
-    const friendsKey = ['p-yo', 'marta:g:g:1', 'nacho:g:g:1', 'sara:g:g:1'].join('|');
+    /* CON ÍNDICE (F4): tu entrada, con un rango que lo tiene, y la biblioteca de Lucía —que no lo ha reseñado ni
+       movido— recién guardada en `profileCache`, así que dentro del plazo no se pregunta a GitHub. */
+    const bibliotecas: object[] = [];
+    if (conIndice) {
+      entries.push(entrada('yo', 'Yo', { id: 'p-yo', tier: 'silver' }));
+      entries.push(entrada('lucia', 'Lucía', { gamesGistId: 'gist-lucia' }));
+      const juegoDeLucia = { id: 1, _ts: 1, name: nombre, platforms: ['PC'], genres: [], steamDeck: false, review: '', grade: 80 };
+      bibliotecas.push({
+        profileId: 'p-lucia',
+        gamesGistId: 'gist-lucia',
+        cachedAt: ahora,
+        etag: null,
+        games: { c: [juegoDeLucia], v: [], e: [], p: [], d: [], deleted: [], updatedAt: ahora },
+      });
+    }
+    const friendsKey = ['p-yo', 'marta:g:g:1', 'nacho:g:g:1', 'sara:g:g:1', ...(conIndice ? ['lucia:g:g:1'] : [])].join('|');
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const peticion = indexedDB.open('myGameList');
       peticion.onsuccess = () => resolve(peticion.result);
@@ -419,9 +436,10 @@ export async function sembrarAmistades(page: Page, juego: string): Promise<void>
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction('profileCache', 'readwrite');
       tx.objectStore('profileCache').put({ profileId: `__dir__:${GIST_SOCIAL}`, cachedAt: ahora, version: 8, friendsKey, entries });
+      for (const biblioteca of bibliotecas) tx.objectStore('profileCache').put(biblioteca);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
     db.close();
-  }, juego);
+  }, [juego, Boolean(opciones.indice)] as const);
 }
