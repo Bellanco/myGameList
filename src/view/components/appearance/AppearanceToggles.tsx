@@ -9,13 +9,15 @@ import { useGameScenes } from '../../hooks/useGameScenes';
 import { useOwnTier } from '../../../viewmodel/useOwnTier';
 import { canUseGameScenes } from '../../../core/constants/tiers';
 import { useShowWishlist } from '../../hooks/useShowWishlist';
+import { ItadToggle } from '../settings/ItadToggle';
 
 const A = APPEARANCE_UI;
 
 /**
- * LAS SIETE PREFERENCIAS DE DOS RESPUESTAS: claro u oscuro, versales o no, el botón de Steam Deck, los efectos,
- * las escenas de empezar y cerrar un juego (de plata para arriba), las carátulas y la pestaña de la lista de deseos. Todas viven en este dispositivo (`localStorage`) y solo se copian a la nube si hay sesión,
- * así que ninguna depende de tener cuenta.
+ * LAS OCHO PREFERENCIAS DE DOS RESPUESTAS: claro u oscuro, versales o no, el botón de Steam Deck, los efectos,
+ * las escenas de empezar y cerrar un juego (de plata para arriba), las carátulas, los precios de IsThereAnyDeal y la
+ * pestaña de la lista de deseos. Todas viven en este dispositivo (`localStorage`) y solo se copian a la nube si hay
+ * sesión, así que ninguna depende de tener cuenta (los precios, además, solo se piden con espacio social).
  *
  * Cada una va en su caja: puestas en fila, cinco rótulos con su par de botones se leían como una tira de diez
  * botones sueltos y no se veía dónde acababa una opción y empezaba la siguiente.
@@ -181,6 +183,9 @@ export const AppearanceToggles = memo(function AppearanceToggles() {
         </button>
       </div>
       </div>
+
+      {/* Los precios de IsThereAnyDeal: también salen a la red, así que van junto a las carátulas. */}
+      <ItadToggle />
 
       {/* La lista de deseos: esconde la pestaña, no sus juegos ni lo que ven los demás (eso es el perfil social). */}
       <div className="appearance-field">

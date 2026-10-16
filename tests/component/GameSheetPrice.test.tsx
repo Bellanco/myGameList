@@ -7,6 +7,7 @@ import { GameSheetPanel, type GameSheetPanelProps } from '../../src/view/compone
 import { TAB_ACTIONS } from '../../src/core/constants/labels';
 import { PRICES_UI } from '../../src/core/constants/pricesLabels';
 import { statsReviewPath } from '../../src/core/utils/reviewPath';
+import { gameSheetSlug } from '../../src/core/utils/gameSheetPath';
 import type { GameItem, TabData } from '../../src/model/types/game';
 import type { PrecioItad } from '../../src/model/types/prices';
 
@@ -42,7 +43,7 @@ const data: TabData = {
   c: [juego(1, 'Hollow Knight')],
   v: [],
   e: [],
-  p: [],
+  p: [juego(3, 'Hades II')],
   d: [juego(2, 'Hollow Knight: Silksong')],
   deleted: [],
   updatedAt: 0,
@@ -111,5 +112,12 @@ describe('GameSheetPanel — el precio de un deseo', () => {
     expect(await screen.findByRole('region', { name: PRICES_UI.boxAria })).toBeInTheDocument();
     expect(repo.loadGamePrice).toHaveBeenCalledWith('Outer Wilds', 1000);
     expect(screen.getByRole('button', { name: /deseados/i })).toBeInTheDocument();
+  });
+
+  it('de uno de tus próximos, también', async () => {
+    repo.loadGamePrice.mockResolvedValue({ ...precio, titulo: 'Hades II' });
+    pintar({ slug: gameSheetSlug('Hades II'), pricesOn: true, priceTtlMs: 1000 });
+    expect(await screen.findByRole('region', { name: PRICES_UI.boxAria })).toBeInTheDocument();
+    expect(repo.loadGamePrice).toHaveBeenCalledWith('Hades II', 1000);
   });
 });

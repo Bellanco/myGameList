@@ -669,11 +669,10 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
   `useItad`.
 - `core/utils/money.ts`: `formatPrice(amount, currency = 'EUR')` con `Intl.NumberFormat(APP_LOCALE)`; un
   formateador por moneda.
-- **El interruptor «IsThereAnyDeal»** (`view/components/settings/ItadToggle.tsx`) va dentro de la tarjeta
-  «Integraciones» de Ajustes, bajo la importación de Playnite y tras un filete, con los dos botones de las
-  carátulas. Ahí mismo irá «Traer de IsThereAnyDeal» (P7.2).
-  - Solo se monta con espacio social (P0.2): `SettingsHub` recibe `hasSocialProfile` de `App`.
-  - Encendido con la lista de deseos oculta, dice debajo que no se piden precios. Que no se pidan es de la P3.
+- **El interruptor «Precios de IsThereAnyDeal»** (`view/components/settings/ItadToggle.tsx`) es una caja más de
+  **Ajustes › Diseño › Preferencias**, junto a las carátulas, con sus dos botones y sin explicación debajo (lo que se
+  envía lo dicen la privacidad y las cookies). Decisión del usuario (16-10-2026): estaba en «Integraciones» y no se
+  encontraba. Preferencias solo se abre con espacio social (P0.2), y no lo esconde ningún rango.
 - **Legal:** IsThereAnyDeal en los terceros del aviso legal, en «Empresas que tratan tus datos» de la privacidad
   (con la frase de P0.1), un apartado «Precios de IsThereAnyDeal» en cookies y una línea en los créditos.
   `LEGAL_VERSION` no sube (precedente de IGDB); la nota está en `legal.ts`.
@@ -685,6 +684,11 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
 
 **Cómo quedó:**
 
+- **También en Próximos** (decisión del usuario, 16-10-2026): los precios salen en Próximos y en Deseados, con su orden
+  y su filtro, y en la ficha de un juego de cualquiera de las dos. Se piden las dos listas a la vez, en una petición,
+  con una de ellas abierta: la caché poda lo que no se pide y, pidiendo solo la abierta, tiraría los de la otra.
+  Deseados oculta deja de pedir los suyos, no los de Próximos. Los textos legales dicen «tus listas de próximos y de
+  deseos»; como no se había publicado, no hay versión que subir.
 - **Deseados sin tope para mithril** (decisión del usuario, 16-10-2026): `hasUnlimitedWishlist` en
   `core/constants/tiers.ts`. `App` lee el rango propio (`useOwnTier`) y, con mithril, el tope es infinito. Sin tope,
   el recuento no se dice contra ningún número (no hay `listCap`) y no se pinta «llena». Mientras el rango no se sabe

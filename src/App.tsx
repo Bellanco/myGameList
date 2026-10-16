@@ -328,15 +328,20 @@ export default function App() {
   // y lo que se añade desde la ruleta de un amigo va a próximos, para no mandarlo a una lista que no se ve.
   const { showWishlist } = useShowWishlist();
   const visibleTabs = useMemo(() => (showWishlist ? TAB_ORDER : TAB_ORDER.filter((tab) => tab !== 'd')), [showWishlist]);
-  /* LOS PRECIOS DE DESEADOS (P3): con el interruptor de IsThereAnyDeal encendido, con espacio social (P0.2) y con la
-     lista de deseos a la vista; y se piden solo con Deseados abierta. El plazo es el del rango de quien mira (P0.7):
-     mientras no se sabe, se pinta lo guardado y no se pide nada. */
+  /* LOS PRECIOS DE PRÓXIMOS Y DESEADOS (P3; Próximos, decisión del usuario del 16-10-2026): con el interruptor de
+     IsThereAnyDeal encendido y con espacio social (P0.2); Deseados, además, a la vista. Se piden con una de las dos
+     abierta, y de LAS DOS a la vez: una sola petición (hasta 400 títulos) y la caché, que poda lo que no se pide, no
+     tira los de una al abrir la otra. El plazo es el del rango de quien mira (P0.7): mientras no se sabe, se pinta lo
+     guardado y no se pide nada. */
   const { itad } = useItad();
-  const pricesOn = itad && hasSocialProfile && showWishlist;
+  const pricesOn = itad && hasSocialProfile;
   const priceTtlMs = pricesOn && ownTier ? PROFILE_TIER_PRICE_TTL_MS[ownTier] : null;
+  const priceTab = currentTab === 'p' || (currentTab === 'd' && showWishlist);
   const wishlistTitles = useMemo(
-    () => (pricesOn && activeSection === 'lists' && currentTab === 'd' ? vm.data.d.map((game) => game.name) : null),
-    [pricesOn, activeSection, currentTab, vm.data.d],
+    () => (pricesOn && activeSection === 'lists' && priceTab
+      ? [...vm.data.p, ...(showWishlist ? vm.data.d : [])].map((game) => game.name)
+      : null),
+    [pricesOn, activeSection, priceTab, showWishlist, vm.data.p, vm.data.d],
   );
   const wishlistPrices = useWishlistPrices(wishlistTitles, priceTtlMs);
   const renderPrice = useMemo(
@@ -669,17 +674,19 @@ export default function App() {
   // (cambia cuando cambian esos inputs) y de la pestaña, en vez de re-listar sus internals.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const filteredList = useMemo(() => vm.getFilteredList(currentTab, filters), [vm.getFilteredList, currentTab, filters]);
-  /* EL PRECIO EN EL ORDEN Y EN LOS FILTROS DE DESEADOS (segunda pasada de la P3): los precios no están en `GameItem`,
-     así que «En oferta» y el orden por precio o descuento se aplican aquí (`arrange`, que llega con los precios),
-     sobre lo que ya filtró y ordenó el view-model. Sin precios (apagados, o en otra lista), el filtro no se aplica y
-     un orden por precio que quedara puesto se aplica como el de siempre de Deseados (`sortGames` no sabe de precios). */
-  const pricesShown = currentTab === 'd' && wishlistPrices !== null;
+  /* EL PRECIO EN EL ORDEN Y EN LOS FILTROS DE PRÓXIMOS Y DESEADOS (segunda pasada de la P3): los precios no están en
+     `GameItem`, así que «En oferta» y el orden por precio o descuento se aplican aquí (`arrange`, que llega con los
+     precios), sobre lo que ya filtró y ordenó el view-model. Sin precios (apagados, o en otra lista), el filtro no se
+     aplica y un orden por precio que quedara puesto se aplica como el de siempre de la lista (`sortGames` no sabe de
+     precios). */
+  const pricesShown = priceTab && wishlistPrices !== null;
+  const tabSort = vm.sort[currentTab];
   const list = useMemo(() => {
-    if (currentTab !== 'd') return filteredList;
-    if (wishlistPrices) return wishlistPrices.arrange(filteredList, filters.sale, vm.sort.d);
+    if (!priceTab) return filteredList;
+    if (wishlistPrices) return wishlistPrices.arrange(filteredList, filters.sale, tabSort);
     // Las columnas de `PRICE_SORTS`: `isPriceSortColumn` viaja con los precios y no en el arranque.
-    return vm.sort.d.col === 'price' || vm.sort.d.col === 'discount' ? sortGames(filteredList, DEFAULT_SORT.d, 'd') : filteredList;
-  }, [currentTab, filteredList, wishlistPrices, filters.sale, vm.sort.d]);
+    return tabSort.col === 'price' || tabSort.col === 'discount' ? sortGames(filteredList, DEFAULT_SORT[currentTab], currentTab) : filteredList;
+  }, [priceTab, currentTab, filteredList, wishlistPrices, filters.sale, tabSort]);
 
   /* LA FICHA ABIERTA, que vive en `?juego=` (ver `useGameSheetParam`). Aquí solo se mira si hay algo que abrir: la
      ficha se monta dentro del chunk perezoso del panel, que es donde viajan `buildGameSheet` y la saga. */
@@ -1252,7 +1259,7 @@ export default function App() {
           onAddGame={handleAddGame}
           // Sin tope (mithril), el recuento no se dice contra ningún número.
           listCap={currentTab === 'd' && Number.isFinite(wishlistMax) ? { total: vm.data.d.length, max: wishlistMax } : undefined}
-          renderPrice={currentTab === 'd' ? renderPrice : undefined}
+          renderPrice={priceTab ? renderPrice : undefined}
           onImportLibrary={handleImportLibraryExporter}
           inboxCount={inboxCount}
           onOpenInbox={openInbox}
@@ -1262,7 +1269,7 @@ export default function App() {
           recentlyChangedId={recentlyChangedId}
           removingId={removingId}
         />
-        {currentTab === 'd' && wishlistPrices ? (
+        {pricesShown ? (
           <Suspense fallback={null}>
             <PricesCredit />
           </Suspense>
@@ -1376,7 +1383,6 @@ export default function App() {
             onImportLibrary={handleImportLibraryExporter}
             inboxCount={inboxCount}
             onOpenInbox={openInbox}
-            hasSocialProfile={hasSocialProfile}
           />
           <LegalSettings />
         </>

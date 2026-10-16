@@ -190,17 +190,6 @@
    dimensionaba por contenido y quedaban de tamaños distintos). */
 .theme-mode-row .btn { flex: 1 1 0; min-width: 0; justify-content: center; }
 
-/* ISTHEREANYDEAL, dentro de la tarjeta de integraciones y bajo un filete: otra integración de la misma tarjeta. La
-   tarjeta va a lo ancho, así que los dos botones se acotan; estirados a 1440 px serían dos barras. */
-.settings-itad {
-  border-top: 1px solid var(--hair);
-  margin-top: .9rem;
-  padding-top: .9rem;
-}
-.settings-itad h3 { font-size: var(--fs-md); margin: 0 0 .3rem; }
-.settings-itad .theme-mode-row { max-width: 22rem; }
-.settings-itad-hint { margin: .5rem 0 0; }
-
 /* LA FILA DE LA ACCIÓN PRINCIPAL, arriba de su tarjeta: el botón que se ha venido a pulsar, sus acompañantes
    y el enlace que despliega el detalle. Se alinean por la base para que el enlace no baile respecto a los
    botones, y envuelve en cuanto no caben, que en un móvil es siempre. */
