@@ -12,6 +12,8 @@ import { useGameSheetFriendSignals } from '../../../viewmodel/gameSheet/useGameS
 import { useGameSheetFriendEntry } from '../../../viewmodel/gameSheet/useGameSheetFriendEntry';
 import type { FriendGameEntry } from '../../../viewmodel/gameSheet/friendLibraryIndex';
 import { useGameSheetViewModel } from '../../../viewmodel/gameSheet/useGameSheetViewModel';
+import { useGamePrice } from '../../../viewmodel/prices/useGamePrice';
+import type { PrecioItad } from '../../../model/types/prices';
 import { SOCIAL_ROUTES } from '../../../viewmodel/social/socialRoutePaths';
 import type { TabAction } from '../../../viewmodel/useGameListViewModel';
 import { useNativeDialog } from '../../modals/useNativeDialog';
@@ -33,6 +35,11 @@ import '../../../styles/gameSheet.scss';
    pieza de fuera, opcional (F0.10): si no llega, la sección no se pinta. Con ella dentro, el panel no cabía en el
    presupuesto total del precache. */
 const GameSheetFriends = lazy(() => import('./GameSheetFriends').then((module) => ({ default: module.GameSheetFriends })));
+/* EL RECUADRO DEL PRECIO (P3), en el chunk de los precios: solo se pide con un deseo con precio, y no entra en el
+   precache de la ficha. Sin red y sin el chunk, el lado se queda vacío y la saga sigue en el cuerpo: sin errores. */
+type PriceBoxType = typeof import('../prices/Prices').PriceBox;
+const SIN_RECUADRO: PriceBoxType = () => null;
+const PriceBox = lazy(() => import('../prices/Prices').then((module) => ({ default: module.PriceBox }), () => ({ default: SIN_RECUADRO })));
 
 /** A dónde lleva «Ver análisis» desde la ficha (el mismo destino que desde la tabla). */
 export type GameSheetReviewTarget = (tab: TabId, game: GameItem) => { to: string; state?: unknown };
@@ -54,6 +61,12 @@ export interface GameSheetPanelProps {
   friendId?: string;
   /** Un juego que no tienes: añadirlo a deseados o a próximos, con lo que se sepa de él. */
   onAddGame: (game: Partial<GameItem>, tab: 'p' | 'd') => void;
+  /**
+   * LOS PRECIOS DE ISTHEREANYDEAL (P3 del plan de la ficha y los precios): encendidos (interruptor, espacio social y
+   * Deseados a la vista) y el plazo del rango de quien mira, `null` mientras no se sabe (entonces vale lo guardado).
+   */
+  pricesOn?: boolean;
+  priceTtlMs?: number | null;
 }
 
 /** Lo que dura la salida del panel (`gsSale` en `styles/gameSheet.scss`). */
@@ -451,10 +464,13 @@ const BarraDeAcciones = forwardRef<HTMLElement, {
  * (`useSwipeToClose`). Los botones flotan abajo y el cuerpo les reserva justo su alto (`--gs-botones`).
  */
 export function GameSheetPanel(props: GameSheetPanelProps) {
-  const { open, friendId = '', slug } = props;
+  const { open, friendId = '', slug, data, pricesOn = false, priceTtlMs = null } = props;
   const { signals, missing } = useGameSheetFriendSignals(open);
   const deAmistad = useGameSheetFriendEntry(open, friendId, slug);
-  return <GameSheetPanelView {...props} signals={signals} missing={missing} friendEntry={deAmistad} />;
+  // El precio, solo de un deseo tuyo (P3); el de un juego que no tienes llega con la P5.
+  const deseo = open && pricesOn ? data.d.find((game) => matchesGameSheet(slug, game.name)) : undefined;
+  const price = useGamePrice(deseo?.name ?? null, priceTtlMs);
+  return <GameSheetPanelView {...props} signals={signals} missing={missing} friendEntry={deAmistad} price={deseo ? price : undefined} />;
 }
 
 /** Lo que la ficha sabe de tus amistades, ya cargado: lo pone `GameSheetPanel` o, con datos inventados, la maqueta. */
@@ -465,6 +481,8 @@ export interface GameSheetSocialData {
   missing: number;
   /** El bloque de la amistad desde cuyo perfil se abrió (F0.7), o `null`. */
   friendEntry: FriendGameEntry | null;
+  /** El precio del juego, si es un deseo y se sabe (P3); `null` si ITAD no lo tiene. */
+  price?: PrecioItad | null;
 }
 
 /**
@@ -487,6 +505,7 @@ export function GameSheetPanelView({
   signals: canalEIndice,
   missing,
   friendEntry: deAmistad,
+  price,
 }: GameSheetPanelProps & GameSheetSocialData) {
   // Lo de la amistad del bloque cuenta también para la ficha: así se abre aunque solo ella lo tenga.
   const signals = useMemo<readonly GameSheetSignal[]>(
@@ -571,6 +590,8 @@ export function GameSheetPanelView({
   const sinBloque = (lista: GameSheetFriend[]) => (bloque ? lista.filter((friend) => friend.id !== bloque.friend.id) : lista);
   const amigos = ficha ? sinBloque(ficha.friends) : [];
   const quieren = ficha ? sinBloque(ficha.wishers) : [];
+  // El recuadro solo con un mejor precio: sin tienda que lo venda, la cabecera se queda como sin precio.
+  const conPrecio = Boolean(own?.tab === 'd' && price?.mejor);
   const plataformas = ficha?.saga.find((entry) => entry.current)?.platforms ?? bloque?.item.platforms ?? [];
   return (
     <dialog
@@ -596,12 +617,17 @@ export function GameSheetPanelView({
           </button>
           <div className="gs-scroll" key={ficha.slug} ref={scrollRef}>
             <div className="gs-contenido" ref={contentRef}>
-              {/* Con ancho, el lado de la cabecera es la saga (sin precio, ese hueco quedaba vacío); en estrecho, la
-                  saga va al final del cuerpo. Se pinta en los dos sitios y el CSS esconde la que no toca. */}
+              {/* El lado de la cabecera: el precio de un deseo (P3, F0.15) o, sin precio, la saga. Con ancho, la saga
+                  va ahí (sin ella, ese hueco quedaba vacío); en estrecho, al final del cuerpo. Se pinta en los dos
+                  sitios y el CSS esconde la que no toca. Con precio, la saga se queda solo en el cuerpo. */}
               <Cabecera
                 sheet={ficha}
                 covers={covers}
-                lado={ficha.saga.length ? <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
+                lado={conPrecio && price ? (
+                  <Suspense fallback={null}>
+                    <PriceBox precio={price} name={ficha.name} />
+                  </Suspense>
+                ) : ficha.saga.length ? <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
               />
               <div className="gs-cuerpo">
                 {bloque ? <BloqueDeAmistad entrada={bloque} onOpenReview={openFriendReview} /> : null}
@@ -618,7 +644,7 @@ export function GameSheetPanelView({
                     />
                   </Suspense>
                 ) : null}
-                <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-solo-estrecho" />
+                <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className={conPrecio ? '' : 'is-solo-estrecho'} />
               </div>
             </div>
           </div>

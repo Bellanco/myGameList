@@ -74,36 +74,67 @@ export async function fetchWishlistPrices(titles: readonly string[]): Promise<Pr
 }
 
 /**
- * LOS PRECIOS DE TU LISTA DE DESEOS, con la caché local por delante: se pide solo lo que no tiene precio o lo tiene
- * más viejo que `ttlMs` (el plazo del rango de quien mira), por partes de 400, y lo que llega se mezcla con lo
- * guardado. Lo que ya no está en la lista sale de la caché. Si una tanda falla, las siguientes no se piden: lo
- * guardado vale hasta el siguiente intento.
+ * Pide lo que haga falta de `titles` por partes de 400 y lo mezcla con `cache`. Si una tanda falla, las siguientes
+ * no se piden: lo guardado vale hasta el siguiente intento.
  */
-export async function loadWishlistPrices(titles: readonly string[], ttlMs: number, now: number = Date.now()): Promise<WishlistPrices> {
-  let cache: PriceCache = (await getPriceCache<PriceCache>()) ?? {};
+async function refresh(cache: PriceCache, titles: readonly string[], now: number): Promise<{ cache: PriceCache; status: PricesStatus }> {
+  let next = cache;
   let status: PricesStatus = 'ok';
-  const pending = titlesToRequest(cache, titles, ttlMs, now);
-  for (const part of chunk(pending, PRICE_REQUEST_MAX_TITLES)) {
+  for (const part of chunk(titles, PRICE_REQUEST_MAX_TITLES)) {
     try {
       const answer = await fetchWishlistPrices(part);
-      cache = mergePrices(cache, answer.juegos, now);
+      next = mergePrices(next, answer.juegos, now);
       if (answer.incompleto) status = 'incompleto';
     } catch (error) {
       status = error instanceof PricesRequestError ? error.status : 'no-disponible';
       break;
     }
   }
-  cache = pruneCache(cache, titles);
-  await putPriceCache(cache);
+  return { cache: next, status };
+}
+
+/**
+ * LOS PRECIOS DE TU LISTA DE DESEOS, con la caché local por delante: se pide solo lo que no tiene precio o lo tiene
+ * más viejo que `ttlMs` (el plazo del rango de quien mira), por partes de 400, y lo que llega se mezcla con lo
+ * guardado. Lo que ya no está en la lista sale de la caché. Si una tanda falla, las siguientes no se piden: lo
+ * guardado vale hasta el siguiente intento.
+ */
+export async function loadWishlistPrices(titles: readonly string[], ttlMs: number, now: number = Date.now()): Promise<WishlistPrices> {
+  const stored: PriceCache = (await getPriceCache<PriceCache>()) ?? {};
+  const pending = titlesToRequest(stored, titles, ttlMs, now);
+  const { cache: merged, status } = await refresh(stored, pending, now);
+  const cache = pruneCache(merged, titles);
+  // Solo se escribe si algo cambió: con todo fresco, abrir Deseados no toca IndexedDB.
+  if (pending.length > 0 || Object.keys(cache).length !== Object.keys(stored).length) {
+    await putPriceCache(cache);
+  }
+  return { prices: pricesOf(cache, titles), status };
+}
+
+/**
+ * EL PRECIO DE UN JUEGO, para la ficha: lo guardado si aún vale con el plazo de quien mira y, si no, una petición con
+ * ese título solo. No poda: la caché es de toda la lista de deseos, y la ficha solo añade o refresca su juego. Sin
+ * nada guardado y sin poder pedirlo, `undefined` (no se sabe), que no es lo mismo que `null` (ITAD no lo tiene).
+ */
+export async function loadGamePrice(title: string, ttlMs: number, now: number = Date.now()): Promise<PrecioItad | null | undefined> {
+  const stored: PriceCache = (await getPriceCache<PriceCache>()) ?? {};
+  if (titlesToRequest(stored, [title], ttlMs, now).length === 0) return stored[title].precio;
+  const { cache } = await refresh(stored, [title], now);
+  if (cache !== stored) await putPriceCache(cache);
+  return cache[title]?.precio;
+}
+
+/** Lo que se sabe de `titles` en `cache`: solo los títulos con algo guardado. */
+function pricesOf(cache: PriceCache, titles: readonly string[]): Record<string, PrecioItad | null> {
   const prices: Record<string, PrecioItad | null> = {};
   for (const title of titles) {
     const entry = cache[title];
     if (entry) prices[title] = entry.precio;
   }
-  return { prices, status };
+  return prices;
 }
 
-/** La caché local entera, sin pedir nada: para pintar al momento lo que ya se sabe mientras llega lo demás. */
-export async function readCachedPrices(): Promise<PriceCache> {
-  return (await getPriceCache<PriceCache>()) ?? {};
+/** Lo guardado de `titles`, sin pedir nada: para pintar al momento lo que ya se sabe mientras llega lo demás. */
+export async function readCachedPrices(titles: readonly string[]): Promise<Record<string, PrecioItad | null>> {
+  return pricesOf((await getPriceCache<PriceCache>()) ?? {}, titles);
 }

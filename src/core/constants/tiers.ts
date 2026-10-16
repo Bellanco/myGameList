@@ -213,6 +213,23 @@ export function canUseGameScenes(tier: ProfileTier): boolean {
   return PROFILE_TIER_GAME_SCENES[tier];
 }
 
+/**
+ * LA LISTA DE DESEOS SIN TOPE (P3 del plan de la ficha y los precios; decisión del usuario, 16-10-2026): solo mithril.
+ * Los demás siguen con `WISHLIST_MAX_GAMES` (o `WISHLIST_MAX_GAMES_ADMIN` con el claim). Sin tope, el recuento no se
+ * dice contra ningún número, y nada en pantalla nombra el rango.
+ */
+export const PROFILE_TIER_UNLIMITED_WISHLIST: Record<ProfileTier, boolean> = {
+  bronze: false,
+  silver: false,
+  gold: false,
+  mithril: true,
+};
+
+/** ¿Este rango tiene la lista de deseos sin tope? */
+export function hasUnlimitedWishlist(tier: ProfileTier): boolean {
+  return PROFILE_TIER_UNLIMITED_WISHLIST[tier];
+}
+
 export const PROFILE_TIER_LABELS: Record<ProfileTier, string> = {
   bronze: 'Bronce',
   silver: 'Plata',

@@ -1,0 +1,147 @@
+// LOS PRECIOS DE ISTHEREANYDEAL (P3 del plan de la ficha y los precios). Viaja con el chunk perezoso de los precios
+// (`view/components/prices/Prices.tsx`), así que no pesa en el arranque. Neutro: el verde es el de «bien» de cada tema
+// (`--success`), el mismo que ya dice «a favor» en toda la app.
+
+// ─── El renglón y la caja del mosaico ───────────────────────────────────────────────────────────────────────────
+
+.price-tag {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .1rem .4rem;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.price-tag-now { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.price-tag-cut {
+  font-weight: 700;
+  color: color-mix(in srgb, var(--success) 80%, var(--text));
+}
+
+.price-tag-low {
+  padding: 0 .35rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: color-mix(in srgb, var(--success) 75%, var(--text));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 50%, transparent);
+}
+
+// En el renglón estrecho no cabe al lado del nombre: el precio baja a su propia línea, bajo él. Sin precio (ITAD no lo
+// tiene, o aún no ha llegado) la ranura no existe: vacía y a todo el ancho, aplastaba el nombre letra a letra.
+.row-price:empty { display: none; }
+.row-head:has(> .row-price:not(:empty)) { flex-wrap: wrap; }
+// El nombre cede ancho antes que bajar la nota: con la línea partida, un nombre largo empujaba las estrellas abajo.
+.row-head:has(> .row-price:not(:empty)) > .row-name { flex: 1 1 0; min-width: 0; }
+.row-price { display: inline-flex; order: 3; flex: 1 0 100%; min-width: 0; }
+.row-price .price-tag { justify-content: flex-start; }
+
+// Con sitio (el mismo corte que reparte las ranuras del renglón en una línea), el precio sube junto a la nota, del
+// lado de las señales: el margen automático lo pega a ella y el aro se queda siempre en el canto.
+@container gamelist (min-width: 46rem) {
+  .row-head:has(> .row-price:not(:empty)) { flex-wrap: nowrap; }
+  .row-price { order: 0; flex: 0 0 auto; align-self: center; margin-left: auto; }
+  .row-price .price-tag { justify-content: flex-end; }
+}
+
+// En la caja del mosaico con carátula, una línea más bajo las etiquetas (esa caja crece con lo que lleva); en la plana,
+// en la línea de la nota y contra el canto (ver `GameTable`).
+div.game-card-price { margin-top: .35rem; }
+div.game-card-price .price-tag { justify-content: flex-start; }
+.game-card-head > .game-card-price { margin-left: auto; }
+.game-card-price:empty { display: none; }
+
+// ─── El recuadro de la ficha (F0.15) ────────────────────────────────────────────────────────────────────────────
+
+.gs-price {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  padding: .85rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--success) 9%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 35%, transparent);
+}
+
+// Con ancho, el recuadro estira hasta el alto de su columna (el lado de la cabecera ya es una columna flexible).
+.gs-head-lado > .gs-price { flex: 1 1 auto; }
+
+.gs-price-arriba { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .3rem .8rem; }
+.gs-price-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .6rem; }
+.gs-price-now { font-size: var(--fs-2xl); font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1; }
+.gs-price-regular { font-size: var(--fs-sm); color: var(--text-muted); text-decoration: line-through; }
+
+.gs-price-cut {
+  padding: .1rem .45rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--on-accent);
+  background: var(--success);
+}
+
+.gs-price-low {
+  padding: .15rem .5rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: color-mix(in srgb, var(--success) 75%, var(--text));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 50%, transparent);
+  white-space: nowrap;
+}
+
+.gs-price-donde { margin: 0; font-size: var(--fs-sm); color: var(--text); }
+.gs-price-donde span { color: var(--text-muted); }
+
+// El emparejamiento con otro título, a la vista: para que uno equivocado se vea.
+.gs-price-match { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); font-style: italic; }
+
+.gs-price-minimos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .5rem;
+  margin: 0;
+  padding: .5rem 0;
+  border-block: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
+
+  div { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+  dt { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+  dd { margin: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+  dd small { display: block; font-size: var(--fs-2xs); font-weight: 400; color: var(--text-muted); }
+}
+
+.gs-price-otras {
+  display: grid;
+  gap: .2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+
+  li { display: flex; justify-content: space-between; gap: .8rem; color: var(--text-muted); }
+}
+
+.gs-price-otras-precio { color: var(--text); font-variant-numeric: tabular-nums; }
+.gs-price-otras-precio small { color: color-mix(in srgb, var(--success) 75%, var(--text)); }
+
+.gs-price-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; margin-top: auto; padding-top: .15rem; }
+.gs-price-credit { font-size: var(--fs-2xs); color: var(--text-muted); }
+
+// ─── La atribución al pie de Deseados ───────────────────────────────────────────────────────────────────────────
+
+.prices-credit {
+  margin: .6rem 0 0;
+  text-align: right;
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+
+  a { color: inherit; }
+}

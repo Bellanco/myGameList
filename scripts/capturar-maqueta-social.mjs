@@ -35,7 +35,7 @@ const TODAS = [
   'perfil-propio', 'perfil-propio&vista=publicaciones', 'ajustes', 'logros', 'globales', 'resena', 'resena-perfil',
   'compartir-resumen', 'compartir-resumen&abrir=al-dia', 'compartir-resumen&abrir=cambiado', 'compartir-resumen&abrir=espera',
   'resumen-publico', 'resumen-publico&abrir=sin-app',
-  'ficha', 'ficha&abrir=sin-social', 'ficha&abrir=de-amistad', 'ficha&abrir=ajeno',
+  'ficha', 'ficha&abrir=sin-social', 'ficha&abrir=de-amistad', 'ficha&abrir=ajeno', 'ficha&abrir=deseo',
 ];
 const PANTALLAS = args.pantallas ? args.pantallas.split(',') : TODAS;
 

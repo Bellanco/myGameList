@@ -28,7 +28,8 @@ import {
   titlesToRequest,
   type PriceCache,
 } from '../../src/core/prices/priceCache';
-import { loadWishlistPrices, readCachedPrices } from '../../src/model/repository/pricesRepository';
+import { loadGamePrice, loadWishlistPrices, readCachedPrices } from '../../src/model/repository/pricesRepository';
+import { isHistoricLow, matchedOtherTitle } from '../../src/core/prices/priceDisplay';
 import type { PrecioItad } from '../../src/model/types/prices';
 
 const HORA = 60 * 60 * 1000;
@@ -130,7 +131,7 @@ describe('loadWishlistPrices', () => {
     expect(init?.method).toBe('POST');
     expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer prueba');
     expect(titulosPedidos(0)).toEqual(['Hades', 'Raro']);
-    expect(await readCachedPrices()).toMatchObject({ Hades: { pedidoEn: 100 * HORA }, Raro: { precio: null } });
+    expect(idb.cache).toMatchObject({ Hades: { pedidoEn: 100 * HORA }, Raro: { precio: null } });
   });
 
   it('con todo fresco no pide nada', async () => {
@@ -150,7 +151,7 @@ describe('loadWishlistPrices', () => {
     await loadWishlistPrices(['Fresco', 'Viejo'], 18 * HORA, 100 * HORA);
 
     expect(titulosPedidos(0)).toEqual(['Viejo']);
-    const guardado = await readCachedPrices();
+    const guardado = idb.cache as PriceCache;
     expect(Object.keys(guardado).sort()).toEqual(['Fresco', 'Viejo']);
     expect(guardado.Viejo).toEqual({ precio: precio('Viejo', 3), pedidoEn: 100 * HORA });
   });
@@ -200,5 +201,73 @@ describe('loadWishlistPrices', () => {
     const out = await loadWishlistPrices(['Hades'], HORA, 100 * HORA);
     expect(out.status).toBe('incompleto');
     expect(out.prices.Hades).toEqual(precio('Hades', 9));
+  });
+
+  it('con todo fresco tampoco escribe en IndexedDB', async () => {
+    const { putPriceCache } = await import('../../src/model/repository/indexedDbRepository');
+    vi.mocked(putPriceCache).mockClear();
+    idb.cache = { Hades: { precio: precio('Hades', 9), pedidoEn: 99 * HORA } } satisfies PriceCache;
+    await loadWishlistPrices(['Hades'], 18 * HORA, 100 * HORA);
+    expect(putPriceCache).not.toHaveBeenCalled();
+  });
+
+  it('lo guardado se lee sin pedir nada, solo de los títulos que se preguntan', async () => {
+    idb.cache = {
+      Hades: { precio: precio('Hades', 9), pedidoEn: 1 },
+      Otro: { precio: null, pedidoEn: 1 },
+    } satisfies PriceCache;
+    expect(await readCachedPrices(['Hades', 'Nuevo'])).toEqual({ Hades: precio('Hades', 9) });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('loadGamePrice', () => {
+  const fetchMock = vi.fn<typeof fetch>();
+
+  beforeEach(() => {
+    idb.cache = null;
+    session.signedIn = true;
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('con el precio fresco no pide nada', async () => {
+    idb.cache = { Hades: { precio: precio('Hades', 9), pedidoEn: 99 * HORA } } satisfies PriceCache;
+    expect(await loadGamePrice('Hades', 18 * HORA, 100 * HORA)).toEqual(precio('Hades', 9));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('caducado o sin nada, pide ese título solo y lo añade sin podar el resto', async () => {
+    idb.cache = { Otro: { precio: precio('Otro', 5), pedidoEn: 99 * HORA } } satisfies PriceCache;
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ juegos: { Hades: precio('Hades', 7) } })));
+    expect(await loadGamePrice('Hades', 18 * HORA, 100 * HORA)).toEqual(precio('Hades', 7));
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ titulos: ['Hades'] });
+    expect(Object.keys(idb.cache as PriceCache).sort()).toEqual(['Hades', 'Otro']);
+  });
+
+  it('sin poder pedirlo, lo viejo vale; sin nada, no se sabe', async () => {
+    fetchMock.mockResolvedValue(new Response('{}', { status: 503 }));
+    expect(await loadGamePrice('Hades', HORA, 100 * HORA)).toBeUndefined();
+    idb.cache = { Hades: { precio: precio('Hades', 9), pedidoEn: 1 } } satisfies PriceCache;
+    expect(await loadGamePrice('Hades', HORA, 100 * HORA)).toEqual(precio('Hades', 9));
+  });
+});
+
+describe('lo que se dice de un precio', () => {
+  it('está en su mínimo si el mejor de ahora iguala o mejora el histórico', () => {
+    const base = precio('Hades', 9);
+    expect(isHistoricLow({ ...base, minimos: { ...base.minimos, historico: { precio: 9, fecha: null } } })).toBe(true);
+    expect(isHistoricLow({ ...base, minimos: { ...base.minimos, historico: { precio: 10, fecha: null } } })).toBe(true);
+    expect(isHistoricLow({ ...base, minimos: { ...base.minimos, historico: { precio: 8, fecha: null } } })).toBe(false);
+    // Sin mínimo conocido o sin tienda que lo venda, no.
+    expect(isHistoricLow(base)).toBe(false);
+    expect(isHistoricLow({ ...precio('Hades', null), minimos: { historico: { precio: 9, fecha: null }, anio: null, tresMeses: null } })).toBe(false);
+  });
+
+  it('dice con qué otro título acertó ITAD, y nada si es el mismo escrito de otra forma', () => {
+    expect(matchedOtherTitle(precio('Hades II', 9), 'Hades 2')).toBeNull();
+    expect(matchedOtherTitle(precio('The Witcher 3: Wild Hunt', 9), 'the witcher 3 wild hunt')).toBeNull();
+    expect(matchedOtherTitle(precio('Hades', 9), 'Hades 2')).toBe('Hades');
   });
 });

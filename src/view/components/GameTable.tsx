@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
@@ -35,6 +35,12 @@ interface GameTableProps {
   onAddGame?: () => void;
   /** Lista con tope (la de deseos): cuántos juegos tiene ENTERA y cuántos caben. El recuento se dice contra él. */
   listCap?: { total: number; max: number };
+  /**
+   * EL PRECIO DE CADA JUEGO (P3 del plan de la ficha y los precios): solo en Deseados y con el interruptor de
+   * IsThereAnyDeal encendido. Lo pinta quien lo pasa, desde el chunk perezoso de los precios, para que la tabla —que
+   * va en el arranque— no cargue con nada de ellos. Sin él, ni la ranura.
+   */
+  renderPrice?: (game: GameItem) => ReactNode;
   /**
    * Cuántos juegos hay DE VERDAD cuando `games` es solo un lote: la ficha de un perfil pinta de 15 en 15, y el
    * recuento decía 15 aunque la lista tuviera 200. Sin él, se cuentan los que llegan.
@@ -393,6 +399,7 @@ export const GameTable = memo(function GameTable({
   onEdit,
   onAddGame,
   listCap,
+  renderPrice,
   totalCount,
   onImportLibrary,
   inboxCount = 0,
@@ -1169,8 +1176,14 @@ export const GameTable = memo(function GameTable({
                                   {/* Sin carátula sobre la que flotar, la nota y la insignia encabezan la caja
                                       en la MISMA línea: siguen siendo las dos señales que se buscan y siguen
                                       estando en el mismo punto de todas las cajas, que es lo que importaba. */}
-                                  {!covers && (nota || insignia) ? (
-                                    <div className="game-card-head">{nota}{insignia}</div>
+                                  {/* El precio (P3), sin carátula, en esa misma línea y contra el canto: la caja plana
+                                      tiene el alto fijo y una línea más se salía por abajo con un título de dos. */}
+                                  {!covers && (nota || insignia || renderPrice) ? (
+                                    <div className="game-card-head">
+                                      {nota}
+                                      {insignia}
+                                      {renderPrice ? <span className="game-card-price">{renderPrice(game)}</span> : null}
+                                    </div>
                                   ) : null}
                                   {/* EL NOMBRE ENTERO, AL PASAR POR ENCIMA. Va a dos líneas y corte; si no cabe, al
                                       llegar con el ratón o el teclado se despliega EL MISMO título por encima de
@@ -1196,6 +1209,7 @@ export const GameTable = memo(function GameTable({
                                       {renderTags(game.genres, 'chip-genre', capsGenero.n, true)}
                                     </div>
                                   </div>
+                                  {covers && renderPrice ? <div className="game-card-price">{renderPrice(game)}</div> : null}
                                 </div>
                                 {/* EL MEDIDOR DEL PIE. La misma nota que el aro, dicha como una barra que cruza
                                     la caja de lado a lado: de un vistazo, y sin leer ni una cifra, la fila de
@@ -1275,6 +1289,8 @@ export const GameTable = memo(function GameTable({
                                 línea de chips cuya longitud cambia en cada fila. */}
                             <span className="row-head">
                               <strong className="row-name">{game.name}</strong>
+                              {/* El precio (P3), a la izquierda de la nota: así el aro sigue en el canto. */}
+                              {renderPrice ? <span className="row-price">{renderPrice(game)}</span> : null}
                               <span className="row-actions">
                                 {/* La ranura de la nota se reserva aunque ESTE juego no la tenga (`meta-score`
                                     dice si la lista la usa): si no, la insignia de al lado se correría de sitio

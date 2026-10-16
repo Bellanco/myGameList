@@ -55,6 +55,7 @@ import { ADMIN_ONLY_TIER, type ProfileTier } from '../../src/core/constants/tier
 import type { RelationshipState, SocialSharedGame } from '../../src/model/types/social';
 import type { GameItem, TabData, TabId } from '../../src/model/types/game';
 import { GameSheetPanelView, type GameSheetSocialData } from '../../src/view/components/gameSheet/GameSheetPanel';
+import type { PrecioItad } from '../../src/model/types/prices';
 import type { GameSheetSignal } from '../../src/core/gameSheet/buildGameSheet';
 import { gameSheetSlug } from '../../src/core/utils/gameSheetPath';
 import { TAB_ACTIONS } from '../../src/core/constants/labels';
@@ -828,7 +829,8 @@ function Pasarela({ caso }: { caso: string }) {
 // La ficha REAL (`GameSheetPanelView`) con lo de tus amistades inventado: en la app lo carga `GameSheetPanel` de la
 // copia del directorio en IndexedDB, y aquí no se siembra nada porque el origen de desarrollo es el de la app.
 // Variantes (`abrir`): con amistades (por defecto), sin espacio social, abierta desde el perfil de Marta (su bloque
-// arriba, F0.7) y un juego que no tienes. El precio llegará con la P5.
+// arriba, F0.7), un juego que no tienes y un deseo con su precio (P3; en la app lo pide `GameSheetPanel` a
+// `/api/precios`). El precio de un juego que no tienes llegará con la P5.
 const MI_HOLLOW: GameItem = {
   id: 1, _ts: 1, name: 'Hollow Knight', platforms: ['Switch', 'PC'], genres: ['Metroidvania', 'Acción'], steamDeck: true,
   review: 'Un mapa que se descubre a mano y unos jefes que piden paciencia. La música de Christopher Larkin hace la mitad del trabajo: cada zona suena a lo que es.',
@@ -843,6 +845,19 @@ const MI_BIBLIOTECA: TabData = {
   d: [{ id: 2, _ts: 1, name: 'Hollow Knight: Silksong', platforms: ['Switch'], genres: ['Metroidvania'], steamDeck: false, review: '', grade: 85, score: 4 }],
   deleted: [],
   updatedAt: 0,
+};
+// El precio de Silksong: en su mínimo histórico, con descuento y dos tiendas más (el recuadro completo, F0.15).
+const PRECIO_SILKSONG: PrecioItad = {
+  titulo: 'Hollow Knight: Silksong',
+  itadId: 'silksong',
+  mejor: { tienda: 'GOG', precio: 15.99, normal: 19.99, descuento: 20, hasta: new Date(Date.now() + 6 * 864e5).toISOString(), url: 'https://isthereanydeal.com/' },
+  otras: [
+    { tienda: 'Steam', precio: 17.99, normal: 19.99, descuento: 10, hasta: null, url: 'https://isthereanydeal.com/' },
+    { tienda: 'Epic Game Store', precio: 19.99, normal: 19.99, descuento: 0, hasta: null, url: 'https://isthereanydeal.com/' },
+  ],
+  minimos: { historico: { precio: 15.99, fecha: '2026-06-14T00:00:00Z' }, anio: 15.99, tresMeses: 17.99 },
+  urlFicha: 'https://isthereanydeal.com/',
+  bundles: [],
 };
 const ref = (p: Persona) => ({ id: p.id, name: p.displayName });
 const SENALES: GameSheetSignal[] = [
@@ -875,6 +890,7 @@ const MARTA_OUTER: GameSheetSocialData['friendEntry'] = {
 function Ficha() {
   const caso = params.get('abrir') || '';
   const ajeno = caso === 'ajeno';
+  const deseo = caso === 'deseo';
   const social: GameSheetSocialData = caso === 'sin-social'
     ? { signals: [], missing: 0, friendEntry: null }
     : {
@@ -888,7 +904,7 @@ function Ficha() {
       <GameSheetPanelView
         open
         data={MI_BIBLIOTECA}
-        slug={gameSheetSlug(ajeno ? 'Outer Wilds' : 'Hollow Knight')}
+        slug={gameSheetSlug(ajeno ? 'Outer Wilds' : deseo ? 'Hollow Knight: Silksong' : 'Hollow Knight')}
         onClose={avisar('cierra la ficha (Esc, la X, pulsar fuera, «atrás» o deslizarla)')}
         onOpenGame={avisar('abre la ficha de esa entrega')}
         tabActions={TAB_ACTIONS}
@@ -898,6 +914,7 @@ function Ficha() {
         reviewTarget={() => ({ to: '/stats/resenas' })}
         onAddGame={avisar('lo añade a esa lista')}
         {...social}
+        price={deseo ? PRECIO_SILKSONG : undefined}
       />
     </>
   );
@@ -987,6 +1004,7 @@ const VARIANTES: Record<string, Array<{ nombre: string; vista?: string; abrir?: 
     { nombre: 'Sin espacio social', abrir: 'sin-social' },
     { nombre: 'Desde el perfil de Marta', abrir: 'de-amistad' },
     { nombre: 'Un juego que no tienes', abrir: 'ajeno' },
+    { nombre: 'Un deseo con su precio', abrir: 'deseo' },
   ],
   'perfil-propio': [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Publicaciones', vista: 'publicaciones' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
 };

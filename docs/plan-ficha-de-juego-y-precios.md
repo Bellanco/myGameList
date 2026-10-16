@@ -684,31 +684,41 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
   `tests/unit/itadPreference.test.ts` y `tests/component/ItadToggle.test.tsx`.
 - **Sin CHANGELOG todavía:** el interruptor solo no enseña nada; la entrada va con la P3, que es cuando se ven precios.
 
-## Fase P3 · Precios en Deseados · M
+## Fase P3 · Precios en Deseados · M · ✅ hecha (16-10-2026)
 
-- **Deseados sin tope para mithril (decisión del usuario, 16-10-2026).** El tope (`WISHLIST_MAX_GAMES`, 100) solo frena
-  las altas en el cliente; la sincronización no recorta. Para mithril pasa a no haber tope: el límite se decide por el
-  rango propio (`useOwnTier`) además del claim (400 con `admin`, `WISHLIST_MAX_GAMES_ADMIN`, que se queda para quien
-  lo tenga sin ser mithril), y sin tope el recuento de la lista no se dice contra ningún número ni se pinta «llena».
-  Nada visible nombra el rango (memoria `rangos-ocultos-al-usuario`).
-- **Los precios, por partes:** `/api/precios` admite hasta 400 títulos por petición, así que con una lista mayor el
-  cliente pide en tandas de 400; el borde, a su vez, parte cada tanda en llamadas a ITAD de hasta 200 ids. Cada tanda
-  cuenta como una petición en el tope por hora de su rango.
+**Cómo quedó:**
 
-- **Tabla (`GameTable`, solo en la pestaña `d` con el interruptor encendido):**
-  - en escritorio, una columna «Precio» tras «Interés», con «11,99 € · −60 %» y una marca «Mínimo» si el precio
-    iguala el histórico;
-  - en la tarjeta de móvil, la misma línea bajo el nombre.
-- **En la ficha** (que sustituye al detalle de la fila, F0.6), el recuadro completo de F0.15. Las `url` de ITAD, tal
-  cual y con `rel="noopener"`.
-- **Emparejamiento visible:** si el título de ITAD no coincide con el tuyo (comparado con `gameTitleKey`), se muestra
-  «Precio de: *título de ITAD*», para que un emparejamiento equivocado se vea.
-- **Sin precio:** sin red, sin emparejamiento o con el `429`, la celda se queda vacía. No sale «—» ni un error
-  (memoria `degradacion-servicios`).
-- **Orden y filtro:** ordenar por precio y por descuento, y un filtro «Solo en oferta». Es opcional; se puede dejar
-  para una segunda pasada.
-- **Atribución:** una línea discreta al pie de Deseados, «Precios de IsThereAnyDeal», con enlace. También en `CREDITS`.
-- **Carga:** todo el código de precios en un chunk que solo se pide con el interruptor encendido y Deseados abierto.
+- **Deseados sin tope para mithril** (decisión del usuario, 16-10-2026): `hasUnlimitedWishlist` en
+  `core/constants/tiers.ts`. `App` lee el rango propio (`useOwnTier`) y, con mithril, el tope es infinito. Sin tope,
+  el recuento no se dice contra ningún número (no hay `listCap`) y no se pinta «llena». Mientras el rango no se sabe
+  rige el tope de siempre, que solo frena altas; el claim `admin` sigue en 400. Nada visible nombra el rango.
+- **Cuándo se piden:** con el interruptor encendido, espacio social y Deseados a la vista (`pricesOn` en `App`). En
+  la lista, solo con Deseados abierta (`useWishlistPrices`); en la ficha, solo de un deseo tuyo (`useGamePrice`, con
+  `loadGamePrice`, que pide ese título solo y no poda la caché). Primero se pinta lo guardado. Mientras el rango
+  está en vuelo no se pide nada.
+- **Por partes:** el cliente pide en tandas de 400 (P2) y el borde las parte en llamadas a ITAD de 200 ids.
+- **El renglón:** en estrecho, el precio («11,99 € −60 %» y «Mínimo» si iguala el histórico) va en su línea, bajo
+  el nombre; con sitio (`@container gamelist (min-width: 46rem)`, el corte del renglón ancho), sube junto a la nota y
+  el aro sigue en el canto. Sin precio, la ranura no existe (`:empty`).
+- **El mosaico:** en la caja plana, que tiene el alto fijo, el precio va en la línea de la nota, contra el canto; una
+  línea más se salía por abajo con un título de dos. Con carátula, una línea bajo las etiquetas.
+- **La ficha:** el recuadro de F0.15 en el lado de la cabecera, en lugar de la saga, que baja al cuerpo. Las `url`
+  de ITAD, tal cual y con `rel="noopener"`.
+- **Emparejamiento visible:** «Precio de: *título de ITAD*» en el recuadro y, en el renglón, al pasar por encima
+  (`matchedOtherTitle`, con `gameTitleKey`: *Hades II* y *Hades 2* son el mismo).
+- **Sin precio** (sin red, sin emparejamiento, `429`, `501`): no se pinta nada, ni «—» ni un error.
+- **Atribución:** «Precios de IsThereAnyDeal» al pie de Deseados y en el recuadro, con enlace; en `CREDITS` desde la P2.
+- **Carga:** `view/components/prices/Prices.tsx` (con `prices.scss` y `pricesLabels.ts`) y `pricesRepository` son
+  chunks propios, fuera del precache. La tabla recibe `renderPrice` y no carga nada de ellos. Si el chunk no llega
+  (sin red y recién desplegado), no hay precios y nada falla.
+- **Coste medido** (`npm run build && npm run validate`, 16-10-2026): crítico de 192,9 a **193,9 de 195 kB** (`index`
+  +0,77 kB: el rango propio y el cableado en `App`); total de 238,2 a **239,5 de 240 kB**. Queda medio kB de total:
+  la P5 y la P7 tendrán que diferir algo o rehacer las mediciones del tope.
+- **Maqueta:** `docs/maquetas/social.html?pantalla=ficha&abrir=deseo`, la ficha real con un precio inventado
+  (también en `capturar-maqueta-social.mjs`).
+- **No entra, para una segunda pasada:** ordenar por precio o descuento y el filtro «Solo en oferta».
+- **Tests:** `tests/component/Prices.test.tsx`, `GameSheetPrice.test.tsx`, `useWishlistPrices.test.tsx` y lo nuevo
+  de `tests/unit/preciosCliente.test.ts`.
 
 ## Fase P4 · Aviso de bajada · aparcada (16-10-2026)
 

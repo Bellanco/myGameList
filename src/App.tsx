@@ -4,6 +4,10 @@ import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ORDER, TAB_ROUTE, TAB_TI
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
 import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS, WISHLIST_MAX_GAMES, WISHLIST_MAX_GAMES_ADMIN } from './core/constants/uiConfig';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from './model/types/game';
+import { PROFILE_TIER_PRICE_TTL_MS, hasUnlimitedWishlist } from './core/constants/tiers';
+import { useOwnTier } from './viewmodel/useOwnTier';
+import { useWishlistPrices } from './viewmodel/prices/useWishlistPrices';
+import { useItad } from './view/hooks/useItad';
 import { decideReviewPublication } from './core/social/reviewPublication';
 import { applyReviewPublication } from './viewmodel/applyReviewPublication';
 import { copyText } from './core/utils/clipboard';
@@ -102,6 +106,13 @@ const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ defau
    seguir abriendo algo, como abría el detalle. */
 const importGameSheetPanel = () => import('./view/components/gameSheet/GameSheetPanel');
 const GameSheetPanel = lazy(() => importGameSheetPanel().then((module) => ({ default: module.GameSheetPanel })));
+/* LOS PRECIOS DE ISTHEREANYDEAL (P3 del plan de la ficha y los precios): su propio chunk, que solo se pide con el
+   interruptor encendido y Deseados abierta. Sin red y sin el chunk, la lista se queda sin precios y sin errores. */
+type PricesChunk = Pick<typeof import('./view/components/prices/Prices'), 'PriceTag' | 'PricesCredit'>;
+const SIN_PRECIOS: PricesChunk = { PriceTag: () => null, PricesCredit: () => null };
+const importPrices = (): Promise<PricesChunk> => import('./view/components/prices/Prices').catch(() => SIN_PRECIOS);
+const PriceTag = lazy(() => importPrices().then((module) => ({ default: module.PriceTag })));
+const PricesCredit = lazy(() => importPrices().then((module) => ({ default: module.PricesCredit })));
 const PublicReviewScreen = lazy(() => import('./view/components/PublicReviewScreen').then((module) => ({ default: module.PublicReviewScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
@@ -266,7 +277,12 @@ export default function App() {
   // El administrador tiene más sitio en la lista de deseos. `App` no se monta en la página pública de una reseña
   // (`main.tsx` la sirve sola), así que escuchar aquí la sesión no carga Firebase donde no debe.
   const isAdmin = useIsAdmin();
-  const wishlistMax = isAdmin ? WISHLIST_MAX_GAMES_ADMIN : WISHLIST_MAX_GAMES;
+  // El rango propio: mithril tiene Deseados sin tope (P3 del plan de la ficha y los precios), y el plazo de los
+  // precios depende de él. `null` mientras no se sabe: rige el tope de siempre, que solo frena altas.
+  const ownTier = useOwnTier();
+  const wishlistMax = ownTier && hasUnlimitedWishlist(ownTier)
+    ? Number.POSITIVE_INFINITY
+    : isAdmin ? WISHLIST_MAX_GAMES_ADMIN : WISHLIST_MAX_GAMES;
   const vm = useGameListViewModel(wishlistMax);
   // F2: enlaza la sesión de Google con la escala de puntuación (hidrata desde Firestore / resetea al salir);
   // devuelve el uid para gatear la opción en Ajustes. Se monta aquí para que la escala esté en toda la app.
@@ -306,6 +322,27 @@ export default function App() {
   // y lo que se añade desde la ruleta de un amigo va a próximos, para no mandarlo a una lista que no se ve.
   const { showWishlist } = useShowWishlist();
   const visibleTabs = useMemo(() => (showWishlist ? TAB_ORDER : TAB_ORDER.filter((tab) => tab !== 'd')), [showWishlist]);
+  /* LOS PRECIOS DE DESEADOS (P3): con el interruptor de IsThereAnyDeal encendido, con espacio social (P0.2) y con la
+     lista de deseos a la vista; y se piden solo con Deseados abierta. El plazo es el del rango de quien mira (P0.7):
+     mientras no se sabe, se pinta lo guardado y no se pide nada. */
+  const { itad } = useItad();
+  const pricesOn = itad && hasSocialProfile && showWishlist;
+  const priceTtlMs = pricesOn && ownTier ? PROFILE_TIER_PRICE_TTL_MS[ownTier] : null;
+  const wishlistTitles = useMemo(
+    () => (pricesOn && activeSection === 'lists' && currentTab === 'd' ? vm.data.d.map((game) => game.name) : null),
+    [pricesOn, activeSection, currentTab, vm.data.d],
+  );
+  const wishlistPrices = useWishlistPrices(wishlistTitles, priceTtlMs);
+  const renderPrice = useMemo(
+    () => (wishlistPrices
+      ? (game: GameItem) => (
+        <Suspense fallback={null}>
+          <PriceTag precio={wishlistPrices[game.name]} name={game.name} />
+        </Suspense>
+      )
+      : undefined),
+    [wishlistPrices],
+  );
   useEffect(() => {
     if (!showWishlist && currentTab === 'd' && activeSection === 'lists') {
       navigate(TAB_ROUTE.p, { replace: true });
@@ -1195,7 +1232,9 @@ export default function App() {
           onOpenGame={openGameSheet}
           onEdit={vm.openEditGame}
           onAddGame={handleAddGame}
-          listCap={currentTab === 'd' ? { total: vm.data.d.length, max: wishlistMax } : undefined}
+          // Sin tope (mithril), el recuento no se dice contra ningún número.
+          listCap={currentTab === 'd' && Number.isFinite(wishlistMax) ? { total: vm.data.d.length, max: wishlistMax } : undefined}
+          renderPrice={currentTab === 'd' ? renderPrice : undefined}
           onImportLibrary={handleImportLibraryExporter}
           inboxCount={inboxCount}
           onOpenInbox={openInbox}
@@ -1204,6 +1243,11 @@ export default function App() {
           recentlyChangedId={recentlyChangedId}
           removingId={removingId}
         />
+        {currentTab === 'd' && wishlistPrices ? (
+          <Suspense fallback={null}>
+            <PricesCredit />
+          </Suspense>
+        ) : null}
       </>
     ),
     pick: (
@@ -1549,6 +1593,8 @@ export default function App() {
             onDelete={vm.deleteGame}
             onMigrate={vm.migrateGame}
             reviewTarget={gameSheetReviewTarget}
+            priceTtlMs={priceTtlMs}
+            pricesOn={pricesOn}
           />
         ) : null}
 
