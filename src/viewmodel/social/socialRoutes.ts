@@ -2,6 +2,10 @@
 // escritas a mano que había antes: los patrones son los mismos que entiende `<Link>`/`navigate`, así que dejan
 // de poder divergir del resto del enrutado, y el decodificado de parámetros lo hace el router.
 import { matchPath } from 'react-router-dom';
+// Los patrones viven aparte (`socialRoutePaths.ts`) para quien solo necesita una dirección y no este módulo entero.
+import { SOCIAL_ROUTES } from './socialRoutePaths';
+
+export { SOCIAL_ROUTES };
 
 /** Panel visible del hub. `feed` es el estado por defecto (y el de `/social` a secas). */
 export type SocialPanel = 'feed' | 'profile' | 'profiles' | 'requests' | 'profile-detail' | 'profile-review' | 'detail';
@@ -26,20 +30,6 @@ export interface SocialRouteState {
   detailEventType: SocialEventType | '';
 }
 
-export const SOCIAL_ROUTES = {
-  profileEdit: '/social/profile',
-  profiles: '/social/profiles',
-  requests: '/social/requests',
-  profileDetail: '/social/profiles/:profileId',
-  profileReviews: '/social/profiles/:profileId/reviews',
-  profilePosts: '/social/profiles/:profileId/posts',
-  // El listado de logros de esa persona. Sub-ruta del hub y no de primer nivel (a diferencia de `/logros`, que es
-  // el tuyo): sin el perfil delante, la dirección no diría de quién son.
-  profileAchievements: '/social/profiles/:profileId/logros',
-  profileGlobals: '/social/profiles/:profileId/globales',
-  profileReview: '/social/profiles/:profileId/game/:gameId/review',
-  activityDetail: '/social/user/:userId/game/:gameId/:eventType',
-} as const;
 
 const EMPTY: SocialRouteState = {
   activePanel: 'feed',
