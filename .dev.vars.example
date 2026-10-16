@@ -39,3 +39,10 @@ IGDB_CLIENT_SECRET=
 # busque pósters de series y películas y fotos de actores. Las imágenes ya elegidas las sirve `/poster`, que no
 # lo necesita. Se saca de https://www.themoviedb.org/settings/api y se regenera desde ahí mismo.
 TMDB_READ_TOKEN=
+
+# IsThereAnyDeal (ver docs/plan-ficha-de-juego-y-precios.md). La clave de API la usa `/api/precios` para los precios
+# de Deseados; el secret de la aplicación OAuth, `/api/itad/token` para canjear el código al traer tu lista de
+# seguimiento. Su gemelo público es ITAD_CLIENT_ID, en `wrangler.toml`. En la app de ITAD, la casilla «This app will
+# NOT store OAuth secret securely» va DESMARCADA: el canje lo hace una Function y el secret nunca llega al navegador.
+# ITAD_API_KEY=
+# ITAD_CLIENT_SECRET=
