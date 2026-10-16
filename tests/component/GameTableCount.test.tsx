@@ -16,12 +16,8 @@ function renderTable(games: GameItem[], totalCount?: number) {
       games={games}
       totalCount={totalCount}
       currentTab="c"
-      expandedId={null}
-      onExpandedChange={vi.fn()}
+      onOpenGame={vi.fn()}
       onEdit={vi.fn()}
-      onDelete={vi.fn()}
-      onMigrate={vi.fn()}
-      tabActions={[]}
       onSort={vi.fn()}
       readOnly
     />,

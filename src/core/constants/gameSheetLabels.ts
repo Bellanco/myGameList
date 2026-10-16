@@ -41,10 +41,14 @@ export const GAME_SHEET_UI = {
   friendsCount: (count: number) => (count === 1 ? 'amistad' : 'amistades'),
   /** La sección de quienes lo tienen, y la de quienes lo quieren (sus deseos, aparte y sin nota). */
   friendsTitle: 'Tus amistades',
+  /** Solo junto al bloque de una amistad (F0.7): ahí ya no es evidente de quién son los datos (F0.14). */
+  yourData: 'Tus datos',
   wishersTitle: 'Lo quieren',
   /** Adelanto de su reseña, entre comillas latinas como el resto de citas de la app. */
   friendSnippet: (snippet: string) => `«${snippet}»`,
   friendOpenAria: (name: string) => `Ver el perfil de ${name}`,
+  /** Su reseña, en el bloque de la amistad desde cuyo perfil se abrió la ficha (F0.7). */
+  friendReviewAria: (name: string, game: string) => `Ver la reseña de ${name} de ${game}`,
   /** El mes en que lo terminó (`finishedOn`, `AAAA-MM`), tras su lista: «Completado · sept. 2025». */
   finishedOn: (yearMonth: string) => {
     const [year, month] = yearMonth.split('-').map(Number);
@@ -56,11 +60,12 @@ export const GAME_SHEET_UI = {
   /** El tiempo jugado, en las cifras de la cabecera: la cifra grande y la unidad pequeña («46 horas»). */
   hours: (hours: number) => String(hours).replace('.', ','),
   hoursUnit: (hours: number) => (hours === 1 ? 'hora' : 'horas'),
-  yearsAria: 'Años en los que se completó',
   saga: 'Saga',
   sagaOwn: (tab: TabId | null) => (tab ? `Tú: ${LIST_SHORT[tab]}` : 'No lo tienes'),
   sagaFriends: (count: number) => `${count} ${count === 1 ? 'amistad' : 'amistades'}`,
   sagaOpenAria: (name: string) => `Abrir la ficha de ${name}`,
+  /** El nombre de un juego que abre su ficha desde otra pantalla (una reseña, el feed). */
+  openSheetAria: (name: string) => `Abrir la ficha de ${name}`,
   platformsAria: 'Plataformas',
   genresAria: 'Géneros',
 } as const;

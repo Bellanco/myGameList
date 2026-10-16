@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { JUEGOS, sembrarAmistades, sembrarBiblioteca } from './seed';
+import { JUEGOS, JUEGO_AJENO, sembrarAmistades, sembrarBiblioteca } from './seed';
+import { gameSheetSlug } from '../../src/core/utils/gameSheetPath';
 
 // TUS AMISTADES EN LA FICHA DE UN JUEGO (F3 del plan de la ficha), sobre el build: salen de la copia del directorio
 // social que guarda el hub, sin sesión, sin red y sin cargar Firebase. Lo que se comprueba aquí es lo que jsdom no ve:
@@ -37,10 +38,10 @@ test.describe('la ficha de un juego · tus amistades', () => {
     await expect(ficha.locator('.gs-wanter')).toHaveText('Sara');
   });
 
-  test('tocar una amistad lleva a su perfil y la ficha se cierra', async ({ page }) => {
+  test('tocar una amistad lleva a su perfil con el juego abierto y su bloque arriba (F0.7)', async ({ page }) => {
     await page.getByRole('article', { name: 'Ver el perfil de Marta' }).click();
-    await expect(page).toHaveURL(/\/social\/profiles\/p-marta$/);
-    await expect(page.locator('dialog.gs-dialog[open]')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/social\/profiles\/p-marta\?juego=[^&]+&de=p-marta$/);
+    await expect(page.getByRole('dialog', { name: `Ficha de ${JUEGO}` })).toBeVisible();
   });
 });
 
@@ -61,5 +62,35 @@ test.describe('la ficha de un juego · el índice de las bibliotecas de tus amis
     await expect(ficha.getByRole('article', { name: 'Ver el perfil de Lucía' })).toBeVisible();
     await expect(ficha.locator('.gs-sec-amistades article')).toHaveCount(3);
     expect(aGitHub).toEqual([]);
+  });
+});
+
+// LA FICHA DESDE EL PERFIL DE UNA AMISTAD Y LA DE UN JUEGO QUE NO TIENES (F5): su bloque arriba, con sus datos, y en vez
+// de mover o borrar, añadirlo.
+test.describe('la ficha de un juego · desde el perfil de una amistad y sin tenerlo', () => {
+  test.beforeEach(async ({ page }) => {
+    await sembrarBiblioteca(page);
+    await page.goto('/completados');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Lista del completista');
+    await sembrarAmistades(page, JUEGO, { indice: true });
+  });
+
+  test('con `de=`, su bloque va arriba y tus datos llevan título', async ({ page }) => {
+    await page.goto(`/completados?juego=${gameSheetSlug(JUEGO)}&de=p-lucia`);
+    const ficha = page.getByRole('dialog', { name: `Ficha de ${JUEGO}` });
+    await expect(ficha.locator('.gs-sec-de-amistad strong').first()).toHaveText('Lucía');
+    await expect(ficha.getByText('Tus datos')).toBeVisible();
+    // Ella no se repite en la lista de abajo.
+    await expect(ficha.getByRole('article', { name: 'Ver el perfil de Lucía' })).toHaveCount(0);
+  });
+
+  test('un juego que no tienes: lo de tus amistades, y se añade a deseados sin cerrar la ficha', async ({ page }) => {
+    await page.goto(`/completados?juego=${gameSheetSlug(JUEGO_AJENO)}&de=p-lucia`);
+    const ficha = page.getByRole('dialog', { name: `Ficha de ${JUEGO_AJENO}` });
+    await expect(ficha.locator('.gs-sec-de-amistad')).toContainText('Un plataformas tierno');
+    await expect(ficha.getByRole('button', { name: /Eliminar/ })).toHaveCount(0);
+    await ficha.getByRole('button', { name: 'Añadir a deseados' }).click();
+    await expect(ficha.locator('.gs-head .gs-pill')).toHaveText('En tus deseos');
+    await expect(ficha.getByRole('button', { name: /Pasar a próximos/ })).toBeVisible();
   });
 });

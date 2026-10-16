@@ -426,26 +426,45 @@ Para que «quién lo tiene» incluya también a quien lo tiene sin reseñar ni h
   rango, bronce, inactivos, visibilidad, lo que falta y la memoria de la sesión), los del panel y el e2e
   `fichaAmistades.test.ts`, que comprueba sobre el build que dentro del plazo no sale ni una petición a GitHub.
 
-## Fase F5 · Puntos de entrada · S
+## Fase F5 · Puntos de entrada · S · ✅ hecha (16-10-2026)
 
-Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=<clave>`.
+Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=<clave>`.
 
-Cuando la fila del perfil de una amistad abra la ficha, se borra lo que la F2 dejó en pie: el detalle de `GameTable`
-(`expandedId`/`onExpandedChange`, la fila `detail`, `DETAIL_ROW_ESTIMATE_PX`, el bloque del mosaico y su marcado),
-sus estilos de fila desplegada (F0.8) y los textos de `UI_MESSAGES.detail` que ya no se usen, y se reescribe
-`GameTableColumns.test.tsx`.
-
-Y tocar una amistad en la ficha pasa a llevar a su perfil **con ese juego abierto** (F0.7): en la F3 lleva solo
-a su perfil (`GameSheetPanel`, `openFriend`).
-
-| Desde | Cambio |
+| Desde | Cómo quedó |
 |---|---|
-| Fila o caja de tus listas (`GameTable`) | Abre la ficha **en lugar del detalle** (F0.6, hecho en F2) |
-| Fila de las listas de una amistad (`SocialProfileDetailScreen.tsx:767`) | Abre la ficha con el bloque de esa persona arriba (F0.7) |
-| `ReviewDetailHead.tsx:102-105` | El chip del nombre pasa a ser un botón que abre la ficha |
-| Feed (`FeedMoveCard.tsx:74` y tarjetas de reseña) | El nombre del juego abre la ficha si no hay reseña. Si la hay, se mantiene la reseña |
-| Buscador (`searchSources.ts:22`) | Según F0.3 |
-| Saga, dentro de la ficha | Cada entrega, a su ficha (*replace*, F0.9) |
+| Fila o caja de tus listas (`GameTable`) | Abre la ficha (F0.6, en F2). El detalle desplegable ya no existe |
+| Fila de las listas de una amistad (`SocialProfileDetailScreen`) | Abre la ficha con `&de=<perfil>`: su bloque arriba (F0.7). En tu propio perfil, la ficha de siempre |
+| Chip del juego en una reseña (`ReviewDetailHead`) | Es un botón que abre la ficha, solo en el hub. La página pública y la ficha de la ruleta no lo ofrecen |
+| Aviso de lista del feed (`FeedMoveCard`) | El nombre de un juego sin reseña abre la ficha con el bloque de quien lo movió. Con reseña, sigue abriendo la reseña. Las tarjetas de reseña no cambian |
+| Buscador ⌘K (`searchSources`, `GlobalSearch`) | Un juego tuyo abre su ficha encima de donde estás, sin perder la pantalla ni sus filtros (F0.3). La dirección de respaldo es su lista con la ficha abierta |
+| Saga, dentro de la ficha | Cada entrega, a su ficha (*replace*, F0.9), conservando el `de=` |
+| Una amistad, dentro de la ficha | Su perfil **con el juego abierto** y su bloque arriba (F0.7) |
+
+- **La ficha de un juego que no tienes.** `App` monta el panel con cualquier `?juego=`, y el panel decide si hay algo que
+  enseñar: lo tuyo, lo de tus amistades o el bloque de `de=`. En vez de mover, editar y borrar, «Añadir a deseados» y
+  «Añadir a próximos» (`addGameToWishlist` / `addGameToProximos`, con las plataformas que se sepan). Al añadirlo, la
+  ficha pasa a ser la tuya sin cerrarse.
+- **El bloque de la amistad (F0.7).** `loadFriendGameEntry` (en el chunk perezoso del índice, fuera del precache): su
+  entrada de ese juego desde su biblioteca guardada (su perfil la acaba de bajar) o, si falta, una lectura
+  condicional; solo si es amistad y con su visibilidad. Lleva su nombre de título, su lista y cuándo lo terminó, sus
+  datos con el mismo marcado que los tuyos y su reseña, que lleva a la reseña entera en su perfil. Ella sale de la
+  lista de abajo. **Decisión tomada al verlo (16-10-2026):** junto a su bloque, tus datos llevan el título «Tus
+  datos»; sin bloque siguen sin él (F0.14), porque entonces sí se sabe de quién son.
+- **Las pantallas del hub no dependen del router:** reciben `openGameSheet` de `SocialHub` por props, y sin ella lo
+  pulsable se queda en texto (la maqueta, los tests).
+- **Borrado lo que la F2 dejó en pie:** el detalle de `GameTable` (`expandedId`/`onExpandedChange`, la fila
+  `detail`, `DETAIL_ROW_ESTIMATE_PX`, el detalle del mosaico y su marcado), las props que solo usaba él
+  (`onDelete`, `onMigrate`, `tabActions`, `visibility.showHours`), el estado `expandedId` del view-model, el
+  chevrón girado, la caja abierta del mosaico, las animaciones de cierre de esa fila (`_motion`, Persona, Portal) y
+  los textos `score`, `interest`, `hoursSuffix` y `reviewLink` de `UI_MESSAGES.detail`. **Se quedan** la fila
+  `detail-row` y su fondo, sus ajustes de móvil, su animación de entrada y el filo de Arcade (`.detail-row.open`):
+  los usa la bandeja de importados (`ImportInboxTable`), que el plan no tenía en cuenta en F0.8. **Medido:** el
+  crítico baja de 193,6 a 192,9 kB.
+- **Tests:** `GameTableColumns` comprueba la fila de cajas del mosaico en vez del detalle; `GameTableHours` se fue y
+  sus casos pasaron a la ficha, como el orden de los años; los de reseña del detalle se fueron y quedan los del
+  mosaico. Nuevos: el `de=` en `useGameSheetParam`, la ficha ajena y el bloque en `GameSheetPanel`,
+  `loadFriendGameEntry`, el chip de la reseña, el nombre del aviso del feed, el buscador y, sobre el build, el bloque,
+  añadir un juego ajeno y la auditoría de accesibilidad de la ficha ajena con bloque en los 16 temas y modos.
 
 ## Fase F6 · Maqueta, accesibilidad y e2e · S
 
@@ -915,9 +934,9 @@ Ninguna: todas cerradas el 15-10-2026. Lo que queda son datos.
     **buscar a mano lo que no se encontró**. Se queda como está, sin subir de prioridad.
 - **Medición P0:** si `caches.default` guarda y devuelve en las Pages Functions del dominio real. Si no, la caché de
   precios va solo en el cliente.
-- **En F3, mirando el código:** si el directorio cacheado (`peekCachedSocialDirectory`) trae la visibilidad y el
-  estado de amistad de cada perfil. Si no, la ficha solo enseña lo del canal social.
-- **Medir el arranque crítico** con `gameSheetPath` añadido (hoy, 187,7 de 190 kB), y comparar el modal
-  precacheado con el modal dentro del arranque.
+- ✅ **En F3, mirando el código:** el directorio cacheado trae la visibilidad de cada perfil, y quién es amistad lo
+  dice la huella de amistades (ver F3).
+- ✅ **Arranque crítico, medido:** 193,3 de 195 kB con la ficha (F2), 192,9 tras quitar el detalle de la tabla (F5).
+  El panel va precacheado y diferido, fuera del arranque; lo de tus amistades, fuera del precache (F4).
 - **El tope por usuario y hora de `/api/precios` y `/api/itad/token`** (el de respaldo, en memoria del aislado).
 

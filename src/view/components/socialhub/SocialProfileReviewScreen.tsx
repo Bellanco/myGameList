@@ -40,6 +40,7 @@ export function SocialProfileReviewScreen({
   related = null,
   likeBar = null,
   coversAllowed = false,
+  openGameSheet,
 }: {
   SOCIAL_UI: SocialUiLabels;
   review: ProfileReview | null;
@@ -72,6 +73,8 @@ export function SocialProfileReviewScreen({
   likeBar?: React.ReactNode;
   /** ¿Se puede pedir la carátula del juego para el fondo? Lo decide quien monta (ver `useReviewCover`). */
   coversAllowed?: CoverAccess;
+  /** Abrir la ficha del juego (F5 del plan de la ficha): la pasa `SocialHub`. Sin ella, el nombre no se pulsa. */
+  openGameSheet?: (name: string) => void;
 }) {
   const reviewDate = review ? new Date(review.ts || 0) : null;
   const hasValidDate = Boolean(review && review.ts > 0 && reviewDate && !Number.isNaN(reviewDate.getTime()));
@@ -79,6 +82,7 @@ export function SocialProfileReviewScreen({
   return (
     <ReviewScreen
       SOCIAL_UI={SOCIAL_UI}
+      openGameSheet={openGameSheet}
       title={SOCIAL_UI.feed.reviewDetailTitle}
       content={review ? {
         gameName: review.name,

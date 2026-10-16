@@ -8,13 +8,19 @@ import { statsReviewPath } from '../../src/core/utils/reviewPath';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 // Las señales de tus amistades salen de la copia del directorio social en IndexedDB (F3): aquí se dan hechas.
-const senales = vi.hoisted(() => ({ actuales: [] as GameSheetSignal[], indice: [] as GameSheetSignal[], faltan: 0 }));
+const senales = vi.hoisted(() => ({
+  actuales: [] as GameSheetSignal[],
+  indice: [] as GameSheetSignal[],
+  faltan: 0,
+  deAmistad: null as null | { friend: { id: string; name: string }; tab: 'c' | 'v' | 'e' | 'p' | 'd'; item: Record<string, unknown> },
+}));
 vi.mock('../../src/viewmodel/gameSheet/gameSheetFriendSignals', () => ({
   loadGameSheetFriendSignals: () => Promise.resolve(senales.actuales),
 }));
 // El índice de sus bibliotecas (F4) llega aparte, con su `import()`.
 vi.mock('../../src/viewmodel/gameSheet/friendLibraryIndex', () => ({
   loadFriendLibraryIndex: () => Promise.resolve({ signals: senales.indice, missing: senales.faltan }),
+  loadFriendGameEntry: () => Promise.resolve(senales.deAmistad),
 }));
 
 // LA FICHA DE UN JUEGO (F2 del plan de la ficha): el panel que sustituye al detalle de la fila. jsdom no maqueta,
@@ -55,6 +61,7 @@ function pintar(over: Partial<GameSheetPanelProps> = {}) {
     onDelete: vi.fn(),
     onMigrate: vi.fn(),
     reviewTarget: (_tab, game) => ({ to: statsReviewPath(game.id, game.name) }),
+    onAddGame: vi.fn(),
     ...over,
   };
   render(
@@ -91,6 +98,17 @@ describe('GameSheetPanel', () => {
     expect(screen.getByLabelText('Géneros')).toHaveTextContent('Metroidvania');
     expect(screen.getByLabelText('Años en los que se completó')).toHaveTextContent('2024');
     expect(screen.queryByText('Años en los que se completó')).toBeNull();
+  });
+
+  it('los años van del más reciente al más antiguo', () => {
+    pintar({ data: biblioteca({ c: [{ ...hollow, years: [2019, 2023, 2020] }] }) });
+    const anios = [...screen.getByLabelText('Años en los que se completó').querySelectorAll('.chip')].map((chip) => chip.textContent);
+    expect(anios).toEqual(['2023', '2020', '2019']);
+  });
+
+  it('con 0 horas no hay tiempo jugado: un 0 es la casilla sin rellenar', () => {
+    pintar({ data: biblioteca({ c: [{ ...hollow, hours: 0 }] }) });
+    expect(screen.queryByText('Tiempo jugado')).toBeNull();
   });
 
   it('el tiempo jugado sube a las cifras de la cabecera, a la izquierda de la nota', () => {
@@ -251,6 +269,7 @@ describe('GameSheetPanel · tus amistades (F3)', () => {
       onDelete: vi.fn(),
       onMigrate: vi.fn(),
       reviewTarget: (_tab, game) => ({ to: statsReviewPath(game.id, game.name) }),
+      onAddGame: vi.fn(),
     };
     render(
       <MemoryRouter initialEntries={['/completados?juego=hollow-knight']}>
@@ -338,6 +357,7 @@ describe('GameSheetPanel · la salida', () => {
     onDelete: vi.fn(),
     onMigrate: vi.fn(),
     reviewTarget: (_tab, game) => ({ to: statsReviewPath(game.id, game.name) }),
+    onAddGame: vi.fn(),
   };
 
   function abrirYCerrar() {
@@ -370,5 +390,86 @@ describe('GameSheetPanel · la salida', () => {
   it('con «reducir movimiento», se cierra en el acto', () => {
     const dialog = abrirYCerrar();
     expect(dialog.open).toBe(false);
+  });
+});
+
+// F5: LA FICHA SE ABRE DESDE MÁS SITIOS, también para juegos que no tienes, y desde el perfil de una amistad lleva su
+// bloque arriba (F0.7).
+describe('GameSheetPanel · juegos que no tienes y el bloque de una amistad (F5)', () => {
+  const marta = { id: 'p-marta', name: 'Marta' };
+
+  afterEach(() => {
+    senales.actuales = [];
+    senales.deAmistad = null;
+  });
+
+  function Donde() {
+    const { pathname, search } = useLocation();
+    return <span data-testid="donde">{pathname + search}</span>;
+  }
+
+  function pintarDe(over: Partial<GameSheetPanelProps>) {
+    const props: GameSheetPanelProps = {
+      open: true,
+      data: biblioteca(),
+      slug: 'celeste',
+      onClose: vi.fn(),
+      onOpenGame: vi.fn(),
+      tabActions: TAB_ACTIONS,
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onMigrate: vi.fn(),
+      reviewTarget: (_tab, game) => ({ to: statsReviewPath(game.id, game.name) }),
+      onAddGame: vi.fn(),
+      ...over,
+    };
+    render(
+      <MemoryRouter initialEntries={['/social']}>
+        <Routes>
+          <Route path="*" element={<><GameSheetPanel {...props} /><Donde /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    return props;
+  }
+
+  it('un juego que no tienes se abre con lo de tus amistades, y en vez de mover o borrar, se añade', async () => {
+    senales.actuales = [{ kind: 'review', friend: marta, gameName: 'Celeste', grade: 90, snippet: 'Precioso.', at: 1 }];
+    const props = pintarDe({});
+    await screen.findByRole('heading', { name: 'Celeste' });
+    expect(screen.queryByRole('button', { name: /Eliminar/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir a deseados' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir a próximos' }));
+    expect(props.onAddGame).toHaveBeenNthCalledWith(1, expect.objectContaining({ name: 'Celeste' }), 'd');
+    expect(props.onAddGame).toHaveBeenNthCalledWith(2, expect.objectContaining({ name: 'Celeste' }), 'p');
+  });
+
+  it('desde el perfil de una amistad, su bloque va arriba y ella no se repite en la lista de abajo', async () => {
+    senales.actuales = [
+      { kind: 'review', friend: marta, gameName: 'Celeste', grade: 90, snippet: 'Precioso.', at: 1 },
+      { kind: 'move', friend: { id: 'p-nacho', name: 'Nacho' }, gameName: 'Celeste', tab: 'e', at: 1 },
+    ];
+    senales.deAmistad = {
+      friend: marta,
+      tab: 'c',
+      item: { id: 33, _ts: 1, name: 'Celeste', platforms: ['Switch'], genres: ['Plataformas'], steamDeck: false, review: 'Precioso y difícil.', grade: 90, finishedOn: '2025-09' },
+    };
+    pintarDe({ friendId: 'p-marta' });
+    const bloque = await screen.findByText('Marta', { selector: '.gs-sec-de-amistad strong' });
+    const seccion = bloque.closest('.gs-sec-de-amistad') as HTMLElement;
+    expect(seccion).toHaveTextContent('Completado');
+    expect(seccion).toHaveTextContent('Switch');
+    expect(seccion.querySelector('.gs-snippet')).toHaveTextContent('«Precioso y difícil.»');
+    const lista = await screen.findByText('Tus amistades');
+    expect((lista.closest('.gs-sec-amistades') as HTMLElement).textContent).not.toContain('Marta');
+    fireEvent.click(screen.getByRole('article', { name: 'Ver la reseña de Marta de Celeste' }));
+    expect(screen.getByTestId('donde')).toHaveTextContent('/social/profiles/p-marta/game/33/review');
+  });
+
+  it('una amistad de tu lista lleva a su perfil con el juego abierto', async () => {
+    senales.actuales = [{ kind: 'review', friend: marta, gameName: 'Hollow Knight', grade: 90, snippet: 'x', at: 1 }];
+    pintarDe({ data: biblioteca({ c: [hollow] }), slug: 'hollow-knight' });
+    fireEvent.click(await screen.findByRole('article', { name: 'Ver el perfil de Marta' }));
+    expect(screen.getByTestId('donde')).toHaveTextContent('/social/profiles/p-marta?juego=hollow-knight&de=p-marta');
   });
 });

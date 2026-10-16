@@ -709,8 +709,7 @@
    borde dentado —el recorte de revista del que está hecha toda la interfaz del tema— y las dos mitades se
    separan un instante antes de desaparecer. Es el mismo gesto con el que el juego tacha lo que ya no está. ══ */
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-effects="on"][data-palette="persona"] tbody tr.main-row.is-leaving,
-  :root[data-effects="on"][data-palette="persona"] tbody tr.detail-row.is-leaving {
+  :root[data-effects="on"][data-palette="persona"] tbody tr.main-row.is-leaving {
     animation: p5-scissor-cut .3s cubic-bezier(.4, 0, .7, .2) forwards;
   }
 

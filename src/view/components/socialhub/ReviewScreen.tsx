@@ -63,6 +63,7 @@ export function ReviewScreen({
   footer = null,
   related = null,
   coversAllowed = false,
+  openGameSheet,
   screenLoading = false,
   bodyLoading = false,
   previewOnly = false,
@@ -89,6 +90,8 @@ export function ReviewScreen({
   related?: ReactNode;
   /** ¿Se puede pedir la carátula del juego para el fondo? Ver `useReviewCover`. */
   coversAllowed?: CoverAccess;
+  /** Abrir la ficha del juego (F5 del plan de la ficha): la pasa `SocialHub`. Sin ella, el nombre no se pulsa. */
+  openGameSheet?: (name: string) => void;
   /** La reseña entera viene de camino: se espera con su forma en vez de decir que no existe. */
   screenLoading?: boolean;
   /** El texto completo viene de camino, pero la cabecera ya se puede pintar. */
@@ -160,6 +163,8 @@ export function ReviewScreen({
             author={author}
             dateLabel={dateLabel}
             score={{ score: content.score, grade: content.grade }}
+            // El chip del juego abre su ficha encima de la reseña (F5 del plan de la ficha).
+            onOpenGame={openGameSheet ? () => openGameSheet(content.gameName) : undefined}
           />
           {bodyLoading ? (
             <DetailBodySkeleton />

@@ -47,6 +47,27 @@ describe('useGameSheetParam', () => {
     expect(result.current.location.search).toBe('');
   });
 
+  it('con una amistad, abre con su bloque (`&de=`); pasar a otra entrega lo conserva y cerrar lo quita (F0.7)', () => {
+    const { result } = montar('/social/profiles/p-marta');
+    act(() => result.current.param.openSheet('Hollow Knight', { friendId: 'p-marta' }));
+    expect(result.current.param.friendId).toBe('p-marta');
+    act(() => result.current.param.openSheet('Hollow Knight: Silksong'));
+    expect(result.current.param.slug).toBe('hollow-knight-silksong');
+    expect(result.current.param.friendId).toBe('p-marta');
+    act(() => result.current.param.openSheet('Hades', { friendId: '' }));
+    expect(result.current.param.friendId).toBe('');
+    act(() => result.current.param.closeSheet());
+    expect(result.current.location.pathname).toBe('/social/profiles/p-marta');
+    expect(result.current.location.search).toBe('');
+  });
+
+  it('con la URL ya puesta, cerrar quita también la amistad', () => {
+    const { result } = montar('/social/profiles/p-marta?juego=hades&de=p-marta');
+    expect(result.current.param.friendId).toBe('p-marta');
+    act(() => result.current.param.closeSheet());
+    expect(result.current.location.search).toBe('');
+  });
+
   it('abrir la misma ficha que ya está abierta no navega', () => {
     const { result } = montar('/completados');
     act(() => result.current.param.openSheet('Hades'));

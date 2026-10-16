@@ -16,12 +16,8 @@ function renderEmpty(props: Partial<Parameters<typeof GameTable>[0]> = {}) {
     <GameTable
       games={[]}
       currentTab="c"
-      expandedId={null}
-      onExpandedChange={vi.fn()}
+      onOpenGame={vi.fn()}
       onEdit={vi.fn()}
-      onDelete={vi.fn()}
-      onMigrate={vi.fn()}
-      tabActions={[]}
       {...props}
     />,
   );
@@ -56,12 +52,8 @@ describe('GameTable — estado vacío', () => {
       <GameTable
         games={[]}
         currentTab="c"
-        expandedId={null}
-        onExpandedChange={vi.fn()}
+        onOpenGame={vi.fn()}
         onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onMigrate={vi.fn()}
-        tabActions={[]}
         onAddGame={vi.fn()}
         onImportLibrary={vi.fn()}
         inboxCount={3}

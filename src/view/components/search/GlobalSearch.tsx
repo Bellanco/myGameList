@@ -20,6 +20,7 @@ import { runSearch, type SearchGroupKind, type SearchSource } from '../../../cor
 import type { TabData, TabId } from '../../../model/types/game';
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 import { useNativeDialog } from '../../modals/useNativeDialog';
+import { useGameSheetParam } from '../../../viewmodel/gameSheet/useGameSheetParam';
 import {
   gameSearchSources,
   loadSocialSearchSources,
@@ -160,7 +161,7 @@ function SearchDialog({ open, onClose, games, visibleTabs }: {
   );
 }
 
-type Option = { id: string; path?: string; more?: SearchGroupKind };
+type Option = { id: string; path?: string; gameSheet?: string; more?: SearchGroupKind };
 
 function SearchPanel({ onClose, games, visibleTabs }: {
   onClose: () => void;
@@ -168,6 +169,7 @@ function SearchPanel({ onClose, games, visibleTabs }: {
   visibleTabs: readonly TabId[];
 }) {
   const navigate = useNavigate();
+  const { openSheet } = useGameSheetParam();
   const baseId = useId();
   const listId = `${baseId}-list`;
   const [query, setQuery] = useState('');
@@ -206,7 +208,7 @@ function SearchPanel({ onClose, games, visibleTabs }: {
   // Las opciones en el orden en que se recorren con las flechas: los resultados y, al final de cada grupo recortado,
   // su «Ver más», que también es una opción para que se pueda alcanzar sin ratón.
   const options = useMemo<Option[]>(() => groups.flatMap((group) => [
-    ...group.results.map((result) => ({ id: `${baseId}-${result.id}`, path: result.path })),
+    ...group.results.map((result) => ({ id: `${baseId}-${result.id}`, path: result.path, gameSheet: result.gameSheet })),
     ...(group.total > group.results.length ? [{ id: `${baseId}-more-${group.kind}`, more: group.kind }] : []),
   ]), [groups, baseId]);
   const activeIndex = options.length ? Math.min(active, options.length - 1) : -1;
@@ -225,11 +227,17 @@ function SearchPanel({ onClose, games, visibleTabs }: {
       setExpanded((current) => new Set([...current, kind]));
       return;
     }
+    // Un juego tuyo abre su ficha encima de donde estás, sin perder la pantalla ni sus filtros (F0.3).
+    if (option.gameSheet) {
+      onClose();
+      openSheet(option.gameSheet);
+      return;
+    }
     if (option.path) {
       onClose();
       void navigate(option.path);
     }
-  }, [navigate, onClose]);
+  }, [navigate, onClose, openSheet]);
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -308,7 +316,7 @@ function SearchPanel({ onClose, games, visibleTabs }: {
                       // El foco se queda en la caja: el clic no se lo lleva.
                       onMouseDown={(event) => event.preventDefault()}
                       onMouseMove={() => setActive(options.findIndex((option) => option.id === optionId))}
-                      onClick={() => choose({ id: optionId, path: result.path })}
+                      onClick={() => choose({ id: optionId, path: result.path, gameSheet: result.gameSheet })}
                     >
                       <span className="search-option-title">{result.title}</span>
                       <span className="search-option-detail">{result.detail}</span>

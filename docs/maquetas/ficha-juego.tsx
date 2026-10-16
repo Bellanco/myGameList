@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactElement, type Ref, type RefObject } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
+import { GAME_SHEET_UI } from '../../src/core/constants/gameSheetLabels';
 import '../../src/styles/index.scss';
 import '../../src/styles/social.scss';
 import './ficha-juego.scss';
@@ -365,7 +366,7 @@ function TusDatos({ g, tab }: { g: GameItem; tab: TabId }) {
           {(tab === 'c' || tab === 'v') && (g.hours ?? 0) > 0 ? (
             <div className="detail-box">
               <span className="detail-label">{D.playtime}</span>
-              <div>{D.hoursSuffix(String(g.hours).replace('.', ','))}</div>
+              <div>{`${GAME_SHEET_UI.hours(g.hours ?? 0)} ${GAME_SHEET_UI.hoursUnit(g.hours ?? 0)}`}</div>
             </div>
           ) : null}
           {(tab === 'c' || tab === 'v' || tab === 'e') && g.strengths?.length ? (
@@ -414,7 +415,7 @@ function Analisis({ g }: { g: GameItem }) {
         <p className="hub-feed-review-text gs-review">{g.review}</p>
         <a className="btn btn-open" href="#resena" onClick={avisar('abre tu reseña en /stats/resenas')} aria-label={D.reviewLinkAria(g.name)}>
           <Icon name={COMMON_ICONS.arrowsToEye} />
-          <span>{D.reviewLink}</span>
+          <span>Ver análisis</span>
         </a>
       </div>
     </div>
@@ -750,14 +751,8 @@ function Pantalla(): ReactElement {
       <GameTable
         games={BIBLIOTECA[lista]}
         currentTab={lista}
-        expandedId={null}
-        onExpandedChange={(id) => {
-          if (id !== null) abrir(id);
-        }}
+        onOpenGame={(game) => abrir(game.id)}
         onEdit={avisar('abre el formulario (doble clic, como hoy)')}
-        onDelete={avisar('borra')}
-        onMigrate={avisar('mueve de lista')}
-        tabActions={TAB_ACTIONS[lista]}
       />
       <FichaModal id={abierto} onClose={cerrar} onOpen={abrir} />
     </>

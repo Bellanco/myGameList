@@ -111,6 +111,39 @@ describe('SocialDetailScreen — game/:id/review', () => {
     expect(onOpenProfileDetail).toHaveBeenCalledWith('p1');
   });
 
+  it('el chip del juego abre su ficha cuando el hub la ofrece (F5 del plan de la ficha); si no, es solo un rótulo', () => {
+    const openGameSheet = vi.fn();
+    const { unmount } = render(
+      <SocialDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        activeDetailEvent={baseEvent}
+        getGameItemById={() => null}
+        onOpenProfileDetail={vi.fn()}
+        onBack={vi.fn()}
+        status=""
+        statusKind=""
+        openGameSheet={openGameSheet}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir la ficha de The Witcher 3' }));
+    expect(openGameSheet).toHaveBeenCalledWith('The Witcher 3');
+    unmount();
+
+    render(
+      <SocialDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        activeDetailEvent={baseEvent}
+        getGameItemById={() => null}
+        onOpenProfileDetail={vi.fn()}
+        onBack={vi.fn()}
+        status=""
+        statusKind=""
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Abrir la ficha de The Witcher 3' })).toBeNull();
+    expect(screen.getByText('The Witcher 3', { selector: '.hub-feed-game-chip' })).toBeInTheDocument();
+  });
+
   // El bloque de relacionadas llega montado desde el hub (es quien tiene el directorio con el que relacionar), y
   // la pantalla solo decide DÓNDE va: al pie del análisis, fuera de su tarjeta. Que esté fuera importa —es
   // material de al lado, no parte de la reseña— y es lo que hace que no herede el «sin recorte» del detalle.

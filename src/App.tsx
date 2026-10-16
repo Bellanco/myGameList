@@ -343,7 +343,6 @@ export default function App() {
   const settingsGroup = matchSettingsGroup(location.pathname);
   const { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters } = useToolbarFilters();
   const {
-    setExpandedId,
     openNewGame,
     setFormModalOpen,
     saveDraft,
@@ -630,9 +629,8 @@ export default function App() {
 
   /* LA FICHA ABIERTA, que vive en `?juego=` (ver `useGameSheetParam`). Aquí solo se mira si hay algo que abrir: la
      ficha se monta dentro del chunk perezoso del panel, que es donde viajan `buildGameSheet` y la saga. */
-  const { slug: gameSheetSlugParam, openSheet, closeSheet } = useGameSheetParam();
+  const { slug: gameSheetSlugParam, friendId: gameSheetFriendId, openSheet, closeSheet } = useGameSheetParam();
   const gameSheetTab = useMemo(() => ownGameSheetTab(vm.data, gameSheetSlugParam), [vm.data, gameSheetSlugParam]);
-  const gameSheetOpen = gameSheetTab !== null;
   const openGameSheet = useCallback((game: GameItem) => openSheet(game.name), [openSheet]);
   const gameSheetReviewTarget = useCallback((tab: TabId, game: GameItem) => ({
     to: statsReviewPath(game.id, game.name),
@@ -763,7 +761,6 @@ export default function App() {
         navigate(TAB_ROUTE[tab]);
       });
     };
-    setExpandedId(null);
     if (desde === hasta || !coversPreference.get()) {
       navegar();
       return;
@@ -771,7 +768,7 @@ export default function App() {
     const forma = listShapePreference.get();
     const urls = caratulasDeArriba(getFilteredList(tab, filters), forma, forma === 'grid' ? 12 : 6, window.devicePixelRatio || 1);
     void precargarCaratulas(urls, PLAZO_PRECARGA_MS).then(navegar);
-  }, [currentTab, navigate, setExpandedId, getFilteredList, filters]);
+  }, [currentTab, navigate, getFilteredList, filters]);
 
   // Ruleta de listados: el juego elegido pasa a "En curso" y la ruleta deja paso a esa lista, que es donde el
   // usuario quiere acabar. El aviso del propio movimiento lo da el viewmodel.
@@ -803,7 +800,6 @@ export default function App() {
   }, [activeSection, currentTab]);
 
   const handleSectionChange = useCallback((section: AppSection) => {
-    setExpandedId(null);
     /* VOLVER A PULSAR LA PESTAÑA EN LA QUE ESTÁS SUBE AL PRINCIPIO, que es lo que hace cualquier barra inferior
        de móvil. Antes no hacía nada (o, en Listados, te cambiaba de lista). La tabla puede tener su propio scroll
        en algunos anchos, así que se sube también ella. */
@@ -838,7 +834,7 @@ export default function App() {
     }
 
     navigate('/ajustes');
-  }, [navigate, setExpandedId, activeSection]);
+  }, [navigate, activeSection]);
   // «¿A qué juego ahora?» vuelve a los listados igual que la barra inferior.
   const handlePickBack = useCallback(() => handleSectionChange('lists'), [handleSectionChange]);
 
@@ -1014,7 +1010,16 @@ export default function App() {
   const formModalMounted = useMountedOnceOpen(vm.formModalOpen);
   const confirmModalMounted = useMountedOnceOpen(!!vm.confirmState);
   const rouletteMounted = useMountedOnceOpen(rouletteOpen);
-  const gameSheetMounted = useMountedOnceOpen(gameSheetOpen);
+  /* LA FICHA SE MONTA CON CUALQUIER `?juego=`, no solo con los tuyos (F5): el feed, una reseña, el buscador o el perfil
+     de una amistad abren también juegos que no tienes. Qué hay que enseñar lo decide el panel, que es quien sabe lo de
+     tus amistades; `gameSheetTab` (si es tuyo, en qué lista) sigue mandando en cerrarla cuando lo borras o lo cambias
+     de lista. */
+  const gameSheetMounted = useMountedOnceOpen(Boolean(gameSheetSlugParam));
+  const { addGameToWishlist, addGameToProximos } = vm;
+  const addGameFromSheet = useCallback((game: Partial<GameItem>, tab: 'p' | 'd') => {
+    if (tab === 'd') addGameToWishlist(game);
+    else addGameToProximos(game);
+  }, [addGameToWishlist, addGameToProximos]);
 
   // Precarga en idle, ya pintada la pantalla: cuando el usuario abra un modal su módulo estará en caché y no
   // habrá que esperar a la red (el `fallback` de Suspense es `null`, así que una espera se vería como un clic
@@ -1187,18 +1192,13 @@ export default function App() {
         <GameTable
           games={list}
           currentTab={currentTab}
-          expandedId={vm.expandedId}
-          onExpandedChange={setExpandedId}
           onOpenGame={openGameSheet}
           onEdit={vm.openEditGame}
-          onDelete={vm.deleteGame}
-          onMigrate={vm.migrateGame}
           onAddGame={handleAddGame}
           listCap={currentTab === 'd' ? { total: vm.data.d.length, max: wishlistMax } : undefined}
           onImportLibrary={handleImportLibraryExporter}
           inboxCount={inboxCount}
           onOpenInbox={openInbox}
-          tabActions={vm.tabActions[currentTab]}
           sort={vm.sort[currentTab]}
           onSort={vm.sortBy}
           recentlyChangedId={recentlyChangedId}
@@ -1536,9 +1536,11 @@ export default function App() {
 
         {gameSheetMounted ? (
           <GameSheetPanel
-            open={gameSheetOpen}
+            open={Boolean(gameSheetSlugParam)}
             data={vm.data}
             slug={gameSheetSlugParam}
+            friendId={gameSheetFriendId}
+            onAddGame={addGameFromSheet}
             onClose={closeSheet}
             onOpenGame={openSheet}
             tabActions={vm.tabActions}

@@ -35,7 +35,7 @@ vi.mock('../../src/model/repository/foreignProfileRepository', () => ({
   },
 }));
 
-const { librarySignals, loadFriendLibraryIndex, planFriendIndex, resetFriendLibraryIndexForTests } = await import(
+const { librarySignals, loadFriendGameEntry, loadFriendLibraryIndex, planFriendIndex, resetFriendLibraryIndexForTests } = await import(
   '../../src/viewmodel/gameSheet/friendLibraryIndex'
 );
 
@@ -142,6 +142,43 @@ describe('loadFriendLibraryIndex', () => {
     expect(await loadFriendLibraryIndex()).toEqual({ signals: [], missing: 0 });
     repo.config = null;
     expect(await loadFriendLibraryIndex()).toEqual({ signals: [], missing: 0 });
+    expect(repo.leidas).toEqual([]);
+  });
+});
+
+// EL BLOQUE DE LA AMISTAD (F0.7): lo que tiene de ESE juego, con las mismas reglas que el índice.
+describe('loadFriendGameEntry', () => {
+  beforeEach(() => {
+    repo.config = { gistId: 'gist-social', token: 'tkn' };
+    repo.copia = {
+      entries: [yo, entrada('marta', { visibility: { ...visible, hiddenTabs: ['v'] } }), entrada('nadie')],
+      friendsKey: huella('marta'),
+    };
+    repo.guardadas = {};
+    repo.leidas = [];
+    repo.remotas = {};
+  });
+
+  it('con su biblioteca guardada, sin red: su entrada de ese juego, y sus listas ocultas no cuentan', async () => {
+    repo.guardadas['p-marta'] = {
+      games: biblioteca({ c: [juego(5, 'Celeste')], v: [juego(6, 'Hades')] }),
+      cachedAt: Date.now() - 100 * HORA,
+    };
+    const celeste = await loadFriendGameEntry('p-marta', 'celeste');
+    expect(celeste).toMatchObject({ friend: { id: 'p-marta', name: 'marta' }, tab: 'c', item: { name: 'Celeste' } });
+    expect(await loadFriendGameEntry('p-marta', 'hades')).toBeNull();
+    expect(repo.leidas).toEqual([]);
+  });
+
+  it('sin la guardada, la pide', async () => {
+    repo.remotas['p-marta'] = biblioteca({ p: [juego(7, 'Celeste')] });
+    expect(await loadFriendGameEntry('p-marta', 'celeste')).toMatchObject({ tab: 'p' });
+    expect(repo.leidas).toEqual(['p-marta']);
+  });
+
+  it('de quien no es amistad no se lee nada (regla 1)', async () => {
+    repo.remotas['p-nadie'] = biblioteca({ c: [juego(8, 'Celeste')] });
+    expect(await loadFriendGameEntry('p-nadie', 'celeste')).toBeNull();
     expect(repo.leidas).toEqual([]);
   });
 });

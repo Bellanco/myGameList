@@ -55,6 +55,7 @@ function renderFeed(
     openProfileAchievements?: (id: string) => void;
     openProfileSummary?: (id: string) => void;
     openMoveReview?: (profileId: string, gameId: number) => void;
+    openGameSheet?: (name: string, options?: { friendId?: string }) => void;
   } = {},
 ) {
   const groups: SocialFeedDayGroup[] = [{ dayHeader: '12 de agosto', dayDate: new Date(AT), items }];
@@ -79,6 +80,7 @@ function renderFeed(
       showMoreFeed={() => {}}
       openActivityDetail={over.openActivityDetail ?? (() => {})}
       openMoveReview={over.openMoveReview ?? (() => {})}
+      openGameSheet={over.openGameSheet}
       handleActivityItemKeyDown={() => {}}
       publishingPost={false}
       handlePublishPost={async () => true}
@@ -155,7 +157,15 @@ describe('renglón de movimiento de lista', () => {
     expect(openMoveReview).not.toHaveBeenCalledWith('uid-de-firebase', 7);
   });
 
-  it('sin análisis detrás, el nombre del juego no ofrece el gesto', () => {
+  it('sin análisis detrás, el nombre del juego abre su ficha, con el bloque de quien lo movió (F5 del plan de la ficha)', async () => {
+    const openGameSheet = vi.fn();
+    renderFeed([move({ tab: 'c' })], { openGameSheet });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir la ficha de Hollow Knight' }));
+    expect(openGameSheet).toHaveBeenCalledWith('Hollow Knight', { friendId: 'pid-2' });
+  });
+
+  it('sin análisis y sin ficha que abrir (la maqueta), el nombre se queda en texto', () => {
     renderFeed([move({ tab: 'c' })]);
 
     // Está, se lee, y no es un control: no hay botón con el nombre del juego.

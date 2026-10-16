@@ -31,6 +31,7 @@ import { SocialGateway } from './socialhub/SocialGateway';
 import { libraryStart } from '../../core/achievements/metrics';
 import { useHubFocusOnNavigate } from '../hooks/useHubFocusOnNavigate';
 import { useUnavailableReviewRedirect } from '../hooks/useUnavailableReviewRedirect';
+import { useGameSheetParam } from '../../viewmodel/gameSheet/useGameSheetParam';
 
 /**
  * Hub social - Fase 1.
@@ -73,6 +74,9 @@ const SocialHubInner = memo(function SocialHubInner({
   const vm = useSocialViewModel({ games });
   // Al cambiar de pantalla, el foco no se queda en el `body` (ver el hook).
   useHubFocusOnNavigate();
+  /* LA FICHA DE UN JUEGO, abierta encima del hub (F5 del plan de la ficha): desde un aviso del feed, el chip de una
+     reseña o las listas de un perfil. Se pasa a las pantallas por props, que así siguen sin depender del router. */
+  const { openSheet: openGameSheet } = useGameSheetParam();
   const {
     navigate, activePanel, socialCfgGistId, authUser, loading, showSocialSpace, hasMainSync, hasSocialGist,
     hasSocialSession, offline, serviceLimited, offlineHasCachedData, legalConsentRequired, savingConsent,
@@ -417,6 +421,7 @@ const SocialHubInner = memo(function SocialHubInner({
     if (activePanel === 'detail') {
       return (
         <SocialDetailScreen
+          openGameSheet={openGameSheet}
           SOCIAL_UI={SOCIAL_UI}
           activeDetailEvent={activeDetailEvent}
           getGameItemById={getGameItemById}
@@ -496,6 +501,7 @@ const SocialHubInner = memo(function SocialHubInner({
       return (
         <>
         <SocialProfileDetailScreen
+          openGameSheet={openGameSheet}
           SOCIAL_UI={SOCIAL_UI}
           activeProfileDetail={selectedProfileDetail}
           profileLoading={profileDetailLoading}
@@ -518,6 +524,7 @@ const SocialHubInner = memo(function SocialHubInner({
           onDeletePost={isOwnProfileDetail ? handleDeletePost : undefined}
           onOpenReview={openDetailReview}
           reviewLink={detailReviewLink}
+          profileId={detailId}
           status={status}
           statusKind={statusKind}
           onAddGame={onAddGame}
@@ -557,6 +564,7 @@ const SocialHubInner = memo(function SocialHubInner({
       const ownReviewText = String(ownReviewGame?.review || activeProfileReview?.review || '').trim();
       return (
         <SocialProfileReviewScreen
+          openGameSheet={openGameSheet}
           SOCIAL_UI={SOCIAL_UI}
           review={activeProfileReview}
           // Aquí SÍ hay firma que dar: se está leyendo la reseña de otra persona. Sin `onOpen` a propósito —ya se
@@ -647,6 +655,7 @@ const SocialHubInner = memo(function SocialHubInner({
     }
     return (
       <SocialFeedScreen
+        openGameSheet={openGameSheet}
         SOCIAL_UI={SOCIAL_UI}
         hasFriends={friendsList.length > 0}
         feedReadFailed={feedReadFailed}

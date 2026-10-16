@@ -17,6 +17,11 @@ export interface SearchResult {
   /** La segunda línea: en qué lista está, de quién es la reseña, qué es la pantalla. */
   detail: string;
   path: string;
+  /**
+   * Un juego tuyo: el nombre con el que se abre su ficha encima de la pantalla en la que estás (F0.3 del plan de la
+   * ficha). `path` queda de respaldo: su lista, con la ficha abierta.
+   */
+  gameSheet?: string;
 }
 
 export interface SearchGroup {
@@ -95,6 +100,7 @@ export function runSearch(
         title: source.title,
         detail: source.detail,
         path: source.path,
+        ...(source.gameSheet ? { gameSheet: source.gameSheet } : {}),
       })),
     });
   }

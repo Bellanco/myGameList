@@ -125,7 +125,7 @@ describe('GlobalSearch', () => {
     expect(dialog().open).toBe(false);
   });
 
-  it('encuentra sin acentos y lleva el juego a su lista filtrada', async () => {
+  it('encuentra sin acentos y abre la ficha del juego encima de donde estás (F0.3 del plan de la ficha)', async () => {
     renderSearch();
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
     fireEvent.change(input(), { target: { value: 'pokemon' } });
@@ -134,7 +134,7 @@ describe('GlobalSearch', () => {
     fireEvent.keyDown(input(), { key: 'Enter' });
 
     expect(dialog().open).toBe(false);
-    expect(screen.getByTestId('where')).toHaveTextContent('/en-curso?q=Pok%C3%A9mon%20Escarlata');
+    expect(screen.getByTestId('where')).toHaveTextContent('/completados?juego=pokemon-escarlata');
   });
 
   it('las flechas mueven la opción activa y el foco se queda en la caja', async () => {

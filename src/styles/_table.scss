@@ -80,9 +80,9 @@ tbody td { padding: .95rem 1rem; font-size: var(--fs-sm); vertical-align: middle
 tbody tr.detail-row { display: none; background: var(--detail-row-bg); border-top: 1px dashed var(--hair); }
 tbody tr.detail-row.open { display: table-row; }
 /* La celda del detalle NO lleva el relleno de una celda normal: su contenido (`.detail-content`) pone el suyo.
-   Estaba escrito como `style={{ padding: 0 }}` inline en las DOS tablas que tienen fila de detalle (el listado
-   principal y la bandeja de importados) porque el reset global `*` no puede con `tbody td`. Aquí una vez, donde
-   ya lo repiten los dos bloques responsive de `_overlays-and-responsive.scss`. */
+   Hoy solo tiene fila de detalle la bandeja de importados: el listado principal abre la ficha del juego (el
+   panel lateral) desde el 16-10-2026. El reset global `*` no puede con `tbody td`, por eso va aquí, y lo repiten
+   los dos bloques responsive de `_overlays-and-responsive.scss`. */
 tbody tr.detail-row td { padding: 0; }
 /* Destello al añadir/editar un juego: la fila recién guardada se resalta y se desvanece, confirmando
    dónde quedó (antes no había ningún feedback al guardar). */
@@ -284,7 +284,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 .row-toggle { align-items: center; }
 .row-toggle-body { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
 .row-name { min-width: 0; overflow-wrap: anywhere; }
-/* Chevron de desplegado sutil: solo en la lista colapsada (móvil/tablet). */
+/* Chevron sutil de «se abre»: solo en la lista colapsada (móvil/tablet). Abre la ficha del juego. */
 .row-chevron {
   display: none;
   flex: 0 0 auto; width: .42rem; height: .42rem;
@@ -295,7 +295,6 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
   opacity: .55;
   transition: transform .2s ease, opacity .2s ease;
 }
-.row-toggle[aria-expanded='true'] .row-chevron { transform: rotate(45deg); opacity: .85; }
 
 /* ── EL RENGLÓN, EN DOS PISOS ─────────────────────────────────────────────────────────────────────────────
    Un solo renglón para todos los anchos (antes había dos marcados distintos, el ancho y el meta compacto del
@@ -1268,7 +1267,6 @@ table.is-grid {
     transform: translateY(-2px);
   }
 }
-.game-card.is-open { border-color: var(--steam); box-shadow: var(--e2); }
 
 /* ── LAS COLUMNAS INVISIBLES (renglón en una pantalla con sitio) ───────────────────────────────────────────
    Aquí es donde la lista deja de parecer una hoja de cálculo SIN dejar de estar ordenada, que es el equilibrio
@@ -1331,8 +1329,7 @@ table.is-grid {
 }
 
 
-/* Despliegue del detalle: aparición suave (no altera la altura medida por el virtualizador,
-   solo opacidad y un leve desplazamiento, así no pelea con la medición de filas). */
+/* Despliegue del detalle de la bandeja de importados: aparición suave (solo opacidad y un leve desplazamiento). */
 tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out both; }
 @keyframes detailReveal {
   from { opacity: 0; transform: translateY(-4px); }

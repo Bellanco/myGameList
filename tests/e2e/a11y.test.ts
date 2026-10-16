@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { JUEGOS, sembrarAmistades, sembrarBiblioteca } from './seed';
+import { JUEGOS, JUEGO_AJENO, sembrarAmistades, sembrarBiblioteca } from './seed';
+import { gameSheetSlug } from '../../src/core/utils/gameSheetPath';
 import { PALETTES } from '../../src/core/constants/palettes';
 import { edicionAbierta, edicionPublicada, sirveFirestore } from './premiosFirestore';
 
@@ -118,6 +119,18 @@ async function fichaConAmistades(page: Page): Promise<void> {
   await sembrarAmistades(page, JUEGOS[0].name);
   await page.locator('button[aria-haspopup="dialog"]', { hasText: JUEGOS[0].name }).first().click();
   await expect(page.getByRole('dialog', { name: `Ficha de ${JUEGOS[0].name}` }).getByText('Tus amistades', { exact: true })).toBeVisible();
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/**
+ * La ficha de un juego que NO tienes, abierta desde el perfil de una amistad (F5): su bloque arriba (sus chips, su
+ * reseña con la nota) y la barra de añadir a deseados o a próximos en vez de la de mover y borrar.
+ */
+async function fichaAjenaConBloque(page: Page): Promise<void> {
+  await listaPintada(page);
+  await sembrarAmistades(page, JUEGOS[0].name, { indice: true });
+  await page.goto(`/completados?juego=${gameSheetSlug(JUEGO_AJENO)}&de=p-lucia`);
+  await expect(page.getByRole('dialog', { name: `Ficha de ${JUEGO_AJENO}` }).locator('.gs-sec-de-amistad')).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -393,6 +406,7 @@ const PANTALLAS: ReadonlyArray<{ nombre: string; amplia: boolean; deseos?: boole
   { nombre: 'lista', amplia: false, abrir: listaPintada },
   { nombre: 'ficha', amplia: false, abrir: fichaAbierta },
   { nombre: 'ficha con amistades', amplia: false, abrir: fichaConAmistades },
+  { nombre: 'ficha ajena con bloque', amplia: false, abrir: fichaAjenaConBloque },
   { nombre: 'panel', amplia: true, deseos: true, abrir: panelDeEstadisticas },
   { nombre: 'ajustes', amplia: false, abrir: pantallaDeAjustes },
   { nombre: 'menú de ajustes', amplia: false, abrir: menuDeAjustesAbierto },

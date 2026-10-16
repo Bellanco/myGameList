@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { GAME_SHEET_PARAM, gameSheetSlug } from '../../core/utils/gameSheetPath';
+import { GAME_SHEET_FRIEND_PARAM, GAME_SHEET_PARAM, gameSheetSlug } from '../../core/utils/gameSheetPath';
 
 /**
  * La marca que deja en el `state` de la navegación la entrada que abrió la ficha. Sirve para dos cosas:
@@ -20,7 +20,13 @@ function estadoDe(state: unknown): EstadoConFicha {
 export interface GameSheetParam {
   /** La clave de la ficha abierta (`?juego=`), o `''` si no hay ninguna. */
   slug: string;
-  openSheet: (name: string) => void;
+  /** La amistad desde cuyo perfil se abrió (`?de=`), o `''`. */
+  friendId: string;
+  /**
+   * Abre la ficha de ese juego. `friendId` pone (o, con `''`, quita) la amistad cuyo bloque va arriba; sin él, se
+   * conserva la que hubiera: pasar a otra entrega de la saga desde el perfil de alguien sigue siendo en su perfil.
+   */
+  openSheet: (name: string, options?: { friendId?: string }) => void;
   closeSheet: () => void;
 }
 
@@ -37,15 +43,21 @@ export interface GameSheetParam {
 export function useGameSheetParam(): GameSheetParam {
   const location = useLocation();
   const navigate = useNavigate();
-  const slug = useMemo(() => new URLSearchParams(location.search).get(GAME_SHEET_PARAM) || '', [location.search]);
+  const { slug, friendId } = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return { slug: params.get(GAME_SHEET_PARAM) || '', friendId: params.get(GAME_SHEET_FRIEND_PARAM) || '' };
+  }, [location.search]);
 
-  const openSheet = useCallback((name: string) => {
+  const openSheet = useCallback((name: string, options?: { friendId?: string }) => {
     const destino = gameSheetSlug(name);
     if (!destino) return;
     const params = new URLSearchParams(location.search);
     const yaAbierta = Boolean(params.get(GAME_SHEET_PARAM));
-    if (params.get(GAME_SHEET_PARAM) === destino) return;
+    const amistad = options?.friendId ?? params.get(GAME_SHEET_FRIEND_PARAM) ?? '';
+    if (params.get(GAME_SHEET_PARAM) === destino && (params.get(GAME_SHEET_FRIEND_PARAM) || '') === amistad) return;
     params.set(GAME_SHEET_PARAM, destino);
+    if (amistad) params.set(GAME_SHEET_FRIEND_PARAM, amistad);
+    else params.delete(GAME_SHEET_FRIEND_PARAM);
     const estado = estadoDe(location.state);
     void navigate(
       { pathname: location.pathname, search: `?${params.toString()}`, hash: location.hash },
@@ -65,6 +77,7 @@ export function useGameSheetParam(): GameSheetParam {
       return;
     }
     params.delete(GAME_SHEET_PARAM);
+    params.delete(GAME_SHEET_FRIEND_PARAM);
     const search = params.toString();
     const { [GAME_SHEET_STATE]: _marca, ...resto } = estado;
     void navigate(
@@ -73,5 +86,5 @@ export function useGameSheetParam(): GameSheetParam {
     );
   }, [location.hash, location.pathname, location.search, location.state, navigate]);
 
-  return { slug, openSheet, closeSheet };
+  return { slug, friendId, openSheet, closeSheet };
 }

@@ -18,7 +18,8 @@ import type { GameSheetFriendRef, GameSheetSignal } from '../../core/gameSheet/b
 import { friendUidsFromDirectoryKey } from '../../core/social/directoryFriendsKey';
 import { PROFILE_TIER_FRIEND_INDEX_TTL_MS, normalizeTier } from '../../core/constants/tiers';
 import { LOCKED_VISIBILITY, applyProfileVisibility } from '../../core/utils/profileVisibility';
-import { TAB_IDS, type TabData } from '../../model/types/game';
+import { entriesForGame } from '../../core/gameSheet/buildGameSheet';
+import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
 import type { SocialProfileVisibility } from '../../model/types/social';
 import { ensureSyncConfigLoaded, getSocialSyncConfig } from '../../model/repository/gistConfigRepository';
 import { loadForeignProfileGames } from '../../model/repository/foreignProfileRepository';
@@ -159,6 +160,49 @@ export async function loadFriendLibraryIndex(): Promise<FriendLibraryIndex> {
     return indice;
   } catch {
     return SIN_INDICE;
+  }
+}
+
+/** Lo de una amistad sobre un juego, para el bloque de arriba de la ficha (F0.7). */
+export interface FriendGameEntry {
+  friend: GameSheetFriendRef;
+  tab: TabId;
+  item: GameItem & { finishedOn?: string };
+}
+
+/**
+ * LO QUE UNA AMISTAD TIENE DE ESE JUEGO, para la ficha abierta desde su perfil (`?de=`, F0.7): su entrada, filtrada
+ * por su visibilidad. Sale de su biblioteca guardada (`profileCache`), que su perfil acaba de bajar; si no está, se
+ * pide (condicional, y sin red sirve la caducada). Con las mismas reglas que el índice: solo si es amistad, con su
+ * visibilidad o, si no se conoce, todo oculto. Y sin plazo de rango: lo pide quien mira su perfil, no un recorrido de
+ * fondo. `null` si no lo tiene, no se ve o no se puede leer.
+ */
+export async function loadFriendGameEntry(profileId: string, slug: string): Promise<FriendGameEntry | null> {
+  try {
+    const gistId = getSocialSyncConfig()?.gistId || '';
+    if (!gistId || !profileId || !slug) return null;
+    const cached = await peekCachedSocialDirectory<IndexDirectoryEntry>(gistId);
+    const friendUids = friendUidsFromDirectoryKey(cached?.friendsKey);
+    const entry = cached?.entries.find((item) => item.id === profileId);
+    if (!entry || !friendUids?.has(String(entry.uid || entry.id)) || !entry.gamesGistId) return null;
+    const name = String(entry.displayName || '').trim();
+    if (!name) return null;
+    const amistad: IndexedFriend = {
+      friend: { id: entry.id, name, ...(entry.photoURL ? { photoURL: entry.photoURL } : {}) },
+      gamesGistId: entry.gamesGistId,
+      visibility: entry.visibility && !entry.socialUnreadable ? entry.visibility : LOCKED_VISIBILITY,
+    };
+    const guardada = await getCachedProfileGamesEntry(profileId, entry.gamesGistId);
+    let games = guardada?.games ?? null;
+    if (!games) {
+      await ensureSyncConfigLoaded().catch(() => {});
+      games = await loadForeignProfileGames({ profileId, gamesGistId: entry.gamesGistId, token: getSocialSyncConfig()?.token || null });
+    }
+    if (!games) return null;
+    const [primera] = entriesForGame(applyProfileVisibility(games, amistad.visibility, false), slug);
+    return primera ? { friend: amistad.friend, tab: primera.tab, item: primera.item } : null;
+  } catch {
+    return null;
   }
 }
 

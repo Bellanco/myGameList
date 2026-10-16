@@ -30,12 +30,8 @@ function renderSortable(tab: TabId, onSort: (tab: TabId, column: string) => void
     <GameTable
       games={[makeGame(1), makeGame(2)]}
       currentTab={tab}
-      expandedId={null}
-      onExpandedChange={vi.fn()}
+      onOpenGame={vi.fn()}
       onEdit={vi.fn()}
-      onDelete={vi.fn()}
-      onMigrate={vi.fn()}
-      tabActions={[]}
       onSort={onSort}
     />,
   );

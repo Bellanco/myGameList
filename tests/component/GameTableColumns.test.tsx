@@ -41,27 +41,19 @@ function renderGames(tab: TabId, games: GameItem[]) {
     <GameTable
       games={games}
       currentTab={tab}
-      expandedId={null}
-      onExpandedChange={vi.fn()}
+      onOpenGame={vi.fn()}
       onEdit={vi.fn()}
-      onDelete={vi.fn()}
-      onMigrate={vi.fn()}
-      tabActions={[]}
     />,
   );
 }
 
-function renderTable(tab: TabId, total: number, expandedId: number | null = null) {
+function renderTable(tab: TabId, total: number) {
   return render(
     <GameTable
       games={Array.from({ length: total }, (_unused, index) => makeGame(index + 1))}
       currentTab={tab}
-      expandedId={expandedId}
-      onExpandedChange={vi.fn()}
+      onOpenGame={vi.fn()}
       onEdit={vi.fn()}
-      onDelete={vi.fn()}
-      onMigrate={vi.fn()}
-      tabActions={[]}
     />,
   );
 }
@@ -138,18 +130,24 @@ describe('GameTable — una sola columna', () => {
     expect(rangos[1].textContent).not.toBe('');
   });
 
-  // LAS FILAS A LO ANCHO —el detalle desplegado, las filas de tarjetas y los espaciadores del virtualizador—
-  // ya no necesitan `colSpan`: con una sola columna, una celda ocupa la tabla entera por definición. Lo que se
-  // comprueba es que nadie haya vuelto a meter columnas por la puerta de atrás, porque ahí volvería el reparto
-  // a partes iguales que dejaba el nombre en un carácter por línea.
-  // Se comprueba sobre el detalle porque el espaciador no llega a pintarse en jsdom: sin maquetación el
-  // virtualizador no devuelve filas y entra su red de seguridad, que pinta la tabla entera.
-  it.each<TabId>(['c', 'v', 'e', 'p'])('el detalle desplegado es una celda más, como todas (pestaña %s)', (tab) => {
-    const { container } = renderTable(tab, 3, 1);
-    const detalle = container.querySelector<HTMLTableCellElement>('tr.detail-row td');
-
-    expect(detalle).not.toBeNull();
-    expect(container.querySelectorAll('tr.detail-row td').length).toBe(1);
-    expect(detalle?.colSpan).toBe(1);
+  // LAS FILAS A LO ANCHO —las filas de cajas del mosaico y los espaciadores del virtualizador— ya no necesitan
+  // `colSpan`: con una sola columna, una celda ocupa la tabla entera por definición. Lo que se comprueba es que nadie
+  // haya vuelto a meter columnas por la puerta de atrás, porque ahí volvería el reparto a partes iguales que dejaba
+  // el nombre en un carácter por línea. Se comprueba sobre una fila del mosaico porque el espaciador no llega a
+  // pintarse en jsdom: sin maquetación el virtualizador no devuelve filas y entra su red de seguridad.
+  it.each<TabId>(['c', 'v', 'e', 'p'])('la fila de cajas del mosaico es una celda más, como todas (pestaña %s)', (tab) => {
+    localStorage.setItem('mis-listas-list-shape', 'grid');
+    try {
+      const { container } = renderTable(tab, 3);
+      const filas = Array.from(container.querySelectorAll('tr.grid-row'));
+      expect(filas.length).toBeGreaterThan(0);
+      for (const fila of filas) {
+        const celdas = fila.querySelectorAll<HTMLTableCellElement>('td');
+        expect(celdas.length).toBe(1);
+        expect(celdas[0].colSpan).toBe(1);
+      }
+    } finally {
+      localStorage.removeItem('mis-listas-list-shape');
+    }
   });
 });

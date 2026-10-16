@@ -751,8 +751,7 @@
   :root[data-effects="on"][data-palette="portal"] tbody tr.main-row.is-entering {
     animation: portal-row-in .34s cubic-bezier(.2, .9, .3, 1);
   }
-  :root[data-effects="on"][data-palette="portal"] tbody tr.main-row.is-leaving,
-  :root[data-effects="on"][data-palette="portal"] tbody tr.detail-row.is-leaving {
+  :root[data-effects="on"][data-palette="portal"] tbody tr.main-row.is-leaving {
     animation: portal-row-out .3s ease-in forwards;
   }
 

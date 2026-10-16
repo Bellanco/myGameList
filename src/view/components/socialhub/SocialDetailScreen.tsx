@@ -38,6 +38,7 @@ export function SocialDetailScreen({
   likeBar = null,
   backLabel,
   coversAllowed = false,
+  openGameSheet,
 }: {
   SOCIAL_UI: SocialUiLabels;
   /**
@@ -69,6 +70,8 @@ export function SocialDetailScreen({
   backLabel?: string;
   /** ¿Se puede pedir la carátula del juego para el fondo? Ver `useReviewCover`. */
   coversAllowed?: CoverAccess;
+  /** Abrir la ficha del juego (F5 del plan de la ficha): la pasa `SocialHub`. Sin ella, el nombre no se pulsa. */
+  openGameSheet?: (name: string) => void;
 }) {
   const gameItem = activeDetailEvent ? getGameItemById(activeDetailEvent.profileId, activeDetailEvent.gameId) : null;
   // Reseña COMPLETA para juegos propios (gameItem.review); para eventos ajenos cae al snippet (≤160) del evento.
@@ -94,6 +97,7 @@ export function SocialDetailScreen({
   return (
     <ReviewScreen
       SOCIAL_UI={SOCIAL_UI}
+      openGameSheet={openGameSheet}
       title={SOCIAL_UI.feed.detailTitle}
       content={activeDetailEvent ? {
         gameName: activeDetailEvent.gameName,

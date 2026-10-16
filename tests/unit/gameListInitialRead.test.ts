@@ -59,7 +59,7 @@ describe('lectura del estado de arranque', () => {
 
     // Y tampoco tras un cambio de estado real (que es lo que de verdad re-renderiza en la app).
     await act(async () => {
-      result.current.setExpandedId(1);
+      result.current.sortBy('c', 'name');
     });
 
     expect(loadLocalState).toHaveBeenCalledTimes(afterMount);

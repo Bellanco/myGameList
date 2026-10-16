@@ -18,7 +18,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 - **La ficha te dice qué han hecho tus amistades con el juego.** Si tienes espacio social, verás quién lo tiene y en
   qué lista, cuándo lo terminó, su nota y el comienzo de su reseña, la media de sus notas y quién lo quiere. Pueden
-  salir también quienes lo tienen aunque no lo hayan reseñado. Toca a una persona para ir a su perfil.
+  salir también quienes lo tienen aunque no lo hayan reseñado. Toca a una persona para ir a su perfil, que se abre
+  con el juego a la vista.
+
+- **La ficha se abre desde más sitios.** Desde el buscador (⌘K), sin salir de donde estás; desde el nombre de un
+  juego en el chip de una reseña o en un aviso de lista del feed; y desde las listas de una amistad, con lo suyo
+  arriba: su lista, sus datos y su reseña. También se abre la de un juego que no tienes, y puedes añadirlo a deseados
+  o a próximos desde ella. El detalle que se desplegaba bajo cada juego ya no existe.
 
 - **«No puedes pasar» estrena colores.** De noche, el fondo es el verde hondo del bosque de Lórien, la hoja es más
   luminosa y el oro más vivo, y la pestaña activa y las letras de los títulos van en plata. De día, el pergamino

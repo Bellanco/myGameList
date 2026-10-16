@@ -386,6 +386,9 @@ export async function sembrarBiblioteca(page: Page, options: SeedOptions = {}): 
 /** Las amistades que siembra `sembrarAmistades`: una con reseña, otra que lo empezó y otra que lo quiere. */
 export const AMISTADES_DE_LA_FICHA = ['Marta', 'Nacho', 'Sara'] as const;
 
+/** Un juego que solo está en la biblioteca de Lucía (con `indice`): para la ficha de un juego que no tienes (F5). */
+export const JUEGO_AJENO = 'Nube Errante';
+
 /**
  * AMISTADES PARA LA FICHA DE UN JUEGO (F3 del plan de la ficha), sin sesión ni red: un espacio social en este
  * navegador y la copia del directorio que dejaría el hub, con tres amistades que tienen `juego` (una lo reseñó, otra
@@ -419,12 +422,17 @@ export async function sembrarAmistades(page: Page, juego: string, opciones: { in
       entries.push(entrada('yo', 'Yo', { id: 'p-yo', tier: 'silver' }));
       entries.push(entrada('lucia', 'Lucía', { gamesGistId: 'gist-lucia' }));
       const juegoDeLucia = { id: 1, _ts: 1, name: nombre, platforms: ['PC'], genres: [], steamDeck: false, review: '', grade: 80 };
+      // Y uno que tú no tienes, con su reseña: es el de la ficha de un juego ajeno, con su bloque arriba (F5).
+      const ajeno = {
+        id: 2, _ts: 1, name: 'Nube Errante', platforms: ['Switch'], genres: ['Plataformas'], steamDeck: false, grade: 90,
+        review: 'Un plataformas tierno y exigente, de los que se recuerdan.', strengths: ['Música'], replayable: true,
+      };
       bibliotecas.push({
         profileId: 'p-lucia',
         gamesGistId: 'gist-lucia',
         cachedAt: ahora,
         etag: null,
-        games: { c: [juegoDeLucia], v: [], e: [], p: [], d: [], deleted: [], updatedAt: ahora },
+        games: { c: [juegoDeLucia, ajeno], v: [], e: [], p: [], d: [], deleted: [], updatedAt: ahora },
       });
     }
     const friendsKey = ['p-yo', 'marta:g:g:1', 'nacho:g:g:1', 'sara:g:g:1', ...(conIndice ? ['lucia:g:g:1'] : [])].join('|');

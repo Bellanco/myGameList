@@ -12,14 +12,20 @@ import { TAB_IDS, type TabData, type TabId } from '../../model/types/game';
 import { getSocialSyncConfig } from '../../model/repository/gistConfigRepository';
 import { getLocalMeta, peekCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
 import { SOCIAL_ROUTES } from '../social/socialRoutes';
+import { gameSheetSearch } from '../../core/utils/gameSheetPath';
 
-/** Tus juegos: cada uno lleva a su lista con el filtro de texto puesto (decisión del usuario, 13-10-2026). */
+/**
+ * Tus juegos: cada uno abre su ficha encima de la pantalla en la que estás (F0.3 del plan de la ficha, 15-10-2026).
+ * Antes llevaba a su lista con el filtro de texto puesto (13-10-2026); `path` es ahora el respaldo: su lista, con la
+ * ficha abierta.
+ */
 export function gameSearchSources(data: TabData, visibleTabs: readonly TabId[]): SearchSource[] {
   return visibleTabs.flatMap((tab) => (data[tab] ?? []).map((game) => ({
     id: `game:${tab}:${game.id}`,
     title: game.name,
     detail: TAB_TOOLTIPS[tab],
-    path: `${TAB_ROUTE[tab]}?q=${encodeURIComponent(game.name)}`,
+    path: `${TAB_ROUTE[tab]}${gameSheetSearch(game.name)}`,
+    gameSheet: game.name,
   })));
 }
 

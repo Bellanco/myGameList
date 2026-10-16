@@ -23,11 +23,12 @@ const DATA = {
 } as unknown as TabData;
 
 describe('gameSearchSources', () => {
-  it('cada juego lleva a su lista con el filtro de texto puesto', () => {
+  it('cada juego abre su ficha; de respaldo, su lista con la ficha abierta', () => {
     const sources = gameSearchSources(DATA, ['c', 'v', 'e', 'p', 'd']);
     expect(sources.find((source) => source.title === 'Pokémon Escarlata')).toMatchObject({
       detail: 'En curso',
-      path: '/en-curso?q=Pok%C3%A9mon%20Escarlata',
+      path: '/en-curso?juego=pokemon-escarlata',
+      gameSheet: 'Pokémon Escarlata',
     });
   });
 

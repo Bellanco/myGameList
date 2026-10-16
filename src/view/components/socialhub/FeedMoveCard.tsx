@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
+import { GAME_SHEET_UI } from '../../../core/constants/gameSheetLabels';
 import type { SocialMoveFeedGroup, SocialMoveGroupGame } from '../../../viewmodel/social/socialFeed';
 
 interface FeedMoveCardProps {
@@ -8,6 +9,11 @@ interface FeedMoveCardProps {
   ownershipClass: string;
   openProfileDetail: (id: string) => void;
   openMoveReview: (actorProfileId: string, gameId: number) => void;
+  /**
+   * Abrir la ficha de un juego sin reseña (F5 del plan de la ficha), con el bloque de quien lo movió arriba. Sin ella
+   * —la maqueta, una pantalla sin ficha—, el nombre se queda en texto, como antes.
+   */
+  openGameSheet?: (gameName: string, profileId: string) => void;
 }
 
 /**
@@ -31,7 +37,7 @@ export const MOVE_GROUP_VISIBLE = 5;
  * SIN HORA desde el 07-10-2026: el día ya lo dice la cabecera del grupo, y la hora era el dato que menos contaba
  * de un aviso que debe pesar poco.
  */
-export function FeedMoveCard({ entry, SOCIAL_UI, ownershipClass, openProfileDetail, openMoveReview }: FeedMoveCardProps) {
+export function FeedMoveCard({ entry, SOCIAL_UI, ownershipClass, openProfileDetail, openMoveReview, openGameSheet }: FeedMoveCardProps) {
   const [expanded, setExpanded] = useState(false);
   const restId = useId();
   const nombreAutor = entry.profileDisplayName || SOCIAL_UI.requests.unknownUser;
@@ -72,6 +78,16 @@ export function FeedMoveCard({ entry, SOCIAL_UI, ownershipClass, openProfileDeta
         // El actor de la RESEÑA, no el id de la entrada del directorio: el detalle resuelve por `actorProfileId` y
         // con el otro id no encontraba nada.
         onClick={() => openMoveReview(game.reviewActorId as string, game.gameId)}
+      >
+        {game.gameName}
+      </button>
+    ) : openGameSheet ? (
+      // Sin reseña que leer, el nombre abre la ficha del juego: dónde lo tienes tú y dónde tus amistades.
+      <button
+        className="hub-feed-move-game"
+        type="button"
+        aria-label={GAME_SHEET_UI.openSheetAria(game.gameName)}
+        onClick={() => openGameSheet(game.gameName, entry.profileId)}
       >
         {game.gameName}
       </button>

@@ -174,7 +174,6 @@ export function useGameListViewModel(wishlistMax: number = WISHLIST_MAX_GAMES) {
   const dataRef = useRef(data);
   dataRef.current = data;
   const [sort, setSort] = useState<Record<TabId, TabSort>>(DEFAULT_SORT);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [notice, setNotice] = useState<StatusNotice | null>(null);
   const [formModalOpen, setFormModalOpen] = useState(false);
   // `subjectId` es OPCIONAL y solo lo rellena quien borra una fila del listado: es lo que le permite a la vista
@@ -643,7 +642,6 @@ export function useGameListViewModel(wishlistMax: number = WISHLIST_MAX_GAMES) {
             updatedAt: Date.now(),
           };
           persist(nextData);
-          setExpandedId(null);
           notify('ok', UI_MESSAGES.games.deleted);
           // Su reseña sale también del canal social, como al vaciarla en el formulario. Antes solo la retiraba la
           // reconciliación al abrir el hub, así que tus amistades la seguían viendo hasta que entraras. En tu propio
@@ -805,8 +803,6 @@ export function useGameListViewModel(wishlistMax: number = WISHLIST_MAX_GAMES) {
     meta,
     setMeta,
     sort,
-    expandedId,
-    setExpandedId,
     notice,
     setNotice,
     formModalOpen,

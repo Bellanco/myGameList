@@ -432,17 +432,12 @@ export const UI_MESSAGES = {
     genres: 'Géneros',
     yearsCompleted: 'Años en los que se completó',
     playtime: 'Tiempo jugado',
-    hoursSuffix: (hours: string) => `${hours} horas`,
     strengths: 'Puntos fuertes',
     weaknesses: 'Puntos débiles',
-    score: 'Puntuación',
-    interest: 'Interés',
     replayability: 'Rejugabilidad',
     retry: 'Dar otra oportunidad',
     review: 'Análisis',
-    /* El análisis ya no se vuelca en el detalle: se va a leer a su pantalla. El texto dice a DÓNDE lleva, no
-       qué hay dentro, porque quien lo pulsa ya sabe que escribió uno. */
-    reviewLink: 'Ver análisis',
+    /* El análisis se lee entero en su pantalla: el nombre accesible del acceso dice a DÓNDE lleva. */
     reviewLinkAria: (name: string) => `Ver análisis de ${name}`,
   },
 } as const;

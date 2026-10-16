@@ -1,13 +1,16 @@
-import { Suspense, forwardRef, lazy, useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
+import { Suspense, forwardRef, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 import { GAME_SHEET_UI } from '../../../core/constants/gameSheetLabels';
 import { COMMON_ICONS, TAB_ICONS } from '../../../core/constants/icons';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { coverDeCaja, type PedidoDePortada } from '../../../core/utils/coverDelListado';
 import { starsFromGrade } from '../../../core/utils/scoreScale';
-import type { GameSheet, GameSheetSagaEntry } from '../../../core/gameSheet/buildGameSheet';
+import type { GameSheet, GameSheetFriend, GameSheetSagaEntry, GameSheetSignal } from '../../../core/gameSheet/buildGameSheet';
+import { gameSheetSearch, matchesGameSheet } from '../../../core/utils/gameSheetPath';
 import { UNPLAYED_TAB_IDS, type GameItem, type TabData, type TabId } from '../../../model/types/game';
 import { useGameSheetFriendSignals } from '../../../viewmodel/gameSheet/useGameSheetFriendSignals';
+import { useGameSheetFriendEntry } from '../../../viewmodel/gameSheet/useGameSheetFriendEntry';
+import type { FriendGameEntry } from '../../../viewmodel/gameSheet/friendLibraryIndex';
 import { useGameSheetViewModel } from '../../../viewmodel/gameSheet/useGameSheetViewModel';
 import { SOCIAL_ROUTES } from '../../../viewmodel/social/socialRoutePaths';
 import type { TabAction } from '../../../viewmodel/useGameListViewModel';
@@ -47,6 +50,10 @@ export interface GameSheetPanelProps {
   onDelete: (tab: TabId, id: number) => void;
   onMigrate: (tab: TabId, id: number, target: TabId) => void;
   reviewTarget: GameSheetReviewTarget;
+  /** La amistad desde cuyo perfil se abrió (`?de=`): su bloque va arriba (F0.7). */
+  friendId?: string;
+  /** Un juego que no tienes: añadirlo a deseados o a próximos, con lo que se sepa de él. */
+  onAddGame: (game: Partial<GameItem>, tab: 'p' | 'd') => void;
 }
 
 /** Lo que dura la salida del panel (`gsSale` en `styles/gameSheet.scss`). */
@@ -215,15 +222,26 @@ function Cabecera({ sheet, covers, lado }: { sheet: GameSheet; covers: boolean; 
  *  · debajo, puntos fuertes y débiles, en dos columnas iguales;
  *  · al final, rejugar o reintentar, con su rótulo y la insignia en la misma línea.
  */
-function TusDatos({ tab, item }: { tab: TabId; item: GameItem }) {
+function TusDatos({ tab, item, conTitulo = false }: { tab: TabId; item: GameItem; conTitulo?: boolean }) {
+  return (
+    <div className="hub-detail-metadata gs-sec-datos">
+      <div className="hub-metadata-section">
+        {/* Sin título (F0.14), salvo junto al bloque de una amistad: ahí ya no se sabe de quién son. */}
+        {conTitulo ? <strong>{GAME_SHEET_UI.yourData}</strong> : null}
+        <DatosDelJuego tab={tab} item={item} />
+      </div>
+    </div>
+  );
+}
+
+/** Los datos de una entrada, los tuyos o los de una amistad (su bloque, F0.7), con las reglas de `TusDatos`. */
+function DatosDelJuego({ tab, item }: { tab: TabId; item: GameItem }) {
   const D = UI_MESSAGES.detail;
   const fuertes = tab === 'c' || tab === 'v' || tab === 'e' ? item.strengths : undefined;
   const malos = tab === 'v' ? item.reasons : tab === 'c' || tab === 'e' ? item.weaknesses : undefined;
   const anios = tab === 'c' ? yearsDesc(item.years) : [];
   return (
-    <div className="hub-detail-metadata gs-sec-datos">
-      <div className="hub-metadata-section">
-        {/* Un solo `detail-content`, como el detalle de la fila: es el que Persona, Arcade y Cyberpunk visten. */}
+        /* Un solo `detail-content`, como el detalle de la fila: es el que Persona, Arcade y Cyberpunk visten. */
         <div className="detail-content gs-detail">
           <div className="detail-box gs-renglon" aria-label={GAME_SHEET_UI.platformsAria}>
             <div className="chips">
@@ -246,7 +264,7 @@ function TusDatos({ tab, item }: { tab: TabId; item: GameItem }) {
             </div>
           ) : null}
           {anios.length ? (
-            <div className="detail-box gs-renglon" aria-label={GAME_SHEET_UI.yearsAria}>
+            <div className="detail-box gs-renglon" aria-label={D.yearsCompleted}>
               {renderTags(anios, 'chip-generic')}
             </div>
           ) : null}
@@ -269,8 +287,6 @@ function TusDatos({ tab, item }: { tab: TabId; item: GameItem }) {
             </div>
           ) : null}
         </div>
-      </div>
-    </div>
   );
 }
 
@@ -286,37 +302,102 @@ function Analisis({ tab, item, reviewTarget }: { tab: TabId; item: GameItem; rev
   const navigate = useNavigate();
   if (!item.review || UNPLAYED_TAB_IDS.includes(tab)) return null;
   const destino = reviewTarget(tab, item);
-  const abrir = () => { void navigate(destino.to, { state: destino.state }); };
   return (
     <div className="hub-detail-metadata gs-sec-analisis">
       <div className="hub-metadata-section">
         <strong>{D.review}</strong>
-        <ul className="gs-friends">
-          <li>
-            {/* El marcado del renglón de persona (`HubPersonRow`) sin avatar ni nombre, escrito aquí para no arrastrar
-                al panel el avatar del hub, que solo usan tus amistades y va en su chunk. */}
-            <article
-              className="hub-feed-card hub-user-card hub-person-row is-clickable"
-              tabIndex={0}
-              aria-label={D.reviewLinkAria(item.name)}
-              onClick={abrir}
-              onKeyDown={activarConTeclado(abrir)}
-            >
-              <div className="hub-person-row-text">
-                <span className="gs-snippet is-propio">{GAME_SHEET_UI.friendSnippet(item.review)}</span>
-              </div>
-              {llevaNota(tab, item) ? (
-                <div className="hub-person-row-action">
-                  <ScoreDisplay game={item} />
-                </div>
-              ) : null}
-            </article>
-          </li>
-        </ul>
+        <RenglonDeAnalisis
+          tab={tab}
+          item={item}
+          aria={D.reviewLinkAria(item.name)}
+          onOpen={() => { void navigate(destino.to, { state: destino.state }); }}
+        />
       </div>
     </div>
   );
 }
+
+/**
+ * El renglón de un análisis: el comienzo del texto en tres renglones y la nota a la derecha, si es nota. Es el marcado
+ * del renglón de persona (`HubPersonRow`) sin avatar ni nombre, escrito aquí para no arrastrar al panel el avatar del
+ * hub, que solo usan tus amistades y va en su chunk.
+ */
+function RenglonDeAnalisis({ tab, item, aria, onOpen }: { tab: TabId; item: GameItem; aria: string; onOpen: () => void }) {
+  return (
+    <ul className="gs-friends">
+      <li>
+        <article
+          className="hub-feed-card hub-user-card hub-person-row is-clickable"
+          tabIndex={0}
+          aria-label={aria}
+          onClick={onOpen}
+          onKeyDown={activarConTeclado(onOpen)}
+        >
+          <div className="hub-person-row-text">
+            <span className="gs-snippet is-propio">{GAME_SHEET_UI.friendSnippet(item.review)}</span>
+          </div>
+          {llevaNota(tab, item) ? (
+            <div className="hub-person-row-action">
+              <ScoreDisplay game={item} />
+            </div>
+          ) : null}
+        </article>
+      </li>
+    </ul>
+  );
+}
+
+/**
+ * EL BLOQUE DE LA AMISTAD desde cuyo perfil se abrió la ficha (F0.7), arriba del todo: su nombre como título, dónde lo
+ * tiene y cuándo lo terminó, su nota, sus datos con el mismo marcado que los tuyos (ya filtrados por lo que ella
+ * esconde) y su reseña, que lleva a la reseña entera en su perfil. Sin avatar: su nombre ya es el título.
+ */
+function BloqueDeAmistad({ entrada, onOpenReview }: { entrada: FriendGameEntry; onOpenReview: () => void }) {
+  const { friend, tab, item } = entrada;
+  return (
+    <div className="hub-detail-metadata gs-sec-de-amistad">
+      <div className="hub-metadata-section">
+        <strong>{friend.name}</strong>
+        <div className="gs-linea">
+          <span className={`gs-pill is-${tab}`}>
+            <Icon name={TAB_ICONS[tab]} />
+            {GAME_SHEET_UI.listPill(tab)}
+          </span>
+          {item.finishedOn ? <span className="gs-desde">{GAME_SHEET_UI.finishedOn(item.finishedOn)}</span> : null}
+          {llevaNota(tab, item) && !item.review ? <ScoreDisplay game={item} /> : null}
+        </div>
+        <DatosDelJuego tab={tab} item={item} />
+        {item.review && !UNPLAYED_TAB_IDS.includes(tab) ? (
+          <RenglonDeAnalisis tab={tab} item={item} aria={GAME_SHEET_UI.friendReviewAria(friend.name, item.name)} onOpen={onOpenReview} />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * UN JUEGO QUE NO TIENES (abierto desde el feed, una reseña, el buscador o el perfil de una amistad): en vez de mover,
+ * editar y borrar, añadirlo a deseados o a próximos, con lo que se sepa de él (sus plataformas, si alguna amistad lo
+ * tiene). Al añadirlo, la ficha pasa a ser la tuya sin cerrarse.
+ */
+const BarraDeAnadir = forwardRef<HTMLElement, { name: string; platforms: string[]; onAddGame: GameSheetPanelProps['onAddGame'] }>(
+  function BarraDeAnadir({ name, platforms, onAddGame }, ref) {
+    const A = UI_MESSAGES.rouletteActions;
+    return (
+      <footer className="gs-bar" ref={ref}>
+        {/* Con su nombre en `aria-label`: en el panel estrecho y en el móvil solo el primero enseña el texto. */}
+        <button className="btn btn-secondary" type="button" aria-label={A.toWishlist} title={A.toWishlist} onClick={() => onAddGame({ name, platforms }, 'd')}>
+          <Icon name={TAB_ICONS.d} />
+          <span className="gs-bar-label">{A.toWishlist}</span>
+        </button>
+        <button className="btn btn-upcoming" type="button" aria-label={A.toProximos} title={A.toProximos} onClick={() => onAddGame({ name, platforms }, 'p')}>
+          <Icon name={TAB_ICONS.p} />
+          <span className="gs-bar-label">{A.toProximos}</span>
+        </button>
+      </footer>
+    );
+  },
+);
 
 /**
  * LOS BOTONES DEL DETALLE DE HOY, anclados abajo y sin barra: mover según la lista (con su color), editar y borrar,
@@ -380,8 +461,16 @@ export function GameSheetPanel({
   onDelete,
   onMigrate,
   reviewTarget,
+  friendId = '',
+  onAddGame,
 }: GameSheetPanelProps) {
-  const { signals, missing } = useGameSheetFriendSignals(open);
+  const { signals: canalEIndice, missing } = useGameSheetFriendSignals(open);
+  const deAmistad = useGameSheetFriendEntry(open, friendId, slug);
+  // Lo de la amistad del bloque cuenta también para la ficha: así se abre aunque solo ella lo tenga.
+  const signals = useMemo<readonly GameSheetSignal[]>(
+    () => (deAmistad ? [...canalEIndice, { kind: 'library', friend: deAmistad.friend, tab: deAmistad.tab, item: deAmistad.item }] : canalEIndice),
+    [canalEIndice, deAmistad],
+  );
   const sheet = useGameSheetViewModel({ data, slug, signals });
   const visible = open && sheet !== null;
 
@@ -416,10 +505,15 @@ export function GameSheetPanel({
   const key = ficha?.slug ?? '';
   const { width, showFiller } = useGameSheetWidth(visible, key, scrollRef, contentRef, Boolean(ficha?.wishers.length));
   const navigate = useNavigate();
-  // Su perfil (F0.7). Con el juego abierto llegará en la F5, cuando su perfil abra la ficha.
+  // Su perfil CON EL JUEGO ABIERTO y su bloque arriba (F0.7).
+  const nombreAbierto = ficha?.name ?? '';
   const openFriend = useCallback((profileId: string) => {
-    void navigate(generatePath(SOCIAL_ROUTES.profileDetail, { profileId }));
-  }, [navigate]);
+    void navigate(`${generatePath(SOCIAL_ROUTES.profileDetail, { profileId })}${gameSheetSearch(nombreAbierto, profileId)}`);
+  }, [navigate, nombreAbierto]);
+  const openFriendReview = useCallback(() => {
+    if (!deAmistad) return;
+    void navigate(generatePath(SOCIAL_ROUTES.profileReview, { profileId: deAmistad.friend.id, gameId: String(deAmistad.item.id) }));
+  }, [navigate, deAmistad]);
   const swipe = useSwipeToClose(panelRef, cerrar);
 
   /* Si no hay animación que esperar, la salida termina ya: con «reducir movimiento», o si el panel ya se fue
@@ -450,6 +544,12 @@ export function GameSheetPanel({
   }, [visible, key]);
 
   const own = ficha?.own ?? null;
+  // El bloque de la amistad, solo si es de ESTA ficha; y ella, fuera de la lista de abajo, donde se repetiría.
+  const bloque = deAmistad && ficha && deAmistad.item && matchesGameSheet(ficha.slug, deAmistad.item.name) ? deAmistad : null;
+  const sinBloque = (lista: GameSheetFriend[]) => (bloque ? lista.filter((friend) => friend.id !== bloque.friend.id) : lista);
+  const amigos = ficha ? sinBloque(ficha.friends) : [];
+  const quieren = ficha ? sinBloque(ficha.wishers) : [];
+  const plataformas = ficha?.saga.find((entry) => entry.current)?.platforms ?? bloque?.item.platforms ?? [];
   return (
     <dialog
       ref={dialogRef}
@@ -482,13 +582,14 @@ export function GameSheetPanel({
                 lado={ficha.saga.length ? <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
               />
               <div className="gs-cuerpo">
-                {own ? <TusDatos tab={own.tab} item={own.item} /> : null}
+                {bloque ? <BloqueDeAmistad entrada={bloque} onOpenReview={openFriendReview} /> : null}
+                {own ? <TusDatos tab={own.tab} item={own.item} conTitulo={Boolean(bloque)} /> : null}
                 {own ? <Analisis tab={own.tab} item={own.item} reviewTarget={reviewTarget} /> : null}
-                {ficha.friends.length || ficha.wishers.length ? (
+                {amigos.length || quieren.length ? (
                   <Suspense fallback={null}>
                     <GameSheetFriends
-                      friends={ficha.friends}
-                      wishers={ficha.wishers}
+                      friends={amigos}
+                      wishers={quieren}
                       showWishers={showFiller}
                       missing={missing}
                       onOpenFriend={openFriend}
@@ -509,7 +610,9 @@ export function GameSheetPanel({
               onDelete={onDelete}
               onMigrate={onMigrate}
             />
-          ) : null}
+          ) : (
+            <BarraDeAnadir ref={barRef} name={ficha.name} platforms={plataformas} onAddGame={onAddGame} />
+          )}
         </div>
       ) : null}
     </dialog>
