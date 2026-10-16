@@ -37,6 +37,9 @@ import {
   tamanoPoster,
   urlDeImagenTmdb,
 } from './functions/_lib/tmdb';
+// Y los precios de IsThereAnyDeal: la misma resolución (caché, segunda pasada, normalización) que `/api/precios`.
+import { resolverPrecios, type CacheItad } from './functions/_lib/itad';
+import { leerTitulos, MAX_TITULOS } from './functions/api/precios';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version?: string };
 
@@ -738,6 +741,94 @@ function localTmdbApi(): Plugin {
 }
 
 /**
+ * GEMELO DE `/api/precios` en desarrollo (P1 del plan de la ficha y los precios), como `localCoverApi` lo es de
+ * `/cover`: tira de `functions/_lib/itad`, el mismo módulo que la Function, con la clave de `.dev.vars`
+ * (`ITAD_API_KEY`). Lo que no tiene, y a propósito: la sesión (quien llama es quien ha levantado el servidor en su
+ * máquina, como en `localPremiosApi`), los topes por rango y por minuto, y la caché de Cloudflare, que aquí es un
+ * `Map` en memoria con el plazo más corto (el de mithril, 15 min) para no repetir llamadas a ITAD al recargar.
+ */
+function localPreciosApi(): Plugin {
+  const deDevVars = (clave: string): string => {
+    try {
+      const texto = readFileSync(new URL('./.dev.vars', import.meta.url), 'utf-8');
+      return new RegExp(`^${clave}=(.*)$`, 'm').exec(texto)?.[1]?.trim() ?? '';
+    } catch {
+      return '';
+    }
+  };
+  const memoria = new Map<string, { valor: unknown; guardadoEn: number; hasta: number }>();
+  const cache: CacheItad = {
+    async leer<T>(clave: string) {
+      const guardado = memoria.get(clave);
+      return guardado && guardado.hasta > Date.now() ? { valor: guardado.valor as T, guardadoEn: guardado.guardadoEn } : null;
+    },
+    async guardar(clave: string, valor: unknown, segundos: number, ahora: number) {
+      memoria.set(clave, { valor, guardadoEn: ahora, hasta: ahora + segundos * 1000 });
+    },
+  };
+  const enviar = (res: ServerResponse, status: number, cuerpo: unknown, cabeceras: Record<string, string> = {}): void => {
+    res.statusCode = status;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    for (const [nombre, valor] of Object.entries(cabeceras)) res.setHeader(nombre, valor);
+    res.end(JSON.stringify(cuerpo));
+  };
+
+  return {
+    name: 'local-precios-api',
+    apply: 'serve',
+
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.split('?')[0] !== '/api/precios' || req.method !== 'POST') {
+          next();
+          return;
+        }
+        let cuerpo = '';
+        req.on('data', (trozo) => { cuerpo += trozo; });
+        req.on('end', () => {
+          void (async () => {
+            const clave = deDevVars('ITAD_API_KEY');
+            if (!clave) {
+              enviar(res, 501, { error: 'No hay ITAD_API_KEY en .dev.vars: los precios no funcionan en desarrollo.' });
+              return;
+            }
+            let leido: Record<string, unknown> | null = null;
+            try {
+              leido = JSON.parse(cuerpo) as Record<string, unknown>;
+            } catch {
+              leido = null;
+            }
+            const titulos = leerTitulos(leido);
+            if (!titulos) {
+              enviar(res, 400, { error: `Hacen falta entre 1 y ${MAX_TITULOS} títulos` });
+              return;
+            }
+            try {
+              const { juegos, preguntoAItad, fallo } = await resolverPrecios(titulos, {
+                clave,
+                plazoMs: 15 * 60 * 1000,
+                cache,
+                presupuesto: { tomar: () => true },
+                ahora: Date.now(),
+              });
+              const diagnostico = { 'x-cache': preguntoAItad ? 'miss' : 'hit' };
+              if (fallo && !Object.values(juegos).some(Boolean)) {
+                enviar(res, 503, { error: 'No se ha podido consultar ITAD', unavailable: true }, diagnostico);
+                return;
+              }
+              enviar(res, 200, { juegos, ...(fallo ? { incompleto: true } : {}) }, diagnostico);
+            } catch {
+              enviar(res, 502, { error: 'No se pudo atender la petición de precios' });
+            }
+          })();
+        });
+      });
+    },
+  };
+}
+
+/**
  * GEMELO DE `/api/github-oauth` en desarrollo: el canje del `code` de «Conectar con GitHub» por el token. La lógica
  * y el porqué están en `scripts/devGithubOAuth.ts`, que llama a la misma Function de producción.
  *
@@ -789,6 +880,7 @@ export default defineConfig({
     localCoverApi(),
     localTmdbApi(),
     localGithubOAuthApi(),
+    localPreciosApi(),
   ],
   server: {
     port: 8000,

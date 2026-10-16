@@ -549,7 +549,36 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
   del dominio real: en `*.workers.dev` es una no-operación, y en este repo nadie la usa todavía. Si no funciona,
   P1 cachea solo en el cliente y los plazos de refresco por rango pasan a ser lo único que protege la clave.
 
-## Fase P1 · Proxy `/api/precios` · M
+## Fase P1 · Proxy `/api/precios` · M · ✅ hecha (16-10-2026)
+
+**Cómo quedó** (`functions/_lib/itad.ts`, `functions/api/precios.ts`, `localPreciosApi` en `vite.config.ts`, y los
+plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROFILE_TIER_PRICE_REQUESTS_PER_HOUR`):
+
+- **`/games/overview/v2` va en cada refresco, no solo con el aviso.** Leída la API: `/games/prices/v3` no trae la
+  fecha del mínimo histórico ni el enlace a la página de ITAD, y el recuadro (F0.15) los pide. `overview` los da
+  (`lowest.timestamp`, `urls.game`) y trae además los packs, así que el aviso de pack de la P4 sale sin una llamada
+  más. Cada petición cuesta como mucho la búsqueda de lo que falte (y su segunda pasada) más dos llamadas por cada
+  200 juegos, y solo por lo que no esté en caché.
+- **El título de ITAD** no lo da ninguna de las tres llamadas: `/lookup/id/title/v1` solo devuelve el id. Como el
+  emparejamiento es exacto, el título que se enseña («Precio de: …», P3) es la variante que acertó: el tuyo o el de
+  la segunda pasada (*Hades 2* → *Hades II*).
+- **La caché del borde** (`caches.default`) guarda cada valor con una clave `GET` inventada bajo el propio dominio
+  (`<origen>/__cache/itad/id/…` y `…/precio/<id>`), porque `/api/precios` es `POST`. Un precio vive un día (más que
+  el plazo de bronce, y así queda de respaldo si ITAD no contesta); cada petición decide con la hora guardada si le
+  vale. `x-cache: hit|miss` lo dice en cada respuesta, para comprobarlo en el dominio real al desplegar.
+- **Topes en memoria del aislado:** por usuario y hora según su rango (30/60/120/1.200) y 150 llamadas a ITAD por
+  minuto en total. Al pasarse el del usuario, 429 con `Retry-After` hasta la hora siguiente.
+- **Con ITAD sin cupo o caído,** lo guardado vale aunque sea viejo y la respuesta lleva `incompleto: true`; si no
+  hay nada, 429 (sin cupo, con su `Retry-After`) o 503 (`unavailable`), como el resto de la API.
+- **Las tiendas elegidas desde administración (P0.6) no entran todavía:** se pide a todas. Entran con su pantalla.
+- **Comprobado contra ITAD** con el gemelo de desarrollo y la clave de `.dev.vars`: *Silksong* con su mejor oferta
+  (PlayerLand), las dos tiendas siguientes, el mínimo histórico con su fecha y el enlace a ITAD; *Hades 2* acierta
+  en la segunda pasada como *Hades II*; *Wario Land 2* se encuentra pero ninguna tienda lo vende (`mejor: null`); y
+  la segunda petición sale de la caché (`x-cache: hit`).
+- **Tests:** `tests/unit/preciosEndpoint.test.ts` (17): la variante numérica, la normalización (orden, una oferta por
+  tienda, el mínimo con y sin fecha, las `url` sin tocar), los packs, la caché y los plazos por rango, ITAD caído o
+  sin cupo, el `501`, la validación de la entrada, el tope por hora del rango y la cabecera `x-cache`.
+
 
 - `functions/_lib/itad.ts`, puro salvo el `fetch`:
   - `buscarIds(titulos)`;

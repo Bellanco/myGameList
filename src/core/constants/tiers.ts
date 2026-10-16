@@ -103,6 +103,35 @@ export const PROFILE_TIER_FRIEND_INDEX_TTL_MS: Record<ProfileTier, number | null
 };
 
 /**
+ * CUÁNTO VALE UN PRECIO DE ISTHEREANYDEAL (P0.7 del plan de la ficha y los precios): pasado este plazo se vuelve a
+ * preguntar. Lo aplican el cliente (cuándo refresca Deseados) y el borde (`/api/precios` acepta lo que tiene en caché
+ * si es más reciente que el plazo de quien pide), así que el precio de un juego se comparte entre todo el mundo y
+ * cada rango solo decide cuánto le vale de viejo.
+ *
+ * Decisión del usuario (15-10-2026). Manda el rango de QUIEN MIRA, y nada lo explica en pantalla.
+ */
+export const PROFILE_TIER_PRICE_TTL_MS: Record<ProfileTier, number> = {
+  bronze: 18 * 60 * 60 * 1000,
+  silver: 12 * 60 * 60 * 1000,
+  gold: 6 * 60 * 60 * 1000,
+  mithril: 15 * 60 * 1000,
+};
+
+/**
+ * Peticiones por usuario y hora a `/api/precios`: una RED DE SEGURIDAD en el borde por si un cliente se porta mal; lo
+ * normal lo limita el plazo de arriba. Mithril, alto pero con tope, para que un bucle propio se corte: lo que protege
+ * la clave de ITAD, que es una para toda la app, es el tope global por minuto de `/api/precios`.
+ *
+ * Decisión del usuario (16-10-2026).
+ */
+export const PROFILE_TIER_PRICE_REQUESTS_PER_HOUR: Record<ProfileTier, number> = {
+  bronze: 30,
+  silver: 60,
+  gold: 120,
+  mithril: 1200,
+};
+
+/**
  * Lo mismo para la CLASIFICACIÓN DE PREMIOS, que pide hasta 60 perfiles solo para enlazar cada fila con el suyo
  * (`usePremiosProfiles`). Antes lo hacía en CADA visita, porque la única caché era la de 30 s en memoria. Aquí
  * lo único que se retrasa es el enlace de alguien que acabe de crear su perfil, así que la copia dura más.
