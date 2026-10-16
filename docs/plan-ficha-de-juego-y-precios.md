@@ -5,7 +5,8 @@
 > las mediciones y la prueba de «Pendiente para cerrar el plan», al final. Sale de la idea C2 de
 > `docs/investigacion-interaccion-social.md`, de una integración con IsThereAnyDeal (ITAD) para la lista de deseos y
 > de traer a Deseados la lista de seguimiento de ITAD. Escrito leyendo `develop` tras `8bfd3b2d` y la documentación de
-> la API de ITAD (v2.11.0). Diseño de la ficha: `docs/maquetas/ficha-juego.html` (con el servidor de desarrollo).
+> la API de ITAD (v2.11.0). La ficha ya construida se ve en la maqueta social (`docs/maquetas/social.html?pantalla=ficha`,
+> con el servidor de desarrollo); el diseño del recuadro del precio, en `docs/maquetas/ficha-juego.html` hasta la P5.
 >
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
 > Las decisiones de la Fase 0 de cada parte son del usuario y van antes de escribir código.
@@ -122,7 +123,13 @@ con «Añadir a deseados».
 
 ## Diseño (maqueta del 15-10-2026)
 
-`docs/maquetas/ficha-juego.html` con el servidor de desarrollo (`npx vite --port 8001`).
+**La ficha construida (F6):** `docs/maquetas/social.html?pantalla=ficha`, con la ficha real (`GameSheetPanelView`) y lo
+de tus amistades inventado, en cuatro variantes (`abrir=`): con amistades, `sin-social`, `de-amistad` (desde el
+perfil de Marta) y `ajeno` (un juego que no tienes). La fotografía `scripts/capturar-maqueta-social.mjs`.
+
+**La maqueta del diseño**, de antes de construirla: `docs/maquetas/ficha-juego.html` con el servidor de desarrollo
+(`npx vite --port 8001`). **Se queda hasta la P5**, porque es lo único que tiene el diseño del recuadro del precio
+(F0.15); con la P5, la maqueta social gana la variante «con precio» y esta se borra.
 - **Detrás va la tabla real** (`GameTable`) con una biblioteca inventada que reproduce los extremos de una biblioteca
   real (ver «Lo que enseñó una biblioteca real»). Tocar una fila abre la ficha.
 - **La URL hace lo que haría la app:** abrir pone `?juego=`, y «atrás», Esc, la X o pulsar fuera lo cierran.
@@ -466,22 +473,30 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
   `loadFriendGameEntry`, el chip de la reseña, el nombre del aviso del feed, el buscador y, sobre el build, el bloque,
   añadir un juego ajeno y la auditoría de accesibilidad de la ficha ajena con bloque en los 16 temas y modos.
 
-## Fase F6 · Maqueta, accesibilidad y e2e · S
+## Fase F6 · Maqueta, accesibilidad y e2e · S · ✅ hecha (16-10-2026)
 
-- Añadir la ficha a `docs/maquetas/social.tsx` (`PANTALLAS`, `:828-876`) y a `TODAS` de
-  `scripts/capturar-maqueta-social.mjs:31-37`, en tres variantes: sin social, con amistades, con precio. Además, la
-  ficha abierta desde el perfil de una amistad (F0.7). Después se borra `docs/maquetas/ficha-juego.*`.
-- e2e, contra el build:
-  - tocar una fila abre el modal, y «atrás» lo cierra **sin mover el scroll de la lista** (con 120+ juegos);
-  - recargar con `?juego=<slug>` lo abre (chunk perezoso en frío);
-  - Esc cierra y el foco vuelve a la fila;
-  - en el mosaico, igual;
-  - **sin red** y con el service worker recién instalado, la ficha abre con lo propio y sin las secciones de fuera;
-  - en un móvil emulado (`hasTouch`, `isMobile`), deslizar a la derecha cierra y quita `?juego=`, y el scroll vertical
-    sigue funcionando;
-  - el modal entra en el barrido de axe de `tests/e2e/a11y.test.ts`.
-- Medir que el arranque crítico no sube más que `gameSheetPath` y la lectura de `?juego=` (skill `medir`). Quitar
-  el detalle de `GameTable` debería **bajarlo**: medirlo también.
+- **Maqueta:** la ficha está en `docs/maquetas/social.tsx` (`pantalla=ficha`) y en `TODAS` de
+  `scripts/capturar-maqueta-social.mjs`, en cuatro variantes: con amistades, sin social, desde el perfil de una
+  amistad y un juego que no tienes. Para pintarla con datos inventados sin sembrar el IndexedDB del origen de
+  desarrollo —que es el de la app—, el panel se partió en `GameSheetPanel` (carga lo de tus amistades) y
+  `GameSheetPanelView` (lo pinta, recibiéndolo por props). El script de capturas espera ahora a que terminen las
+  animaciones de entrada (con tope), o fotografiaba el panel a medio entrar. **Falta la variante «con precio»**, que
+  llega con la P5; hasta entonces **se queda `docs/maquetas/ficha-juego.*`**, que es lo único con el diseño del
+  recuadro del precio (F0.15).
+- **e2e, contra el build** (`tests/e2e/fichaJuego.test.ts`):
+  - con 130 juegos, abrir la ficha y volver atrás no mueven el scroll de la lista;
+  - recargar con `?juego=` la abre, con el chunk en frío;
+  - Esc la cierra y el foco vuelve al juego, en renglones y en el mosaico (y en el mosaico tampoco se mueve el scroll);
+  - sin red y con el service worker recién instalado, abre con lo tuyo y sin lo de tus amistades, sin errores;
+  - en un móvil emulado, deslizarla a la derecha la cierra y quita `?juego=`, y el gesto vertical es del scroll
+    (`touch-action: pan-y`).
+
+  El barrido de axe ya pasaba por la ficha (F2), con amistades (F3) y ajena con bloque (F5), en los 16 temas y modos.
+- **Medido** (skill `medir`: worktree en `0394296a`, el commit anterior a la F2, contra el árbol de la F6; MacBook,
+  16-10-2026): el crítico pasa de **192,4 a 192,9 kB** (tope 195): toda la ficha suma 0,5 kB al arranque, lo que lee
+  `?juego=` y la monta perezosa; quitar el detalle de la tabla compensó parte. El total del precache, de 225,7 a
+  238,2 kB (tope 240): el panel diferido (12,0 kB). El recurso de más del arranque (18 frente a 17) es un trozo que
+  Vite separa al compartirlo con el panel, no peso nuevo.
 
 ---
 

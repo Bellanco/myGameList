@@ -450,7 +450,29 @@ const BarraDeAcciones = forwardRef<HTMLElement, {
  * espacio en blanco sea el mínimo (`useGameSheetWidth`) y en el móvil se cierra deslizándolo hacia la derecha
  * (`useSwipeToClose`). Los botones flotan abajo y el cuerpo les reserva justo su alto (`--gs-botones`).
  */
-export function GameSheetPanel({
+export function GameSheetPanel(props: GameSheetPanelProps) {
+  const { open, friendId = '', slug } = props;
+  const { signals, missing } = useGameSheetFriendSignals(open);
+  const deAmistad = useGameSheetFriendEntry(open, friendId, slug);
+  return <GameSheetPanelView {...props} signals={signals} missing={missing} friendEntry={deAmistad} />;
+}
+
+/** Lo que la ficha sabe de tus amistades, ya cargado: lo pone `GameSheetPanel` o, con datos inventados, la maqueta. */
+export interface GameSheetSocialData {
+  /** Canal social (F3) e índice de bibliotecas (F4). */
+  signals: readonly GameSheetSignal[];
+  /** De cuántas amistades no se pudo leer la biblioteca. */
+  missing: number;
+  /** El bloque de la amistad desde cuyo perfil se abrió (F0.7), o `null`. */
+  friendEntry: FriendGameEntry | null;
+}
+
+/**
+ * LA FICHA, PINTADA: todo lo de `GameSheetPanel` salvo cargar lo de tus amistades, que llega por props. Así la maqueta
+ * social (`docs/maquetas/social.tsx`) monta la ficha real con datos inventados, sin tocar el IndexedDB del origen de
+ * desarrollo, que es el mismo que el de la app.
+ */
+export function GameSheetPanelView({
   open,
   data,
   slug,
@@ -461,11 +483,11 @@ export function GameSheetPanel({
   onDelete,
   onMigrate,
   reviewTarget,
-  friendId = '',
   onAddGame,
-}: GameSheetPanelProps) {
-  const { signals: canalEIndice, missing } = useGameSheetFriendSignals(open);
-  const deAmistad = useGameSheetFriendEntry(open, friendId, slug);
+  signals: canalEIndice,
+  missing,
+  friendEntry: deAmistad,
+}: GameSheetPanelProps & GameSheetSocialData) {
   // Lo de la amistad del bloque cuenta también para la ficha: así se abre aunque solo ella lo tenga.
   const signals = useMemo<readonly GameSheetSignal[]>(
     () => (deAmistad ? [...canalEIndice, { kind: 'library', friend: deAmistad.friend, tab: deAmistad.tab, item: deAmistad.item }] : canalEIndice),
