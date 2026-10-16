@@ -14,6 +14,12 @@
 //
 // Esta carpeta la compila Cloudflare Pages: nada del bundle salvo módulos sin dependencias.
 
+// Los tipos del precio viven en `src/model/types/prices.ts`: los comparten el borde y el cliente (P2), y ese fichero
+// no tiene dependencias, como pide esta carpeta.
+import type { OfertaItad, PrecioItad } from '../../src/model/types/prices';
+
+export type { OfertaItad, PrecioItad };
+
 const API = 'https://api.isthereanydeal.com';
 /** España y euros (P0.3). */
 export const PAIS_ITAD = 'ES';
@@ -22,39 +28,6 @@ export const LOTE_ITAD = 200;
 const TIMEOUT_MS = 5_000;
 /** Lo más que se espera un `Retry-After` antes del único reintento: la Function no puede quedarse colgada. */
 const ESPERA_MAXIMA_MS = 3_000;
-
-/** Una oferta de una tienda. Las `url` van tal cual las da ITAD (sus condiciones lo piden). */
-export interface OfertaItad {
-  tienda: string;
-  precio: number;
-  /** Precio sin rebaja; `null` si ITAD no lo da. */
-  normal: number | null;
-  /** Descuento en %, 0 si no hay. */
-  descuento: number;
-  /** Hasta cuándo dura (ISO), si se sabe. */
-  hasta: string | null;
-  url: string;
-}
-
-/** El precio de un juego, como lo pinta el recuadro de la ficha (F0.15). */
-export interface PrecioItad {
-  /** El título con el que acertó ITAD: el tuyo o su variante con los números cambiados («Precio de: …», P3). */
-  titulo: string;
-  itadId: string;
-  /** La oferta más barata ahora, o `null` si ninguna tienda lo vende. */
-  mejor: OfertaItad | null;
-  /** Las dos tiendas siguientes más baratas (distintas de la mejor). */
-  otras: OfertaItad[];
-  minimos: {
-    historico: { precio: number; fecha: string | null } | null;
-    anio: number | null;
-    tresMeses: number | null;
-  };
-  /** La página del juego en ITAD (crédito y «ver más»), tal cual la da ITAD. */
-  urlFicha: string | null;
-  /** Los packs activos que lo contienen (para el aviso de la P4). */
-  bundles: Array<{ titulo: string; url: string; expira: string | null }>;
-}
 
 // ─── Lo puro ─────────────────────────────────────────────────────────────────────────────────────────────────────
 

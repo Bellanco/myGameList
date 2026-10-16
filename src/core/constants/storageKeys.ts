@@ -48,6 +48,11 @@ export const COVERS_KEY = 'mis-listas-covers';
 export const WISHLIST_KEY = 'mis-listas-wishlist';
 /** Escenas de cada tema al empezar y al cerrar un juego. Ausente = APAGADAS: se encienden a mano en Diseño. */
 export const GAME_SCENES_KEY = 'mis-listas-game-scenes';
+/**
+ * Integración con IsThereAnyDeal (precios de Deseados y traer su lista). Ausente = APAGADA (P0.1): encenderla es lo que
+ * autoriza a que el servidor pregunte a ITAD por los títulos de tu lista de deseos.
+ */
+export const ITAD_KEY = 'mis-listas-itad';
 
 // TAMAÑO de los cuadros del mosaico: 'sm' | 'md' (por defecto) | 'lg'. Cuánto ocupa cada cuadro es cuestión de
 // gusto y de PANTALLA —ocho por fila en un monitor, dos en un teléfono—, así que vive en este aparato y no en

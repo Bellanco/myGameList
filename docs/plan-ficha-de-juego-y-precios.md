@@ -645,23 +645,44 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
   - el `429` de ITAD llega al cliente como `429`/`503` sin romper;
   - nada de la respuesta altera la `url` ni el precio.
 
-## Fase P2 · Cliente: repositorio, caché y preferencia · S
+## Fase P2 · Cliente: repositorio, caché y preferencia · S · ✅ hecha (16-10-2026)
 
-- `model/repository/pricesRepository.ts`:
-  - `fetchWishlistPrices(titulos)` contra `/api/precios`;
-  - caché local en un almacén nuevo `priceCache` de IndexedDB (`DB_VERSION` 5 → 6, con un bloque en
-    `ensureStores`, `idbConnectionRepository.ts:32-83`), con el plazo del rango por juego (P0.7).
+**Cómo quedó:**
 
-  Abrir Deseados pide solo lo caducado o lo que no tiene precio.
-- Se guarda también el último precio visto de cada juego, para detectar bajadas (P4).
-- `itadPreference` con `createPreferenceStore`, sin `cloudField` (P0.4), y la clave en `storageKeys.ts`. Apagada por
-  defecto (P0.1).
-- `core/utils/money.ts`: `formatPrice(amount, currency)` con `Intl.NumberFormat(APP_LOCALE, { style: 'currency' })`.
-- **El interruptor «IsThereAnyDeal»** va en Ajustes › Integración (`SettingsHub`), junto a la importación de
-  Playnite: es una integración, no una opción de diseño. Debajo, cuando está encendido, sale «Traer de
-  IsThereAnyDeal» (P7.2, si el rango lo permite).
-  - Solo aparece con espacio social (P0.2).
-  - Si la lista de deseos está oculta, los precios no se piden aunque esté encendido.
+- **`model/repository/pricesRepository.ts`:** `fetchWishlistPrices(titulos)` contra `/api/precios`, con la sesión
+  (`shareAuthHeaders`), y `loadWishlistPrices(titulos, plazoMs)`:
+  - pide solo lo que no tiene precio o lo tiene más viejo que el plazo del rango de quien mira (P0.7), en tandas de
+    400 (`PRICE_REQUEST_MAX_TITLES`);
+  - mezcla lo que llega con lo guardado, quita lo que ya no está en Deseados y lo guarda;
+  - **nunca lanza:** ante un `401`, `429`, `501`, `503` o sin red, devuelve lo guardado, aunque esté viejo, con un
+    `status` (`ok`, `incompleto`, `sin-cupo`, `no-disponible`, `sin-sesion`, `sin-configurar`) para quien pinta. Si
+    una tanda falla, las siguientes no se piden.
+
+  Arrastra Firebase por las cabeceras, así que se carga con `import()` desde la P3, nunca en el arranque.
+- **La lógica de la caché es pura** (`core/prices/priceCache.ts`): `titlesToRequest`, `mergePrices`, `pruneCache` y
+  `chunk`. Cada juego guarda su precio, cuándo se pidió y, si el mejor precio cambia, el **anterior** con su fecha,
+  para detectar bajadas (P4).
+- **Sin almacén nuevo ni `DB_VERSION` 5 → 6:** la caché es un registro (`__precios__`) dentro de `profileCache`, por
+  `getPriceCache` y `putPriceCache` de `indexedDbRepository.ts`. Subir la versión sin un manejador de
+  `versionchange` dejaba una pestaña vieja abierta bloqueando la apertura de IndexedDB en la nueva. Y el cierre de
+  sesión ya vacía `profileCache`, que es lo que se quiere con unos precios pedidos con la sesión.
+- **`itadPreference` se sincroniza** (P0.4, que manda sobre lo que decía antes esta fase): `cloudField: 'itad'`, el
+  campo `itad` en `FirestorePublicConfig` y en el `hasOnly` de `publicConfig` (`firestore.rules`, validado como
+  booleano, con su test de reglas). `parse` solo acepta un `'on'` explícito: apagada por defecto (P0.1). Hook
+  `useItad`.
+- `core/utils/money.ts`: `formatPrice(amount, currency = 'EUR')` con `Intl.NumberFormat(APP_LOCALE)`; un
+  formateador por moneda.
+- **El interruptor «IsThereAnyDeal»** (`view/components/settings/ItadToggle.tsx`) va dentro de la tarjeta
+  «Integraciones» de Ajustes, bajo la importación de Playnite y tras un filete, con los dos botones de las
+  carátulas. Ahí mismo irá «Traer de IsThereAnyDeal» (P7.2).
+  - Solo se monta con espacio social (P0.2): `SettingsHub` recibe `hasSocialProfile` de `App`.
+  - Encendido con la lista de deseos oculta, dice debajo que no se piden precios. Que no se pidan es de la P3.
+- **Legal:** IsThereAnyDeal en los terceros del aviso legal, en «Empresas que tratan tus datos» de la privacidad
+  (con la frase de P0.1), un apartado «Precios de IsThereAnyDeal» en cookies y una línea en los créditos.
+  `LEGAL_VERSION` no sube (precedente de IGDB); la nota está en `legal.ts`.
+- **Tests:** `tests/unit/preciosCliente.test.ts` (formato, caché y repositorio con `fetch` simulado),
+  `tests/unit/itadPreference.test.ts` y `tests/component/ItadToggle.test.tsx`.
+- **Sin CHANGELOG todavía:** el interruptor solo no enseña nada; la entrada va con la P3, que es cuando se ven precios.
 
 ## Fase P3 · Precios en Deseados · M
 
@@ -709,7 +730,7 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
 ## Fase P6 · Corregir el emparejamiento · S–M (según lo medido en P0)
 
 - En el detalle: «¿No es este juego?» abre una búsqueda (`/games/search/v1` por el proxy) con 5 candidatos.
-- El elegido se guarda **en local** (`priceCache`, `título → itadId`) y no va al gist.
+- El elegido se guarda **en local** (en la caché de precios, `título → itadId`) y no va al gist.
 - Si se quiere que viaje entre dispositivos, es un campo aditivo de `GameItem` (decisión aparte, como el `igdbId`
   de C1).
 
@@ -960,7 +981,8 @@ Un commit por fase, y la fase se marca como hecha aquí en el mismo commit. Cada
   `/itad/vuelta` (P7.2).
 - **Secreto `ITAD_API_KEY`** subido a Pages antes de publicar la versión con P1. Sin él, `/api/precios` da `501` y
   el cliente no enseña precios ni errores.
-- **Firestore:** sin cambios de reglas (salvo que P0.4 cambie).
+- **Firestore:** el campo `itad` de `publicConfig` (P0.4, P2). Las reglas se despliegan **antes** que la versión que lo
+  escribe (`firebase deploy --only firestore:rules`); si no, la escritura de la preferencia la rechazan las reglas viejas.
 
 ## Lo que NO se hace
 

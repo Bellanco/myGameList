@@ -11,6 +11,7 @@ import { FilePickerButton } from './FilePickerButton';
 import { Icon } from './Icon';
 import { PlayniteNote } from './import/PlayniteNote';
 import { ImportGuides } from './import/ImportGuides';
+import { ItadToggle } from './settings/ItadToggle';
 import { GithubSyncCard } from './sync/GithubSyncCard';
 // La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
 // patrón que `stats.scss` y `social.scss`). Se importa desde CADA pantalla que la necesita: si se importara solo
@@ -30,6 +31,8 @@ interface SettingsHubProps {
   /** Nº de juegos esperando en la bandeja (el acceso solo se ofrece si hay alguno). */
   inboxCount: number;
   onOpenInbox: () => void;
+  /** Con espacio social: solo entonces existe el interruptor de IsThereAnyDeal (P0.2 del plan de los precios). */
+  hasSocialProfile: boolean;
 }
 
 /**
@@ -46,6 +49,7 @@ export const SettingsHub = memo(function SettingsHub({
   onImportLibrary,
   inboxCount,
   onOpenInbox,
+  hasSocialProfile,
 }: SettingsHubProps) {
   const [overwriteImport, setOverwriteImport] = useState(false);
   // La conexión con GitHub la ofrece `App` a todo el árbol: la misma que usa la pasarela del hub social, para
@@ -86,6 +90,8 @@ export const SettingsHub = memo(function SettingsHub({
             </button>
           ) : null}
         </div>
+
+        {hasSocialProfile ? <ItadToggle /> : null}
       </div>
 
       {/* LA CONEXIÓN CON GITHUB, en el componente que también monta la pasarela del hub social. Estaba escrita

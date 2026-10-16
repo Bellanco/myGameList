@@ -130,6 +130,15 @@ export const SETTINGS_UI = {
     importBtn: 'Importar',
     importAriaLabel: 'Seleccionar archivo para importar',
   },
+  /** El interruptor de IsThereAnyDeal (P0.1 del plan de la ficha y los precios), en la tarjeta de integraciones. */
+  itad: {
+    title: 'IsThereAnyDeal',
+    note: 'Precios y ofertas de tu lista de deseos en las tiendas de PC. Para buscarlos, nuestro servidor envía a IsThereAnyDeal los nombres de esos juegos; nunca tu IP ni nada de tu cuenta.',
+    aria: 'Precios de IsThereAnyDeal',
+    on: 'Activado',
+    off: 'Desactivado',
+    wishlistHidden: 'Tienes oculta la lista de deseos: mientras lo esté, no se piden precios.',
+  },
   admin: {
     title: 'Administración de filtros',
     description: 'Gestiona géneros, plataformas y etiquetas comunes por categoría.',

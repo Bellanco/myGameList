@@ -12,7 +12,7 @@ const noop = () => {};
 function renderHub() {
   return render(
     <MemoryRouter>
-      <SettingsHub onExport={noop} onImport={noop} onImportLibrary={noop} inboxCount={0} onOpenInbox={noop} />
+      <SettingsHub onExport={noop} onImport={noop} onImportLibrary={noop} inboxCount={0} onOpenInbox={noop} hasSocialProfile={false} />
     </MemoryRouter>,
   );
 }

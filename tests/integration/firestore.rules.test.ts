@@ -89,6 +89,11 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { gameScenes: 'on' }));
     });
 
+    it('admite `itad` (la integración con IsThereAnyDeal) y solo como booleano', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { palette: 'persona', itad: true }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { itad: 'on' }));
+    });
+
     it('F4: admite `feedMoveTabs` (filtro de movimientos del feed) y rechaza lo que no sea una cadena corta', async () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvep' }));
       // Las cinco listas, y cuatro con la marca de «deseos apagada a propósito»: los dos valores más largos.

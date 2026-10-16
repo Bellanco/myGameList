@@ -1313,6 +1313,7 @@ export default function App() {
             onImportLibrary={handleImportLibraryExporter}
             inboxCount={inboxCount}
             onOpenInbox={openInbox}
+            hasSocialProfile={hasSocialProfile}
           />
           <LegalSettings />
         </>

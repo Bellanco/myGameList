@@ -102,6 +102,10 @@
 // aceptado («mientras mantengas tu cuenta»), así que la versión NO sube (mismo criterio que el 2026-08-26). El correo
 // en el panel tampoco la sube: lo ve el responsable del tratamiento, que ya lo tenía en la consola de Firebase; no
 // entra ningún destinatario nuevo. Se dice igualmente, porque el documento enumera lo que ve la administración.
+// 2026-10-16: los PRECIOS DE ISTHEREANYDEAL (docs/plan-ficha-de-juego-y-precios.md). Si los activas, el servidor envía
+// a ITAD los nombres de los juegos de tu lista de deseos; ITAD no recibe tu IP ni nada de tu cuenta. La versión NO
+// sube: viene apagado, solo se ofrece con espacio social y lo enciende cada uno, como las carátulas con IGDB
+// (`5c58166a`). Lo que se acepta no cambia; se declara el destinatario para quien lo encienda.
 export const LEGAL_VERSION = '2026-10-12b';
 
 /**
