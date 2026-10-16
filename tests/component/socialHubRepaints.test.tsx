@@ -147,7 +147,7 @@ vi.mock('../../src/model/repository/localRepository', () => ({
 vi.mock('../../src/viewmodel/useShareViewModel', () => ({
   useShareViewModel: vi.fn(() => ({
     shares: [], quota: { maxActive: 5, ttlDays: 7 }, ban: null, available: true, hasSocialSpace: true,
-    nick: 'Yo', nickIsAccountName: false, loading: false, busyToken: null, error: '', errorDetails: {},
+    loading: false, busyToken: null, error: '', errorDetails: {},
     refresh: vi.fn(async () => {}), share: vi.fn(async () => null), revoke: vi.fn(async () => false),
     shareOf: () => null, clearError: vi.fn(),
   })),

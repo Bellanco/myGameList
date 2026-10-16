@@ -73,7 +73,5 @@ describe('useShareViewModel — a quién se le puede ofrecer compartir', () => {
     await waitFor(() => expect(result.current.available).toBe(true));
     expect(listMyShares).toHaveBeenCalledOnce();
     expect(result.current.quota).toEqual({ maxActive: 5, ttlDays: 7 });
-    // El nombre de la cuenta de Google coincide con el nick: se avisa antes de publicar con él.
-    expect(result.current.nickIsAccountName).toBe(true);
   });
 });

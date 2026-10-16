@@ -91,12 +91,6 @@ export const INSTALL_HINT_KEY = 'mis-listas-install-hint';
 // ya están en tus listas. JSON con la forma de `ImportFieldPrefs`. Local, no se sincroniza (como la bandeja).
 export const IMPORT_FIELDS_KEY = 'mis-listas-import-fields';
 
-// Compartir reseñas — marca de que YA se leyó y aceptó el aviso de publicación (valor: la versión legal
-// aceptada). Publicar una reseña la saca de tus Gists y la pone en internet, así que el aviso se enseña ENTERO
-// la primera vez; luego basta con el resumen. Se guarda la versión y no un simple `true` a propósito: si cambia
-// lo que se publica, `LEGAL_VERSION` cambia y el aviso vuelve a mostrarse completo.
-export const SHARE_CONSENT_KEY = 'mis-listas-share-consent';
-
 // La cápsula del aviso legal (condiciones nuevas por aceptar) ya se enseñó para esta versión: valor, la
 // `LEGAL_VERSION` de entonces. Una vez por versión y navegador, como el aviso del resumen del año.
 export const LEGAL_NOTICE_TOLD_KEY = 'mis-listas-legal-notice-told';

@@ -37,8 +37,6 @@ function withViewModel(overrides: Partial<ShareViewModel>) {
     ban: null,
     available: true,
     hasSocialSpace: true,
-    nick: 'Me',
-    nickIsAccountName: false,
     loading: false,
     serviceDown: false,
     busyToken: null,

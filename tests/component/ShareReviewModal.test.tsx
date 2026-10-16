@@ -6,9 +6,6 @@ import { SHARE_UI } from '../../src/core/constants/shareLabels';
 const props = {
   open: true,
   gameName: 'The Witcher III',
-  quota: { maxActive: 3, ttlDays: 30 },
-  nick: 'Nick',
-  nickIsAccountName: false,
   publishing: false,
   error: '',
   errorHint: '',
@@ -48,6 +45,31 @@ describe('ShareReviewModal — montaje fuera de la barra de acciones', () => {
     render(<ShareReviewModal {...props} />);
     expect(screen.getByRole('button', { name: SHARE_UI.cancel })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: SHARE_UI.confirm })).toBeInTheDocument();
+  });
+});
+
+/**
+ * Antes de publicar, solo confirmar (decisión del 17-10-2026): ni aviso que leer ni casilla que marcar. Qué se
+ * publica y cuánto dura lo cuentan las condiciones, que ya se aceptaron en la puerta del hub.
+ */
+describe('ShareReviewModal — confirmar y publicar', () => {
+  it('publica a la primera, sin casilla que marcar', () => {
+    const onConfirm = vi.fn();
+    render(<ShareReviewModal {...props} onConfirm={onConfirm} />);
+
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    const publicar = screen.getByRole('button', { name: SHARE_UI.confirm });
+    expect(publicar).toBeEnabled();
+    publicar.click();
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('enseña solo el juego, sin el muro de texto', () => {
+    render(<ShareReviewModal {...props} />);
+
+    const contenido = screen.getByRole('dialog').querySelector('.dialog-content');
+    expect(contenido?.querySelectorAll('p')).toHaveLength(1);
+    expect(screen.getByText(props.gameName)).toBeInTheDocument();
   });
 });
 

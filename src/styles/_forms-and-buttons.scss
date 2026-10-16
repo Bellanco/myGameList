@@ -240,66 +240,35 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 
 /* Compartir una reseña con enlace público.
    Hereda del diálogo de confirmación (mismo marco, mismo ritmo de botones) y solo añade lo que este necesita:
-   un aviso que hay que poder leer entero, la casilla de aceptación y el enlace ya publicado.
-   Es más ancho que un confirm porque aquí SÍ hay que leer: se está publicando algo en internet. */
+   el nombre del juego y el enlace ya publicado. Es más ancho que un confirm para que la URL quepa en pocas líneas. */
 .share-dialog {
   width: min(34rem, calc(100vw - 1.5rem));
   max-width: none;
 }
-/* En móvil el aviso se lee en una columna corta: se aprieta el marco y se baja algo el cuerpo para que quepa
-   más texto por pantalla, en vez de dejar una caja alta y estrecha que hay que recorrer entera. */
+/* En móvil se aprieta el marco y se baja algo el cuerpo, para que la URL no haga una caja alta y estrecha. */
 @media (max-width: 480px) {
   .share-dialog .dialog-content {
     gap: 0.75rem;
     padding: 1.1rem;
   }
-  .share-dialog-consent {
-    padding: 0.65rem 0.75rem;
-    font-size: var(--fs-sm);
-    gap: 0.4rem;
-  }
-  .share-dialog-note,
-  .share-dialog-accept {
+  .share-dialog-note {
     font-size: var(--fs-sm);
   }
 }
+/* El juego, centrado en la caja oscurecida que llevaba el aviso: es lo único que hay que leer antes de publicar. */
 .share-dialog-game {
-  font-weight: 600;
   margin: 0;
-}
-.share-dialog-consent {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
   padding: 0.75rem 0.9rem;
   border-radius: var(--radius, 8px);
   background: var(--surface-2, rgba(127, 127, 127, 0.12));
-  font-size: var(--fs-md);
-  line-height: 1.45;
-
-  p {
-    margin: 0;
-  }
-}
-.share-dialog-consent-title {
   font-weight: 600;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 .share-dialog-note {
   margin: 0;
   font-size: var(--fs-md);
   opacity: 0.85;
-}
-.share-dialog-accept {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  font-size: var(--fs-md);
-  cursor: pointer;
-
-  input {
-    margin-top: 0.15rem;
-    flex: 0 0 auto;
-  }
 }
 .share-dialog-error {
   margin: 0;
@@ -843,11 +812,3 @@ html:root .btn.btn-friend > .ui-icon {
   pointer-events: none;
 }
 
-
-/* Aviso dentro del diálogo de compartir: el nombre con el que se firmará no lo eligió su dueño.
-   Va en el color de ATENCIÓN, no en el de peligro: no hay nada roto ni arriesgado, solo algo que conviene mirar
-   antes de publicar. */
-.share-dialog-warn {
-  color: var(--warn, #b8860b);
-  opacity: 1;
-}

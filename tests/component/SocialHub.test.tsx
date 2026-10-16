@@ -134,8 +134,6 @@ const shareMocks = vi.hoisted(() => ({
     ban: null,
     available: true,
     hasSocialSpace: true,
-    nick: 'Me',
-    nickIsAccountName: false,
     loading: false,
     busyToken: null,
     error: '',

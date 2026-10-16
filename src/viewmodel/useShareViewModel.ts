@@ -56,16 +56,6 @@ export interface ShareViewModel {
    * y en cuanto entra aparece el botón de verdad, no el aviso.
    */
   hasSocialSpace: boolean;
-  /** Nick con el que el SERVIDOR firmará la reseña. Se enseña antes de publicar. */
-  nick: string;
-  /**
-   * Ese nick es, literalmente, el nombre de la cuenta de Google.
-   *
-   * Pasa cuando su dueño nunca eligió nick: `profiles.displayName` cae al nombre de la cuenta (ver
-   * `resolvePublicName` en firebaseRepository). Dentro de la app eso ya lo ven sus amistades, pero publicarlo en
-   * una página abierta a cualquiera es otra cosa, así que se avisa ANTES y no después.
-   */
-  nickIsAccountName: boolean;
   loading: boolean;
   /**
    * El servicio de compartir no atiende ahora (cupo agotado, caído, sin red). Mientras dure, el botón no se ofrece y
@@ -91,8 +81,6 @@ export function useShareViewModel(): ShareViewModel {
   const [ban, setBan] = useState<ShareBan | null>(null);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [hasSocialSpace, setHasSocialSpace] = useState(false);
-  const [nick, setNick] = useState('');
-  const [nickIsAccountName, setNickIsAccountName] = useState(false);
   const [loading, setLoading] = useState(false);
   const [serviceDown, setServiceDown] = useState(false);
   const [busyToken, setBusyToken] = useState<string | null>(null);
@@ -130,11 +118,6 @@ export function useShareViewModel(): ShareViewModel {
       setShares(data.shares || []);
       setQuota(data.quota || null);
       setBan(data.ban || null);
-      setNick(data.nick || '');
-      // La comparación se hace AQUÍ y no en el servidor: el nombre de la cuenta de Google es un dato de la
-      // sesión del navegador, y la Function no tiene por qué conocerlo ni guardarlo.
-      const accountName = String(authUser.displayName || '').trim();
-      setNickIsAccountName(Boolean(accountName) && accountName === String(data.nick || '').trim());
       clearError();
     } catch (problem) {
       if (isShareUnavailable(problem)) {
@@ -207,7 +190,7 @@ export function useShareViewModel(): ShareViewModel {
   const shareOf = useCallback((gameId: number) => byGame.get(gameId) || null, [byGame]);
 
   return {
-    shares, quota, ban, available, hasSocialSpace, nick, nickIsAccountName,
+    shares, quota, ban, available, hasSocialSpace,
     loading, serviceDown, busyToken, error, errorDetails,
     refresh, share, revoke, shareOf, clearError,
   };
