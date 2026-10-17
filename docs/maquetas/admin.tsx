@@ -431,7 +431,8 @@ function useFakePanel(notify: (toast: AdminToast) => void): Omit<AdminPanelConte
     removeTodo: async (id) => setTodos((list) => list.filter((t) => t.id !== id)),
   };
 
-  const health: AdminHealthState = { meters: MEDIDORES, fetchedAt: AHORA - 2 * 60_000, loading: false, unreachable: false, refresh: async () => {} };
+  const itad = { status: 'ok' as const, calls: 340, callsYesterday: 510, denied: 0, deniedYesterday: 2, resetsAt: Math.ceil(AHORA / 86_400_000) * 86_400_000 };
+  const health: AdminHealthState = { meters: MEDIDORES, itad, fetchedAt: AHORA - 2 * 60_000, loading: false, unreachable: false, refresh: async () => {} };
   const log: AdminLogState = { entries, error: '', load: async () => {}, record: async (draft) => apuntar(draft), undo: deshacer };
   const copyUid = async () => ok('Identificador copiado.');
   const runShareAction = async (action: () => Promise<string>) => ok(await action().catch(() => 'Hecho (maqueta).'));

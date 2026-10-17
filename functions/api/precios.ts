@@ -18,6 +18,7 @@ import { requireUser } from '../_lib/context';
 import { fail, json, readJson, unavailable } from '../_lib/http';
 import { MAX_NOMBRE } from '../_lib/igdbCover';
 import { ItadSinCupo, cacheDelBorde, resolverPrecios, type PresupuestoItad } from '../_lib/itad';
+import { apuntarUsoItad, contarLlamadas } from '../_lib/itadUso';
 import type { Env } from '../_lib/keys';
 import { readProfileFacts } from '../_lib/quota';
 import { PROFILE_TIER_PRICE_EDITION_SEARCH, PROFILE_TIER_PRICE_REQUESTS_PER_HOUR, PROFILE_TIER_PRICE_TTL_MS } from '../../src/core/constants/tiers';
@@ -105,14 +106,17 @@ export async function onRequestPost(context: { request: Request; env: EnvConItad
     return json({ error: 'Demasiadas consultas de precios en poco tiempo. Inténtalo más tarde.' }, 429, { 'Retry-After': String(segundos) });
   }
 
+  const presupuesto = contarLlamadas(presupuestoGlobal());
   const { juegos, preguntoAItad, fallo } = await resolverPrecios(titulos, {
     clave,
     plazoMs: PROFILE_TIER_PRICE_TTL_MS[tier],
     cache: cacheDelBorde(new URL(context.request.url).origin),
-    presupuesto: presupuestoGlobal(),
+    presupuesto,
     ahora,
     conEdiciones: PROFILE_TIER_PRICE_EDITION_SEARCH[tier],
   });
+  // Para Capacidad: ITAD no dice cuánto se ha gastado de la clave (`itadUso.ts`).
+  await apuntarUsoItad(context.env.SHARES, { llamadas: presupuesto.llamadas, sinCupo: fallo instanceof ItadSinCupo }, ahora);
   const algoResuelto = Object.values(juegos).some(Boolean);
   // `x-cache` es de diagnóstico: con él se comprueba en el dominio real que la caché del borde guarda (P1).
   const diagnostico = { 'x-cache': preguntoAItad ? 'miss' : 'hit' };

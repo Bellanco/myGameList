@@ -30,6 +30,7 @@ vi.mock('../../functions/_lib/quota', () => ({
 }));
 
 const { onRequestPost, leerTitulos, reiniciarTopesParaTests, MAX_TITULOS } = await import('../../functions/api/precios');
+const { itadLlamadasKey, itadSinCupoKey, ITAD_LOTE_LLAMADAS, reiniciarUsoItadParaTests } = await import('../../functions/_lib/itadUso');
 
 const HORA = 60 * 60 * 1000;
 
@@ -307,6 +308,7 @@ function pedir(cuerpo: unknown, entorno: Record<string, unknown> = { ITAD_API_KE
 describe('POST /api/precios', () => {
   beforeEach(() => {
     reiniciarTopesParaTests();
+    reiniciarUsoItadParaTests();
     requireUserMock.mockResolvedValue({ user: { uid: 'u1', idToken: 't' }, appCheckToken: null, projectId: 'p', isAdmin: false });
     rangoMock.mockReturnValue('bronze');
   });
@@ -364,6 +366,25 @@ describe('POST /api/precios', () => {
     rangoMock.mockReturnValue('mithril');
     const mithril = (await (await pedir({ titulos: ["Marvel's Spider-Man"] })).json()) as { juegos: Record<string, { itadId: string } | null> };
     expect(mithril.juegos["Marvel's Spider-Man"]?.itadId).toBe('id-smr');
+  });
+
+  it('apunta para Capacidad las llamadas que salen a ITAD, no las que contesta la caché, y las peticiones sin cupo', async () => {
+    const llamadas = itadFalso();
+    cachesDelBorde();
+    const datos = new Map<string, string>();
+    const SHARES = { get: async (clave: string) => datos.get(clave) ?? null, put: async (clave: string, valor: string) => void datos.set(clave, valor) };
+    const azar = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      await pedir({ titulos: ['Celeste'] }, { ITAD_API_KEY: 'clave', SHARES });
+      await pedir({ titulos: ['Celeste'] }, { ITAD_API_KEY: 'clave', SHARES });
+      const hoy = itadLlamadasKey(Date.now());
+      expect(Number(datos.get(hoy))).toBe(llamadas.length * ITAD_LOTE_LLAMADAS);
+      itadFalso({ estado: 429, retryAfter: '120' });
+      expect((await pedir({ titulos: ['Hades II'] }, { ITAD_API_KEY: 'clave', SHARES })).status).toBe(429);
+      expect(datos.get(itadSinCupoKey(Date.now()))).toBe('1');
+    } finally {
+      azar.mockRestore();
+    }
   });
 
   it('ITAD sin cupo y nada guardado: 429 con su Retry-After; caído: 503 de no disponible', async () => {

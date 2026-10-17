@@ -19,18 +19,50 @@ export interface HealthMeter {
   error?: string;
 }
 
+/**
+ * Lo gastado de IsThereAnyDeal (`functions/_lib/itadUso.ts`). Va aparte de los medidores: su límite no es diario,
+ * sino de 1.000 llamadas cada 5 minutos. `null` donde no se pudo leer.
+ */
+export interface ItadUsage {
+  status: HealthStatus;
+  calls: number | null;
+  callsYesterday: number | null;
+  /** Peticiones que se quedaron sin precios nuevos por falta de cupo. */
+  denied: number | null;
+  deniedYesterday: number | null;
+  resetsAt: number;
+}
+
 export interface AdminHealth {
   fetchedAt: number;
   meters: HealthMeter[];
+  /** `null` si el servidor aún no lo manda (un despliegue anterior). */
+  itad: ItadUsage | null;
 }
 
 const SOURCES = ['covers', 'cloudflare'] as const;
 const STATUSES = ['ok', 'not-configured', 'error'] as const;
 
+const countOf = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : null;
+
+function sanitizeItad(raw: unknown): ItadUsage | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const data = raw as Record<string, unknown>;
+  return {
+    status: STATUSES.find((value) => value === data.status) || 'error',
+    calls: countOf(data.calls),
+    callsYesterday: countOf(data.callsYesterday),
+    denied: countOf(data.denied),
+    deniedYesterday: countOf(data.deniedYesterday),
+    resetsAt: Number(data.resetsAt) || 0,
+  };
+}
+
 /** Lo que venga raro del servidor no se pinta: un medidor sin id o sin techo sobra. */
 export function sanitizeHealth(raw: unknown): AdminHealth | null {
   if (!raw || typeof raw !== 'object') return null;
-  const data = raw as { fetchedAt?: unknown; meters?: unknown };
+  const data = raw as { fetchedAt?: unknown; meters?: unknown; itad?: unknown };
   if (!Array.isArray(data.meters)) return null;
   const meters = data.meters.flatMap((entry): HealthMeter[] => {
     const meter = entry as Record<string, unknown>;
@@ -50,7 +82,7 @@ export function sanitizeHealth(raw: unknown): AdminHealth | null {
       error: typeof meter.error === 'string' ? meter.error.slice(0, 300) : undefined,
     }];
   });
-  return { fetchedAt: Number(data.fetchedAt) || Date.now(), meters };
+  return { fetchedAt: Number(data.fetchedAt) || Date.now(), meters, itad: sanitizeItad(data.itad) };
 }
 
 /** `null` si el endpoint no responde (en desarrollo no existe: lo sirve Pages). */

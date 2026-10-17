@@ -56,6 +56,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Cuentas nombra a cada persona como en el social.** En el panel de administración, la fila lleva el nombre de su
   perfil social si lo tiene; el de su cuenta de Google sale al desplegarla, junto al correo.
 
+- **Capacidad cuenta lo que se pide a IsThereAnyDeal.** En el panel de administración, una tarjeta enseña las
+  llamadas del día a IsThereAnyDeal y cuántas peticiones de precios se quedaron sin cupo, con las de ayer al lado.
+
 ### Fixed
 
 - **Los chips de años, puntos fuertes y puntos débiles se leen mejor en modo claro.** En «No puedes pasar»,
