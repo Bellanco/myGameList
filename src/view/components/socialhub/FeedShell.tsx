@@ -74,6 +74,10 @@ export function FeedShell({
     <section className="hub-hub hub-screen" aria-label={F.sectionAria}>
       {prelude}
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+        {/* LA FILA DE BOTONES VA DENTRO DE LA CABECERA, bajo el título y a la izquierda del avatar (17-10-2026). Como
+            fila aparte, la cabecera medía lo que el avatar, que es más alto que el título en casi todos los temas: entre
+            «Actividad social» y «Ver perfiles» quedaban unos 45 px, el hueco de un subtítulo que esta pantalla no tiene.
+            Ahora el avatar ocupa las dos filas de la rejilla y los botones suben a ras del título. */}
         <header className="hub-screen-header hub-feed-header">
           <div className="hub-feed-header-text">
             <div className="hub-hub-title-wrap">
@@ -81,51 +85,51 @@ export function FeedShell({
             </div>
           </div>
           {avatar}
-        </header>
-        {/* En modo esqueleto la fila entera sale `aria-hidden` además de deshabilitada: son botones que todavía no
-            hacen nada, y anunciarlos invita a pulsarlos. Ocupan su sitio, que es para lo que están ahí — y van
-            ATENUADOS (`is-placeholder`), porque un botón a todo color que no responde al clic se lee como una
-            avería. La atenuación es solo opacidad: no mueve nada, así que al llegar la pantalla no hay salto. */}
-        <div
-          className={`hub-screen-actions hub-screen-actions-split ${inert ? 'is-placeholder' : ''}`.trim()}
-          aria-label={inert ? undefined : F.actionsAria}
-          aria-hidden={inert || undefined}
-        >
-          <div className="hub-screen-actions-left">
-            <button
-              className="btn btn-open"
-              type="button"
-              disabled={inert}
-              onClick={actions?.onOpenProfiles}
-            >
-              <Icon name="bottom-hub" />
-              {F.openProfiles}
-            </button>
-            {/* LA CAMPANA SOLO CON ALGO QUE VER (09-10-2026; con los «me gusta», 13-10-2026). Dentro están las
-                peticiones que te han hecho y los «me gusta» nuevos a lo tuyo; sin nada, el botón llevaba a una pantalla
-                vacía. Tampoco sale en el esqueleto, donde aún no se sabe: aparece a la derecha de «Ver perfiles» y no
-                desplaza nada al llegar. El número cuenta solo lo nuevo: tras abrirla, lo visto sigue dentro hasta salir
-                del social, y la campana con ello, pero sin número. */}
-            {!inert && actions && actions.bellVisible ? (
+          {/* En modo esqueleto la fila entera sale `aria-hidden` además de deshabilitada: son botones que todavía no
+              hacen nada, y anunciarlos invita a pulsarlos. Ocupan su sitio, que es para lo que están ahí — y van
+              ATENUADOS (`is-placeholder`), porque un botón a todo color que no responde al clic se lee como una
+              avería. La atenuación es solo opacidad: no mueve nada, así que al llegar la pantalla no hay salto. */}
+          <div
+            className={`hub-screen-actions hub-screen-actions-split ${inert ? 'is-placeholder' : ''}`.trim()}
+            aria-label={inert ? undefined : F.actionsAria}
+            aria-hidden={inert || undefined}
+          >
+            <div className="hub-screen-actions-left">
               <button
-                className="btn btn-secondary hub-requests-btn"
+                className="btn btn-open"
                 type="button"
-                onClick={actions.onOpenRequests}
-                aria-label={F.openRequestsAria(actions.bellCount)}
-                title={F.openRequests}
+                disabled={inert}
+                onClick={actions?.onOpenProfiles}
               >
-                <Icon name="bell" />
-                {actions.bellCount > 0 ? (
-                  <span className="hub-requests-count is-active" aria-hidden="true">
-                    {actions.bellCount}
-                  </span>
-                ) : null}
+                <Icon name="bottom-hub" />
+                {F.openProfiles}
               </button>
-            ) : null}
+              {/* LA CAMPANA SOLO CON ALGO QUE VER (09-10-2026; con los «me gusta», 13-10-2026). Dentro están las
+                  peticiones que te han hecho y los «me gusta» nuevos a lo tuyo; sin nada, el botón llevaba a una pantalla
+                  vacía. Tampoco sale en el esqueleto, donde aún no se sabe: aparece a la derecha de «Ver perfiles» y no
+                  desplaza nada al llegar. El número cuenta solo lo nuevo: tras abrirla, lo visto sigue dentro hasta salir
+                  del social, y la campana con ello, pero sin número. */}
+              {!inert && actions && actions.bellVisible ? (
+                <button
+                  className="btn btn-secondary hub-requests-btn"
+                  type="button"
+                  onClick={actions.onOpenRequests}
+                  aria-label={F.openRequestsAria(actions.bellCount)}
+                  title={F.openRequests}
+                >
+                  <Icon name="bell" />
+                  {actions.bellCount > 0 ? (
+                    <span className="hub-requests-count is-active" aria-hidden="true">
+                      {actions.bellCount}
+                    </span>
+                  ) : null}
+                </button>
+              ) : null}
+            </div>
+            {/* SIN «CERRAR SESIÓN» AQUÍ. Era el botón más llamativo de la pantalla que más se abre, y es la acción que
+                menos se busca en ella: vive en «Mi perfil social», con el resto de lo que es de la cuenta (09-10-2026). */}
           </div>
-          {/* SIN «CERRAR SESIÓN» AQUÍ. Era el botón más llamativo de la pantalla que más se abre, y es la acción que
-              menos se busca en ella: vive en «Mi perfil social», con el resto de lo que es de la cuenta (09-10-2026). */}
-        </div>
+        </header>
         {notice}
         {composer}
         {children}

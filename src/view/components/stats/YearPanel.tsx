@@ -22,11 +22,14 @@ export const YearPanel = memo(function YearPanel({
   summary,
   scale,
   full = true,
+  onOpenGame,
 }: {
   summary: YearSummary;
   scale: ScoreScale;
   /** ¿Hay datos privados (horas)? Con la proyección pública el año se cuenta sin tiempo de juego. */
   full?: boolean;
+  /** Abre la ficha de un juego desde el podio o el listado del año, sin salir del panel; sin ella no son pulsables. */
+  onOpenGame?: (name: string) => void;
 }) {
   const L = useStatsLabels();
   const avgInScale = scale === 'grade' ? summary.avgGrade : summary.avgGrade / 20;
@@ -71,7 +74,7 @@ export const YearPanel = memo(function YearPanel({
         <div className="stats-card">
           <h2>{L.top.titleYear(summary.year)}</h2>
           <p className="stats-card-sub">{L.top.subtitle}</p>
-          <TopGames top={summary.top} scale={scale} average={summary.avgGrade} showRest={false} year={summary.year} />
+          <TopGames top={summary.top} scale={scale} average={summary.avgGrade} showRest={false} year={summary.year} onOpenGame={onOpenGame} />
         </div>
       ) : null}
 
@@ -97,7 +100,7 @@ export const YearPanel = memo(function YearPanel({
       <div className="stats-card">
         <h2>{L.year.gamesTitle(summary.year)}</h2>
         <p className="stats-card-sub">{L.year.gamesSubtitle}</p>
-        <GameCards games={summary.games} ranked />
+        <GameCards games={summary.games} ranked onOpenGame={onOpenGame} />
       </div>
     </>
   );

@@ -5,6 +5,91 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-17
+
+### Added
+
+- **Precios de IsThereAnyDeal en tu lista de deseos.** Si tienes espacio social, puedes activarlos en Ajustes › Datos,
+  en la tarjeta Integraciones. Cada deseo enseña su mejor precio, el descuento y la marca «Mínimo» si está en su
+  mínimo histórico. Su ficha lleva el recuadro entero: dónde está y hasta cuándo, los mínimos histórico, del último
+  año y de los últimos tres meses, las dos tiendas siguientes y el enlace a la tienda. La ficha de un juego que ya
+  tienes en otra lista no lo enseña, la abras desde donde la abras. Deseados se puede ordenar por precio o por
+  descuento y filtrar por lo que está en oferta. Si IsThereAnyDeal acierta con otro título, la ficha lo dice
+  («Precio de: …»). Vienen desactivados. Al activarlos, nuestro servidor envía a IsThereAnyDeal los nombres de los
+  juegos de tu lista de deseos, nunca tu IP ni nada de tu cuenta. Sin red, el precio no sale y no verás ningún error.
+
+- **Esconder el cuadro para publicar.** Si tu rango te deja publicar, Ajustes › Diseño tiene una opción nueva,
+  «Publicaciones», con Mostrar u Ocultar. Ocultar quita de la actividad social el cuadro de publicar y su botón, pero
+  no tu permiso para publicar. Como el resto de opciones de Diseño, se guarda con tu cuenta.
+
+### Changed
+
+- **Cada juego tiene su ficha.** Al tocar un juego de tus listas, se abre un panel a la derecha con todo lo que
+  enseñaba el detalle. Arriba, tu lista y desde cuándo, las horas que le has dedicado y tu nota o tu interés.
+  Debajo, plataformas, géneros y años, puntos fuertes y débiles, y tu análisis, con el mismo aspecto que las
+  reseñas de tus amistades. Abajo están los botones para moverlo, editarlo o borrarlo. El panel aparece con un
+  fundido suave (en el móvil, deslizándose desde el borde). Si tienes otras
+  entregas de la misma saga, salen en la ficha y llevan a la suya. La ficha queda en la dirección de la página,
+  así que «atrás» la cierra y una recarga la vuelve a abrir. En el móvil se cierra deslizándola hacia la derecha o
+  tocando la franja de la lista. Se abre al momento, también con el ratón, y el doble clic abre la edición encima.
+
+- **La ficha te dice qué han hecho tus amistades con el juego.** Si tienes espacio social, verás quién lo tiene y en
+  qué lista, cuándo lo terminó, su nota y el comienzo de su reseña, la media de sus notas y quién lo quiere. Pueden
+  salir también quienes lo tienen aunque no lo hayan reseñado. Toca a una persona para ir a su perfil, que se abre
+  con el juego a la vista.
+
+- **La ficha se abre desde más sitios.** Desde el buscador (⌘K), que te lleva a la lista del juego con su ficha
+  abierta (y al cerrarla te quedas en esa lista); desde el nombre de un
+  juego en el chip de una reseña o en un aviso de lista del feed; y desde las listas de una amistad, con lo suyo
+  arriba: su lista, sus datos y su reseña. También se abre la de un juego que no tienes, y puedes añadirlo a deseados
+  o a próximos desde ella. En Estadísticas, los juegos de «Lo mejor de tu biblioteca», los de cada año y el que ya
+  tienes en «Ya lo tienes en casa» abren su ficha sin sacarte del panel. El detalle que se desplegaba bajo cada
+  juego ya no existe.
+
+- **«No puedes pasar» estrena colores.** De noche, el fondo es el verde hondo del bosque de Lórien, la hoja es más
+  luminosa y el oro más vivo, y la pestaña activa y las letras de los títulos van en plata. De día, el pergamino
+  pasa a piedra enana, con tintas de oro viejo, cobre y granate. Cada color tiene ahora nombre en la Tierra Media, y
+  el texto se lee con más contraste en los dos modos.
+
+- **El análisis pide al menos 200 caracteres.** Si escribes uno, tiene que tener al menos 200 caracteres. Mientras
+  no llega, debajo del campo se ve cuántos faltan. Dejarlo vacío sigue valiendo, y los análisis más cortos que ya
+  tenías se conservan aunque edites el juego: el mínimo solo se pide si cambias su texto.
+
+- **Al pasar un juego a completados, el año actual ya está puesto.** Entra también si el juego ya tenía otros años,
+  como al terminar una partida nueva de uno que ya habías completado. Puedes quitarlo antes de guardar.
+
+- **Los campos obligatorios llevan un asterisco.** Al añadir o editar un juego, el nombre, la nota o el interés, las
+  plataformas, los géneros y, en completados, los años llevan un * al final del rótulo.
+
+- **Compartir una reseña es pulsar y publicar.** El diálogo enseña solo el juego y el botón «Publicar enlace», sin
+  casilla que marcar ni explicaciones. Qué se publica, cuánto dura el enlace y cómo retirarlo lo cuentan las
+  condiciones.
+
+- **Cuentas nombra a cada persona como en el social.** En el panel de administración, la fila lleva el nombre de su
+  perfil social si lo tiene; el de su cuenta de Google sale al desplegarla, junto al correo.
+
+- **Capacidad cuenta lo que se pide a IsThereAnyDeal.** En el panel de administración, una tarjeta enseña las
+  llamadas del día a IsThereAnyDeal y cuántas peticiones de precios se quedaron sin cupo, con las de ayer al lado.
+
+- **Las listas, en una pastilla.** Las pestañas de arriba (completista, vergüenza, en curso, próximos y deseos) son
+  ahora una pastilla como la barra de abajo, vestida igual que ella en cada tema, con la lista activa resaltada y el
+  número de juegos en su ficha. En una pantalla ancha sube a la fila de la lupa y el tema, y desaparece el hueco que
+  quedaba encima. En el móvil va debajo de esos botones, a todo el ancho.
+
+- **Menos hueco arriba en Actividad social.** «Ver perfiles» queda justo debajo del título y tu avatar a su lado, a
+  la altura de los dos. Antes, entre el título y los botones quedaba el hueco de un subtítulo que la pantalla no tiene.
+
+### Fixed
+
+- **Los chips de años, puntos fuertes y puntos débiles se leen mejor en modo claro.** En «No puedes pasar»,
+  Persona, Portal, Grimdark y Cyberpunk su texto es un poco más oscuro, y ya contrasta lo que pide la norma de
+  accesibilidad. En Cyberpunk oscuro, los puntos débiles van un poco más claros por lo mismo.
+
+- **El tabulador va de campo a campo al añadir o editar un juego.** Ya no se detiene en cada sugerencia de debajo
+  de plataformas, géneros o años. Para elegir una con el teclado, pulsa ↓ desde el campo, recórrelas con ← → y
+  vuelve con ↑. Con la nota de 0 a 100, el tabulador va directo a la casilla del número, no a la barra. Desde
+  ella, ↑ ↓ suben o bajan un punto, y RePág/AvPág, diez.
+
 ## [1.7.9] - 2026-10-15
 
 ### Added

@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 // El panel enlaza a la pantalla de reseñas del hub social, así que necesita un router alrededor.
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { StatsHub } from '../../src/view/components/stats/StatsHub';
 import { STATS_UI } from '../../src/core/constants/statsLabels';
+import { GAME_SHEET_UI } from '../../src/core/constants/gameSheetLabels';
+import { GAME_SHEET_PARAM, gameSheetSlug } from '../../src/core/utils/gameSheetPath';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 // La escala de puntuación se sirve desde un store que se hidrata de Firestore; aquí se fija a mano para no
@@ -176,6 +178,73 @@ describe('StatsHub · periodos', () => {
     expect(listado).not.toHaveTextContent('Dos');
     // Y la lista de la vergüenza se queda en General.
     expect(screen.queryByRole('heading', { name: L.shame.title })).not.toBeInTheDocument();
+  });
+
+  it('en un año, el podio y el listado abren la ficha del juego sin salir del panel', async () => {
+    let location = { pathname: '', search: '' };
+    function Ubicacion() {
+      location = useLocation();
+      return null;
+    }
+    render(
+      <MemoryRouter initialEntries={['/stats']}>
+        <StatsHub games={SAMPLE} />
+        <Ubicacion />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: L.scope.yearAria(2023) }));
+    // «Uno» está en el podio y en el listado del año: los dos botones abren su ficha.
+    const botones = screen.getAllByRole('button', { name: GAME_SHEET_UI.openSheetAria('Uno') });
+    expect(botones).toHaveLength(2);
+
+    await userEvent.click(botones[1]);
+    expect(location.pathname).toBe('/stats');
+    expect(new URLSearchParams(location.search).get(GAME_SHEET_PARAM)).toBe(gameSheetSlug('Uno'));
+    // Y se sigue en el mismo año.
+    expect(screen.getByRole('heading', { name: L.year.gamesTitle(2023) })).toBeInTheDocument();
+  });
+
+  it('en General, el top abre la ficha del juego, no la reseña', async () => {
+    let location = { pathname: '', search: '' };
+    function Ubicacion() {
+      location = useLocation();
+      return null;
+    }
+    const conResena = tabData({ c: SAMPLE.c.map((item) => ({ ...item, review: 'Una reseña larga de verdad.' })) });
+    render(
+      <MemoryRouter initialEntries={['/stats']}>
+        <StatsHub games={conResena} />
+        <Ubicacion />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: GAME_SHEET_UI.openSheetAria('Dos') }));
+    expect(location.pathname).toBe('/stats');
+    expect(new URLSearchParams(location.search).get(GAME_SHEET_PARAM)).toBe(gameSheetSlug('Dos'));
+  });
+
+  it('en «Ya lo tienes en casa», el juego que ya tienes abre su ficha sin salir del panel', async () => {
+    let location = { pathname: '', search: '' };
+    function Ubicacion() {
+      location = useLocation();
+      return null;
+    }
+    const conDeseo = tabData({
+      ...SAMPLE,
+      p: [game({ id: 5, name: 'Hollow Knight', genres: ['Metroidvania'], listedAt: ENERO })],
+      d: [game({ id: 6, name: 'Silksong', genres: ['Metroidvania'], listedAt: FEBRERO })],
+    });
+    render(
+      <MemoryRouter initialEntries={['/stats']}>
+        <StatsHub games={conDeseo} />
+        <Ubicacion />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hollow Knight' }));
+    expect(location.pathname).toBe('/stats');
+    expect(new URLSearchParams(location.search).get(GAME_SHEET_PARAM)).toBe(gameSheetSlug('Hollow Knight'));
   });
 
   it('vuelve a General', async () => {
@@ -444,7 +513,8 @@ describe('StatsHub · figuras interactivas del podio', () => {
     // Las porciones son botones: se activan con Intro, no solo con el ratón. Se busca DENTRO del rosetón abierto:
     // el mismo género es señalable en otras tres figuras de la pantalla (el hexágono, el rosetón polar…).
     const rpg = within(document.querySelector('.burst') as HTMLElement).getByRole('button', { name: /^RPG/ });
-    rpg.focus();
+    // Enfocar ya señala la porción (`onFocus`): es un cambio de estado y va dentro de `act`.
+    act(() => rpg.focus());
     await userEvent.keyboard('{Enter}');
 
     expect(rpg).toHaveAttribute('aria-pressed', 'true');

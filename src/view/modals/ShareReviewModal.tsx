@@ -3,16 +3,14 @@ import { createPortal } from 'react-dom';
 import { useNativeDialog } from './useNativeDialog';
 import { SHARE_UI } from '../../core/constants/shareLabels';
 import { Icon } from '../components/Icon';
-import { grantShareConsent, hasShareConsent } from '../../model/repository/shareConsentRepository';
-import type { ShareQuota } from '../../core/constants/tiers';
 import { copyText } from '../../core/utils/clipboard';
 
 /**
  * Diálogo de compartir una reseña con enlace público.
  *
- * DOS PANTALLAS EN UNA, y el orden importa: la primera vez (o cuando cambia lo que se publica) se enseña el
- * aviso COMPLETO con casilla obligatoria; después, solo el resumen y el botón. No se guarda un `true` sino la
- * versión legal aceptada, así que si cambia lo que sale publicado el aviso vuelve a aparecer entero.
+ * ANTES DE PUBLICAR, SOLO CONFIRMAR: el juego y el botón. Qué se publica, qué no, cuánto dura y cómo se retira lo
+ * cuentan las condiciones («Compartir con un enlace público» en `legalContent.ts`); repetirlo aquí era un muro de
+ * texto entre el usuario y el botón (decisión del 17-10-2026). Pulsar «Publicar enlace» es el acto que lo autoriza.
  *
  * Tras publicar, el diálogo no se cierra: enseña el enlace con su botón de copiar. Cerrarlo de golpe dejaría al
  * usuario sin lo único que ha venido a buscar.
@@ -20,9 +18,6 @@ import { copyText } from '../../core/utils/clipboard';
 export const ShareReviewModal = memo(function ShareReviewModal({
   open,
   gameName,
-  quota,
-  nick,
-  nickIsAccountName,
   publishing,
   error,
   errorHint,
@@ -35,11 +30,6 @@ export const ShareReviewModal = memo(function ShareReviewModal({
 }: {
   open: boolean;
   gameName: string;
-  quota: ShareQuota | null;
-  /** Nick con el que el servidor firmará la reseña, para poder verlo ANTES de publicar. */
-  nick: string;
-  /** Ese nick es el nombre de la cuenta de Google: se avisa, porque casi nadie lo elegiría a propósito. */
-  nickIsAccountName: boolean;
   publishing: boolean;
   error: string;
   /** Qué puede hacer el usuario ante ese error (p. ej. sin enlaces libres). Vacío cuando no aplica. */
@@ -60,24 +50,13 @@ export const ShareReviewModal = memo(function ShareReviewModal({
   onRenew?: () => void;
 }) {
   const dialogRef = useNativeDialog(open, onCancel);
-  const [accepted, setAccepted] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  const consentGiven = hasShareConsent();
 
   useEffect(() => {
     if (open) {
-      setAccepted(false);
       setCopied(false);
     }
   }, [open]);
-
-  const confirm = () => {
-    if (!consentGiven) {
-      grantShareConsent();
-    }
-    onConfirm();
-  };
 
   /**
    * Hoja de compartir del sistema. Es la vía correcta para llevar el enlace a cualquier red: la lista de destinos
@@ -167,27 +146,6 @@ export const ShareReviewModal = memo(function ShareReviewModal({
             </>
           ) : (
             <>
-              {consentGiven ? null : (
-                <div className="share-dialog-consent">
-                  <p className="share-dialog-consent-title">{SHARE_UI.consentTitle}</p>
-                  <p>{SHARE_UI.consentPublished}</p>
-                  <p>{SHARE_UI.consentPrivate}</p>
-                  <p>{SHARE_UI.consentRevocable}</p>
-                </div>
-              )}
-              {quota ? <p className="share-dialog-note">{SHARE_UI.consentDuration(quota.ttlDays, quota.maxActive)}</p> : null}
-              {nick ? (
-                <p className={`share-dialog-note${nickIsAccountName ? ' share-dialog-warn' : ''}`}>
-                  {SHARE_UI.signedAs(nick)}
-                  {nickIsAccountName ? ` ${SHARE_UI.signedAsAccountName}` : ''}
-                </p>
-              ) : null}
-              {consentGiven ? null : (
-                <label className="share-dialog-accept">
-                  <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
-                  <span>{SHARE_UI.consentAccept}</span>
-                </label>
-              )}
               {error ? (
                 <p className="share-dialog-error">
                   {error}
@@ -201,8 +159,8 @@ export const ShareReviewModal = memo(function ShareReviewModal({
                 <button
                   className="btn btn-primary"
                   type="button"
-                  onClick={confirm}
-                  disabled={publishing || (!consentGiven && !accepted)}
+                  onClick={onConfirm}
+                  disabled={publishing}
                 >
                   {publishing ? SHARE_UI.publishing : SHARE_UI.confirm}
                 </button>

@@ -51,7 +51,7 @@ beforeEach(() => {
 describe('useSocialDirectory — refresco tras publicar', () => {
   it('tras un post fuerza el feed pero reutiliza la copia de los perfiles', async () => {
     const { result } = montar();
-    await result.current.hydrateSocialDirectory(true, { keepDirectoryQuery: true });
+    await act(() => result.current.hydrateSocialDirectory(true, { keepDirectoryQuery: true }));
 
     expect(getSocialProfilesByUid).toHaveBeenCalledTimes(1);
     expect(getSocialProfilesByUid.mock.calls[0][1]).toMatchObject({ forceRefresh: false });
@@ -59,7 +59,7 @@ describe('useSocialDirectory — refresco tras publicar', () => {
 
   it('el botón «Actualizar» sigue releyendo los perfiles', async () => {
     const { result } = montar();
-    await result.current.hydrateSocialDirectory(true);
+    await act(() => result.current.hydrateSocialDirectory(true));
 
     expect(getSocialProfilesByUid.mock.calls[0][1]).toMatchObject({ forceRefresh: true });
   });

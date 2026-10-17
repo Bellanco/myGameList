@@ -15,12 +15,8 @@ function countOf(games: GameItem[], listCap?: { total: number; max: number }) {
     <GameTable
       games={games}
       currentTab="d"
-      expandedId={null}
-      onExpandedChange={vi.fn()}
+      onOpenGame={vi.fn()}
       onEdit={vi.fn()}
-      onDelete={vi.fn()}
-      onMigrate={vi.fn()}
-      tabActions={[]}
       onSort={vi.fn()}
       listCap={listCap}
     />,

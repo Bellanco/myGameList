@@ -525,11 +525,18 @@ export async function getCachedProfileGames(
 export async function getCachedProfileGamesEntry(
   profileId: string,
   gamesGistId: string,
-): Promise<{ games: TabData; etag: string | null; fresh: boolean } | null> {
+): Promise<{ games: TabData; etag: string | null; fresh: boolean; cachedAt: number } | null> {
   try {
     const rec = await idbGet<CachedProfileGames>(PROFILE_CACHE_STORE, profileId);
     if (!rec || rec.gamesGistId !== gamesGistId) return null;
-    return { games: rec.games, etag: rec.etag ?? null, fresh: Date.now() - rec.cachedAt < PROFILE_GAMES_TTL_MS };
+    // `cachedAt` es la hora de la última pregunta a GitHub (un 304 la renueva): con ella, el índice de la ficha decide
+    // si toca volver a preguntar con el plazo de su rango (`PROFILE_TIER_FRIEND_INDEX_TTL_MS`).
+    return {
+      games: rec.games,
+      etag: rec.etag ?? null,
+      fresh: Date.now() - rec.cachedAt < PROFILE_GAMES_TTL_MS,
+      cachedAt: rec.cachedAt,
+    };
   } catch {
     return null;
   }
@@ -565,6 +572,42 @@ export async function invalidateProfileGames(profileId: string): Promise<void> {
 // TTL POR DEFECTO (rango bronce). El llamador pasa el suyo según el rango de QUIEN MIRA: plata 20 min, oro 10,
 // mithril 60 s. Ver `PROFILE_TIER_FEED_TTL_MS` en core/constants/tiers.ts.
 const SOCIAL_DIRECTORY_TTL_MS = 30 * 60 * 1000;
+/**
+ * LA CACHÉ LOCAL DE PRECIOS DE ISTHEREANYDEAL (P2 del plan de la ficha y los precios): un solo registro en
+ * `profileCache` con su propia clave, como la copia del directorio. No va en un almacén nuevo A PROPÓSITO: subir
+ * `DB_VERSION` bloquearía la apertura de IndexedDB mientras quede abierta una pestaña con la versión anterior (no hay
+ * manejador de `versionchange` que la cierre), y una caché no justifica ese riesgo. El cierre de sesión la vacía con
+ * el resto de `profileCache`, que es lo correcto: sin espacio social no hay precios, y los títulos de tu lista de
+ * deseos no deben quedarse en un navegador compartido.
+ */
+const PRICE_CACHE_KEY = '__precios__';
+const PRICE_CACHE_VERSION = 1;
+
+interface CachedPrices<T> {
+  profileId: string;
+  version: number;
+  entries: T;
+}
+
+/** La caché local de precios, o `null` si no hay (o no se puede leer, o es de otra versión). */
+export async function getPriceCache<T>(): Promise<T | null> {
+  try {
+    const rec = await idbGet<CachedPrices<T>>(PROFILE_CACHE_STORE, PRICE_CACHE_KEY);
+    return rec && rec.version === PRICE_CACHE_VERSION ? rec.entries : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Guarda la caché local de precios entera. Best-effort: si no se puede, se volverá a pedir. */
+export async function putPriceCache<T>(entries: T): Promise<void> {
+  try {
+    await idbPut<CachedPrices<T>>(PROFILE_CACHE_STORE, { profileId: PRICE_CACHE_KEY, version: PRICE_CACHE_VERSION, entries });
+  } catch {
+    // best-effort.
+  }
+}
+
 const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
 /**
  * Versión de la FORMA de las entradas cacheadas. Una caché escrita con otra versión se ignora, aunque siga

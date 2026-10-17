@@ -92,6 +92,8 @@ const JUEGO = {
   listedAt: 1,
 };
 
+const RESENA_NUEVA = 'Reseña reescrita. '.repeat(15).trim();
+
 function sembrar() {
   localStorage.setItem(
     STORAGE_KEY,
@@ -123,7 +125,8 @@ describe('App · guardar un juego y el canal social', () => {
 
     const resena = await abrirEdicion(user);
     await user.clear(resena);
-    await user.type(resena, 'Reseña reescrita.');
+    // Pegada y no tecleada: un análisis nuevo tiene que llegar al mínimo (`GAME_LIMITS.reviewMin`).
+    await user.paste(RESENA_NUEVA);
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
 
     await waitFor(() => expect(publishReviewActivity).toHaveBeenCalledOnce());
@@ -131,7 +134,7 @@ describe('App · guardar un juego y el canal social', () => {
     expect(publishReviewActivity.mock.calls[0][0]).toMatchObject({
       id: JUEGO.id,
       name: JUEGO.name,
-      review: 'Reseña reescrita.',
+      review: RESENA_NUEVA,
       reviewChanged: true,
     });
     expect(unpublishReviewActivity).not.toHaveBeenCalled();

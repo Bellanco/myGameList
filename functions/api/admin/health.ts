@@ -5,6 +5,8 @@
 //   - Cloudflare (Free): operaciones de KV por tipo y peticiones a Functions, de la API de analíticas
 //     (`cloudflareAnalytics.ts`).
 //   - Carátulas: el contador propio del Worker de carátulas (el mismo de `/api/cover-stats`).
+//   - IsThereAnyDeal: los contadores que apunta `/api/precios` (`itadUso.ts`), aparte de los medidores porque su
+//     límite no es diario sino de 1.000 llamadas cada 5 minutos.
 //
 // Cada fuente puede faltar —sin credenciales, o con su API caída— y entonces su medidor sale con `used: null` y el
 // motivo en `status`. El panel no confunde nunca «no se sabe» con «cero».
@@ -16,9 +18,11 @@ import { requireAdmin } from '../../_lib/context';
 import { json } from '../../_lib/http';
 import { COVER_DAILY_BUDGET, coverDailyQuotaKey, type Env, type KVNamespace } from '../../_lib/keys';
 import { readCloudflareUsage, type CloudflareAnalyticsEnv } from '../../_lib/cloudflareAnalytics';
+import { itadLlamadasKey, itadSinCupoKey } from '../../_lib/itadUso';
 
 interface HealthEnv extends Env, CloudflareAnalyticsEnv {
   COVERS?: KVNamespace;
+  ITAD_API_KEY?: string;
 }
 
 /**
@@ -47,6 +51,16 @@ export interface HealthMeterPayload {
   error?: string;
 }
 
+/** Lo gastado de IsThereAnyDeal hoy y ayer. `null` donde no se pudo leer. */
+export interface ItadUsagePayload {
+  status: HealthStatus;
+  calls: number | null;
+  callsYesterday: number | null;
+  denied: number | null;
+  deniedYesterday: number | null;
+  resetsAt: number;
+}
+
 export async function onRequestGet(context: { request: Request; env: HealthEnv }): Promise<Response> {
   const caller = await requireAdmin(context.request, context.env);
   if (caller instanceof Response) {
@@ -56,13 +70,21 @@ export async function onRequestGet(context: { request: Request; env: HealthEnv }
   const covers = context.env.COVERS;
   // Cada lectura de KV, por su cuenta: si KV no responde (sin cupo de lecturas, justo el día que más interesa mirar
   // esto), se pierde el medidor de carátulas y no la respuesta entera.
-  const readCounter = (at: number) =>
-    covers ? covers.get(coverDailyQuotaKey(at)).then((value) => Number(value) || 0, () => null) : Promise.resolve(null);
-  const [cloudflare, coversSpent, coversYesterday] = await Promise.all([
+  const readKv = (kv: KVNamespace | undefined, key: string) =>
+    kv ? kv.get(key).then((value) => Number(value) || 0, () => null) : Promise.resolve(null);
+  const readCounter = (at: number) => readKv(covers, coverDailyQuotaKey(at));
+  const yesterday = now - 86_400_000;
+  const itadConfigured = Boolean(String(context.env.ITAD_API_KEY || '').trim());
+  const readItad = (key: string) => (itadConfigured ? readKv(context.env.SHARES, key) : Promise.resolve(null));
+  const [cloudflare, coversSpent, coversYesterday, itadCalls, itadCallsYesterday, itadDenied, itadDeniedYesterday] = await Promise.all([
     readCloudflareUsage(context.env, now),
     readCounter(now),
     // El contador del día vive 48 h (ver `/cover`): el de ayer aún está, y da con qué comparar.
-    readCounter(now - 86_400_000),
+    readCounter(yesterday),
+    readItad(itadLlamadasKey(now)),
+    readItad(itadLlamadasKey(yesterday)),
+    readItad(itadSinCupoKey(now)),
+    readItad(itadSinCupoKey(yesterday)),
   ]);
 
   const cloudflareStatus: HealthStatus = !cloudflare.configured ? 'not-configured' : cloudflare.error ? 'error' : 'ok';
@@ -75,5 +97,13 @@ export async function onRequestGet(context: { request: Request; env: HealthEnv }
     { id: 'kv-lists', source: 'cloudflare', used: cloudflare.kv.list, limit: L.kvLists, status: cloudflareStatus, resetsAt: cloudflare.resetsAt, error: cloudflare.error },
     { id: 'functions', source: 'cloudflare', used: cloudflare.functions, limit: L.functionsRequests, status: cloudflareStatus, resetsAt: cloudflare.resetsAt, error: cloudflare.error },
   ];
-  return json({ fetchedAt: now, meters });
+  const itad: ItadUsagePayload = {
+    status: !itadConfigured ? 'not-configured' : itadCalls === null || itadDenied === null ? 'error' : 'ok',
+    calls: itadCalls,
+    callsYesterday: itadCallsYesterday,
+    denied: itadDenied,
+    deniedYesterday: itadDeniedYesterday,
+    resetsAt: cloudflare.resetsAt,
+  };
+  return json({ fetchedAt: now, meters, itad });
 }

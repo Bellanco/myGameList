@@ -130,6 +130,13 @@ export const SETTINGS_UI = {
     importBtn: 'Importar',
     importAriaLabel: 'Seleccionar archivo para importar',
   },
+  /** El interruptor de IsThereAnyDeal (P0.1 del plan de la ficha y los precios), en Preferencias. */
+  itad: {
+    title: 'Precios de IsThereAnyDeal',
+    aria: 'Precios de IsThereAnyDeal',
+    on: 'Activados',
+    off: 'Desactivados',
+  },
   admin: {
     title: 'Administración de filtros',
     description: 'Gestiona géneros, plataformas y etiquetas comunes por categoría.',

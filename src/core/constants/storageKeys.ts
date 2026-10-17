@@ -48,6 +48,11 @@ export const COVERS_KEY = 'mis-listas-covers';
 export const WISHLIST_KEY = 'mis-listas-wishlist';
 /** Escenas de cada tema al empezar y al cerrar un juego. Ausente = APAGADAS: se encienden a mano en Diseño. */
 export const GAME_SCENES_KEY = 'mis-listas-game-scenes';
+/**
+ * Integración con IsThereAnyDeal (precios de Deseados y traer su lista). Ausente = APAGADA (P0.1): encenderla es lo que
+ * autoriza a que el servidor pregunte a ITAD por los títulos de tu lista de deseos.
+ */
+export const ITAD_KEY = 'mis-listas-itad';
 
 // TAMAÑO de los cuadros del mosaico: 'sm' | 'md' (por defecto) | 'lg'. Cuánto ocupa cada cuadro es cuestión de
 // gusto y de PANTALLA —ocho por fila en un monitor, dos en un teléfono—, así que vive en este aparato y no en
@@ -85,12 +90,6 @@ export const INSTALL_HINT_KEY = 'mis-listas-install-hint';
 // Import — preferencia "qué datos traer" (plataformas/géneros/horas/nota) por grupo: juegos nuevos y juegos que
 // ya están en tus listas. JSON con la forma de `ImportFieldPrefs`. Local, no se sincroniza (como la bandeja).
 export const IMPORT_FIELDS_KEY = 'mis-listas-import-fields';
-
-// Compartir reseñas — marca de que YA se leyó y aceptó el aviso de publicación (valor: la versión legal
-// aceptada). Publicar una reseña la saca de tus Gists y la pone en internet, así que el aviso se enseña ENTERO
-// la primera vez; luego basta con el resumen. Se guarda la versión y no un simple `true` a propósito: si cambia
-// lo que se publica, `LEGAL_VERSION` cambia y el aviso vuelve a mostrarse completo.
-export const SHARE_CONSENT_KEY = 'mis-listas-share-consent';
 
 // La cápsula del aviso legal (condiciones nuevas por aceptar) ya se enseñó para esta versión: valor, la
 // `LEGAL_VERSION` de entonces. Una vez por versión y navegador, como el aviso del resumen del año.
@@ -224,6 +223,11 @@ export const ANNOUNCEMENT_SEEN_KEY = 'mis-listas-announcement-seen';
 // Equivocarse aquí solo cuesta un rectángulo gris de más o de menos mientras carga, así que es de dispositivo y no
 // se replica a la nube.
 export const SOCIAL_CAN_POST_KEY = 'mis-listas-social-can-post';
+
+// ¿Enseña la actividad social el cuadro para publicar? Preferencia de Ajustes › Diseño («Publicaciones»), solo para
+// quien puede publicar. Valores: 'on' | 'off'; ausente = a la vista. Se replica a `publicConfig.showPostComposer`.
+// La lee también el esqueleto de la actividad, para no reservar el hueco de un cuadro que no va a llegar.
+export const POST_COMPOSER_KEY = 'mis-listas-show-post-composer';
 
 // PRIMEROS PASOS — por dónde va la guía de bienvenida en ESTE dispositivo: si está ofrecida, en curso, plegada o
 // terminada, en qué misión y paso, y qué misiones se dieron por hechas o se saltaron. JSON con la forma de

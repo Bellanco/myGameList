@@ -35,7 +35,8 @@ const TERMS: LegalDocument = {
   // Fecha PROPIA del documento y no `LEGAL_VERSION`, que es lo que `legal.ts` distingue: un documento puede aclararse
   // sin que nadie tenga que volver a aceptar nada. Historia de los cambios con efecto: ver `LEGAL_VERSION`.
   // 2026-10-12: lenguaje claro (ver la cabecera), sin cambio de contenido; y los «me gusta» (`legal.ts`).
-  updated: '2026-10-12',
+  // 2026-10-16: IsThereAnyDeal entre los servicios de terceros, solo si lo activas (ver `legal.ts`).
+  updated: '2026-10-16',
   intro:
     'myGameList es un proyecto personal y gratuito para llevar tus listas de videojuegos. Si lo usas, aceptas estas condiciones.',
   sections: [
@@ -86,7 +87,7 @@ const TERMS: LegalDocument = {
     {
       heading: 'Servicios de terceros',
       paragraphs: [
-        'La app usa servicios de otras empresas, cuyas condiciones también se te aplican: GitHub (gists), Google (inicio de sesión, base de datos y analítica), Cloudflare (alojamiento), IGDB/Twitch (datos de videojuegos, solo si activas las carátulas) y TMDB (pósters de series y películas y fotos de intérpretes en los premios). Los datos de videojuegos proceden de IGDB.com. This product uses the TMDB API but is not endorsed or certified by TMDB. Las carátulas, pósters, fotos y marcas pertenecen a sus dueños y solo se muestran para identificar cada obra.',
+        'La app usa servicios de otras empresas, cuyas condiciones también se te aplican: GitHub (gists), Google (inicio de sesión, base de datos y analítica), Cloudflare (alojamiento), IGDB/Twitch (datos de videojuegos, solo si activas las carátulas), IsThereAnyDeal (precios de tu lista de deseos, solo si lo activas) y TMDB (pósters de series y películas y fotos de intérpretes en los premios). Los datos de videojuegos proceden de IGDB.com. This product uses the TMDB API but is not endorsed or certified by TMDB. Las carátulas, pósters, fotos y marcas pertenecen a sus dueños y solo se muestran para identificar cada obra.',
       ],
     },
     {
@@ -117,7 +118,8 @@ const PRIVACY: LegalDocument = {
   // y cuáles no, con su porqué, está junto a `LEGAL_VERSION` en `legal.ts`.
   // 2026-10-12: lenguaje claro (ver la cabecera), sin cambio de contenido; y los «me gusta» (`legal.ts`).
   // 2026-10-15: plazos de conservación de las cuentas sin uso y el correo en el panel (ver `legal.ts`).
-  updated: '2026-10-15',
+  // 2026-10-16: IsThereAnyDeal, solo si lo activas (ver `legal.ts`).
+  updated: '2026-10-16',
   intro:
     'Aquí te contamos qué datos tuyos usa myGameList, para qué, quién los ve y qué puedes hacer con ellos, según el Reglamento General de Protección de Datos (RGPD) y la ley española (LOPDGDD).',
   sections: [
@@ -171,6 +173,7 @@ const PRIVACY: LegalDocument = {
         'GitHub: guarda tus gists, en tu propia cuenta.',
         'Cloudflare: aloja y sirve la web.',
         'IGDB (Twitch), solo si activas las carátulas: recibe el título del juego para buscar su portada. La consulta la hace nuestro servidor, así que IGDB no recibe tu IP ni nada que te identifique.',
+        'IsThereAnyDeal, solo si lo activas: si activas los precios, nuestro servidor envía a IsThereAnyDeal los nombres de los juegos de tu lista de deseos. IsThereAnyDeal no recibe tu IP ni ningún dato de tu cuenta.',
         'TMDB, para los premios: proporciona pósters y fotos de intérpretes. No recibe ningún dato tuyo.',
       ],
       paragraphs: [
@@ -208,7 +211,8 @@ const COOKIES: LegalDocument = {
   // las cookies de Google al iniciar sesión (2026-08-06) y los dominios de reCAPTCHA (2026-08-10) fueron precisiones
   // de lo que ya se declaraba, y reCAPTCHA solo se carga con sesión iniciada, nunca en una visita anónima.
   // 2026-10-12: lenguaje claro (ver la cabecera), sin cambio de contenido.
-  updated: '2026-10-12',
+  // 2026-10-16: los precios de IsThereAnyDeal, con la misma forma que las carátulas (ver `legal.ts`).
+  updated: '2026-10-16',
   intro:
     'myGameList no usa cookies de publicidad ni de seguimiento entre webs. Si solo la usas para tus listas (sin sincronizar, sin iniciar sesión y sin aceptar la analítica), no se conecta con servidores de terceros ni guarda cookies: todo se queda en tu navegador. Aquí tienes lo que se guarda y con quién se conecta al activar cada función.',
   sections: [
@@ -248,6 +252,13 @@ const COOKIES: LegalDocument = {
       ],
     },
     {
+      heading: 'Precios de IsThereAnyDeal',
+      paragraphs: [
+        'Los precios vienen desactivados y solo se ofrecen con el espacio social. Mientras no los actives en los ajustes, no se consulta nada.',
+        'Si los activas, nuestro servidor envía a IsThereAnyDeal los nombres de los juegos de tu lista de deseos para buscar sus precios. IsThereAnyDeal no recibe tu IP ni ningún dato de tu cuenta, y tu navegador no se conecta con él. Los precios se guardan en tu navegador y se borran al cerrar la sesión. Puedes desactivarlos cuando quieras desde el mismo sitio.',
+      ],
+    },
+    {
       heading: 'Analítica',
       bullets: [
         'Google Analytics (GA4): identificadores guardados en tu dispositivo para medir el uso y los errores de forma agregada.',
@@ -279,12 +290,17 @@ const COOKIES: LegalDocument = {
 const CREDITS: LegalDocument = {
   id: 'credits',
   title: 'Créditos',
-  updated: '2026-10-12',
+  updated: '2026-10-16',
   intro: 'De dónde salen los datos y las imágenes de terceros que muestra la app.',
   sections: [
     {
       heading: 'Videojuegos',
       paragraphs: ['Los datos y las carátulas de videojuegos proceden de IGDB.com.'],
+    },
+    {
+      heading: 'Precios',
+      paragraphs: ['Los precios y las ofertas de las tiendas proceden de IsThereAnyDeal.'],
+      links: [{ label: 'IsThereAnyDeal', href: 'https://isthereanydeal.com/' }],
     },
     {
       heading: 'Series, películas e intérpretes',

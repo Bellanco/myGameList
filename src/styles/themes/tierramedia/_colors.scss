@@ -6,110 +6,126 @@
    tabla de ids heredados de `constants/palettes.ts`. */
 
 /* ── tierramedia · «No puedes pasar» (el tema de casa) ─────────────────────────────────────────────────────────
-   La Tierra Media sin disfraz: un bosque de noche —verde casi negro, no gris— y encima los dos colores del
-   viaje. Sigue siendo el tema de quien no ha elegido nada, así que es SOBRIO de fondo y VIVO de color.
+   La Tierra Media sin disfraz: de noche, el BOSQUE DE LÓRIEN —verde hondo de verdad, ni gris ni pardo—; a la
+   luz, la PIEDRA de una sala enana. Es el tema de quien no ha elegido nada, así que tiene que entrar por los
+   ojos: fondo hondo, mucho escalón entre chapas y colores cálidos y encendidos. Cada color tiene nombre en el
+   mundo; nada de lima, menta ni coral de catálogo (paleta rehecha el 15-10-2026).
 
-   DOS COLORES, repartidos por PAPEL —la misma regla que «Plata y acero»—:
-     · el ORO (`--steam`, el del Anillo y las hojas de mallorn) es lo que se RELLENA: acción principal,
-       pestaña activa, lomo de la fila, botón de alta;
-     · la HOJA (`--tm-hoja`, el verde de la Comarca) es lo que SEÑALA y ESCRIBE: enlaces, anillo de foco,
-       barra inferior activa.
-   Oro cálido y verde vivo: dos temperaturas, sin abrir una tercera familia.
+   TRES METALES Y UNA HOJA, repartidos por PAPEL —la misma regla que «Plata y acero»—:
+     · el ORO (`--steam`, oro de mallorn de noche y oro de Erebor de día) es lo que se RELLENA: acción
+       principal, lomo de la fila, botón de alta, estrellas;
+     · la PLATA (`--tm-plata`, el envés de la hoja de mallorn) es la LETRA DE LUJO de noche: la pestaña activa,
+       las letras del título de pantalla y el botón encendido, con el oro de toque. Los rótulos de los efectos
+       siguen en oro (el usuario los prefirió así). A la luz se vuelve oro: sobre piedra clara, una plata no se
+       leería;
+     · la HOJA (`--tm-hoja`, la hoja nueva de Lórien al sol) es lo que SEÑALA y ESCRIBE: enlaces, anillo de foco,
+       botón de abrir, barra inferior activa.
 
-   EL ÁMBAR DE AVISO SE VA AL NARANJA porque el oro ya es el acento —lo mismo que hizo «Sol y luna»—: con los
-   dos en amarillo, el año de un juego se leía como un botón.
+   EL AVISO ES COBRE (Rohan de noche, forja de día) porque el oro ya es el acento: con los dos en amarillo, el
+   año de un juego se leía como un botón. El ÉXITO es athelas, esmeralda, separado de la hoja por tono.
 
-   MEDIDAS, peor de los cuatro fondos — oscuro: texto 10,84:1 · atenuado 7,25:1 · pestaña inactiva 7,60:1 ·
-   hoja como tinta 6,96:1 · tinta sobre el relleno de oro 9,25:1. Claro: texto 12,20:1 · atenuado 6,95:1 ·
-   pestaña inactiva 8,59:1 · hoja 4,57:1 · blanco sobre oro viejo 6,77:1. */
+   MEDIDAS, peor de los cuatro fondos — oscuro: texto 11,42:1 · atenuado 8,77:1 · pestaña inactiva 9,39:1 ·
+   hoja 9,15:1 · oro 7,77:1 · plata 9,53:1 · tinta sobre el oro 11,76:1. Claro: texto 12,39:1 · atenuado 7,62:1 ·
+   pestaña inactiva 10,47:1 · hoja 5,17:1 · oro 5,08:1 · blanco sobre el oro 7,67:1. */
 :root[data-palette="tierramedia"] {
-  /* LAS CUATRO CHAPAS: verde de bosque con una gota de calor. 1,12 / 1,27 / 1,52:1 de punta a punta, la misma
-     holgura que piden las demás paletas. */
-  --bg: #10140f;
-  --surface: #182019;
-  --surface-hover: #212b22;
-  --surface-elevated: #2c382d;
-  --border: #4a5a49;
+  /* LAS CUATRO CHAPAS: verde de Lórien de noche. 1,18 / 1,32 / 1,58:1 de punta a punta, algo más de escalón
+     que las demás paletas: es lo que despega los paneles del fondo. */
+  --bg: #040f07;
+  --surface: #0c2313;
+  --surface-hover: #132d1c;
+  --surface-elevated: #1c3b25;
+  --border: #4c8458;
   /* El texto no es blanco: es el papel de un mapa a la luz de una vela. */
-  --text: #f3f1e6;
-  --text-muted: #c9c8b4;
-  --text-dim: #aeb19c;
-  --steam: #e3b04b;
-  --steam-hover: #f0c66c;
-  --steam-rgb: 227,176,75;
-  --tab-active: #f0c66c;
-  --success: #4fd3a5;
-  --success-rgb: 79,211,165;
-  --warn: #f0954b;
-  --warn-rgb: 240,149,75;
-  --danger: #ff7a70;
-  --danger-rgb: 255,122,112;
-  /* El relleno de peligro (blanco encima) baja un punto más que el de la casa (75 %): con este coral, el 75 %
-     dejaba el blanco en 4,3:1. Al 68 % queda en 5,10:1 y la tinta coral sigue en 4,83:1. */
-  --danger-fill: color-mix(in srgb, var(--danger) 68%, #000);
-  --star-empty: #46523f;
-  --star-full: #f0c35a;
-  /* PLATAFORMA · familia fría: el azul de las aguas del mapa. */
-  --chip-plat-fg: #a9c4ef;
-  --chip-plat-bg: rgba(134,181,240,.14);
-  --chip-plat-border: rgba(134,181,240,.34);
-  --hub-text: #f3f1e6;
-  --hub-text-muted: #c9c8b4;
-  /* El oro es un acento CLARO: encima va tinta de bosque, no blanco (9,25:1). */
-  --on-accent: #1c1303;
+  --text: #fdf6e0;
+  --text-muted: #e6d9b0;
+  --text-dim: #cbc497;
+  --steam: #ffc43d;
+  --steam-hover: #ffd666;
+  --steam-rgb: 255,196,61;
+  --tm-plata: #d9e5de;
+  --tab-active: var(--tm-plata);
+  --success: #5fe08a;
+  --success-rgb: 95,224,138;
+  --warn: #ffa04a;
+  --warn-rgb: 255,160,74;
+  --danger: #ff8a6a;
+  --danger-rgb: 255,138,106;
+  /* El relleno de peligro (blanco encima) no sale de oscurecer el coral —se quedaba en marrón—: es su propio
+     rojo de fuego, el del Ojo, con el blanco a 5,55:1. */
+  --danger-fill: #c2331f;
+  --star-empty: #375d40;
+  --star-full: #ffc843;
+  /* PLATAFORMA · familia fría: el Anduin a pleno sol. */
+  --chip-plat-fg: #8fd0ff;
+  --chip-plat-bg: rgba(143,208,255,.14);
+  --chip-plat-border: rgba(143,208,255,.34);
+  --hub-text: #fdf6e0;
+  --hub-text-muted: #e6d9b0;
+  /* El oro es un acento CLARO: encima va tinta de bosque, no blanco (11,76:1). */
+  --on-accent: #1c1000;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   /* LA HOJA · el segundo papel. Escribe (`--fg-link`) y señala (`--focus-ring`); nunca rellena. */
-  --tm-hoja: #9bd27c;
+  --tm-hoja: #c0ec84;
   --focus-ring: var(--tm-hoja);
   --fg-link: var(--tm-hoja);
 }
-/* CLARO = EL MAPA EXTENDIDO SOBRE LA MESA: pergamino en vez de bosque, y los dos colores en su versión de
-   tinta —el oro pasa a oro viejo y la hoja a verde de musgo—. En oscuro los dos EMITEN; aquí son TINTA. */
+/* CLARO = PIEDRA ENANA: el granito de las salas de Erebor, gris con un punto cálido, y encima los colores como
+   vetas y metales —oro de Erebor, cobre de la forja, granate, hierro azul—. En oscuro los colores EMITEN; aquí
+   son TINTA. */
 :root[data-palette="tierramedia"][data-theme="light"] {
-  --bg: #ece3cc;
-  --surface: #fbf7ec;
-  --surface-hover: #e2d7bc;
-  --surface-elevated: #f4eedd;
-  --border: #b9ab88;
-  --text: #1b1a12;
-  --text-muted: #47432f;
-  --text-dim: #4c4834;
-  --steam: #7a5410;
-  --steam-hover: #634410;
-  --steam-rgb: 122,84,16;
-  --tab-active: #634410;
-  --success: #0f6b48;
-  --success-rgb: 15,107,72;
-  --warn: #8f450b;
-  --warn-rgb: 143,69,11;
-  --danger: #ae2727;
-  --danger-rgb: 174,39,39;
+  --bg: #e0ddd5;
+  --surface: #f6f4ef;
+  --surface-hover: #d6d2c8;
+  --surface-elevated: #efede7;
+  --border: #9a9384;
+  --text: #14120e;
+  --text-muted: #37332b;
+  --text-dim: #3d392f;
+  --steam: #714c08;
+  --steam-hover: #5a3b04;
+  --steam-rgb: 113,76,8;
+  --tm-plata: var(--steam);
+  --tab-active: var(--steam-hover);
+  --success: #1d5e3e;
+  --success-rgb: 29,94,62;
+  --warn: #8a3a12;
+  --warn-rgb: 138,58,18;
+  --danger: #9e1a1f;
+  --danger-rgb: 158,26,31;
   --danger-fill: var(--danger);
-  --star-empty: #c4b896;
-  --star-full: #7a5410;
-  --chip-plat-fg: #1d4f91;
-  --chip-plat-bg: rgba(29,79,145,.10);
-  --chip-plat-border: rgba(29,79,145,.30);
-  --hub-text: #1b1a12;
-  --hub-text-muted: #47432f;
-  /* Sombras y veladuras en sepia de tinta, no en pizarra: es papel. */
-  --tint-rgb: 58,46,22;
+  --star-empty: #b3ab9b;
+  --star-full: #714c08;
+  --chip-plat-fg: #234e7a;
+  --chip-plat-bg: rgba(35,78,122,.10);
+  --chip-plat-border: rgba(35,78,122,.30);
+  /* Tinta de los chips de años, puntos fuertes y débiles: la de siempre, un punto más honda. Sobre su velo y
+     este papel, la común se quedaba por debajo de 4,5:1 (medido el 16-10-2026 en los renglones, que son el
+     peor fondo); estas llegan a 4,6. */
+  --chip-generic-fg: #805300;
+  --chip-pf-fg: #19623e;
+  --chip-pd-fg: #9a2f23;
+  --hub-text: #14120e;
+  --hub-text-muted: #37332b;
+  /* Sombras y veladuras en gris de piedra, no en pizarra azulada. */
+  --tint-rgb: 54,50,42;
   --on-accent: #fff;
-  --tm-hoja: #2e6a2a;
+  --tm-hoja: #2c5d1e;
   --focus-ring: var(--tm-hoja);
   --fg-link: var(--tm-hoja);
 }
-/* tierramedia («No puedes pasar») — los siete del mapa: oro, hoja, ámbar de otoño, azul de río, rosa de Rivendel, verde
-   de Lórien y lila de atardecer élfico. Peor relleno 5,20:1 y peor texto 5,20:1 en los cuatro fondos. */
+/* tierramedia («No puedes pasar») — los siete de la Tierra Media: oro de mallorn, hoja de Lórien, cobre de Rohan,
+   Anduin, rosa de Rivendel al atardecer, athelas y orquídea élfica. Peor relleno y peor texto 6,10:1 en los cuatro
+   fondos. */
 :root[data-palette="tierramedia"] {
-  --cat-1: #e3b04b; --cat-2: #9bd27c; --cat-3: #f0954b; --cat-4: #86b5f0; --cat-5: #f08aa6; --cat-6: #5fd0c4; --cat-7: #c3a2f2;
+  --cat-1: #ffc43d; --cat-2: #c0ec84; --cat-3: #ffa04a; --cat-4: #8fd0ff; --cat-5: #ff9ab3; --cat-6: #5fe08a; --cat-7: #dca6ff;
   --wish: var(--cat-7);
-  --cat-1-fg: #e3b04b; --cat-2-fg: #9bd27c; --cat-3-fg: #f0954b; --cat-4-fg: #86b5f0; --cat-5-fg: #f08aa6; --cat-6-fg: #5fd0c4; --cat-7-fg: #c3a2f2;
+  --cat-1-fg: #ffc43d; --cat-2-fg: #c0ec84; --cat-3-fg: #ffa04a; --cat-4-fg: #8fd0ff; --cat-5-fg: #ff9ab3; --cat-6-fg: #5fe08a; --cat-7-fg: #dca6ff;
 }
-/* tierramedia («No puedes pasar») — los mismos siete a la luz: tinta de mapa. Peor 4,57:1. */
+/* tierramedia («No puedes pasar») — los mismos siete en piedra enana: oro de Erebor, musgo, cobre de la forja,
+   hierro azul, rubí, malaquita y amatista. Peor 5,08:1. */
 :root[data-palette="tierramedia"][data-theme="light"] {
-  --cat-1: #7a5410; --cat-2: #2e6a2a; --cat-3: #8f450b; --cat-4: #1d4f91; --cat-5: #9c2552; --cat-6: #0c6560; --cat-7: #6237a6;
-  --cat-1-fg: #7a5410; --cat-2-fg: #2e6a2a; --cat-3-fg: #8f450b; --cat-4-fg: #1d4f91; --cat-5-fg: #9c2552; --cat-6-fg: #0c6560; --cat-7-fg: #6237a6;
+  --cat-1: #714c08; --cat-2: #2c5d1e; --cat-3: #8a3a12; --cat-4: #234e7a; --cat-5: #95234a; --cat-6: #1d5e3e; --cat-7: #63339a;
+  --cat-1-fg: #714c08; --cat-2-fg: #2c5d1e; --cat-3-fg: #8a3a12; --cat-4-fg: #234e7a; --cat-5-fg: #95234a; --cat-6-fg: #1d5e3e; --cat-7-fg: #63339a;
 }

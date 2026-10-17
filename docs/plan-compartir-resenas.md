@@ -489,8 +489,9 @@ real en la llamada a WebCrypto.
 - UI:
   - Botón **Compartir** en el detalle de tu reseña — `StatsReviews.tsx` pasando una prop nueva y opcional a
     `SocialProfileReviewScreen`, para que el hub social (donde la reseña es de otro) no lo pinte.
-  - `view/modals/ShareReviewModal.tsx`: hoja de consentimiento la primera vez (qué se publica, qué no, cuánto
-    dura según tu rango, que se puede retirar), casilla obligatoria y confirmación.
+  - `view/modals/ShareReviewModal.tsx`: solo el juego y *Publicar enlace* (desde el 17-10-2026). La hoja de
+    consentimiento con casilla, la cuota y la firma se quitaron por ser demasiado texto: qué se publica, qué no, la
+    caducidad y la retirada los cuentan las condiciones, que se aceptan en la puerta del hub (`LEGAL_VERSION`).
   - Distintivo en la reseña: *«Compartida · caduca en 5 días»* con *Copiar enlace* y *Dejar de compartir*.
   - Ajustes → **Reseñas compartidas**: lista con juego, fecha, caducidad y contador *«3 de 5 enlaces activos»*.
     Si el usuario está vetado, la pantalla lo dice con su motivo y el botón *Compartir* queda desactivado con la
@@ -536,7 +537,7 @@ Firebase (verificable en la pestaña de red).
 | Nivel | Qué cubre |
 |---|---|
 | Unitario (Vitest) | Esquema Zod (campo extra, `hours`, `authorPhoto`, longitudes), resolución de cuota (veto → override → rango → techos, con override parcial de un solo campo), cuota activa y diaria, veto (403 y purga), escapado HTML |
-| Componente | `ShareReviewModal` (consentimiento obligatorio), pantalla de gestión (retirar libera cuota; vetado lo explica), `PublicReviewScreen` sin elementos de navegación ni foto |
+| Componente | `ShareReviewModal` (confirmar y enlace publicado), pantalla de gestión (retirar libera cuota; vetado lo explica), `PublicReviewScreen` sin elementos de navegación ni foto |
 | E2E (Playwright) | Abrir `/r/:token` sin sesión: no hay enlaces internos, no hay botón atrás, no hay foto del autor, el CTA es la única salida. Pasada de `axe` como en el resto de pantallas |
 | Manual | Tarjeta en WhatsApp, X, Telegram, Discord y Bluesky |
 

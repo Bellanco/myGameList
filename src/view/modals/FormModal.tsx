@@ -91,11 +91,11 @@ const FORM_SUMMARY_TIMEOUT_MS = 5000;
  * juntos y en este orden, en el resumen del pie del modal. Antes eran banderas y el único texto era un "revisa
  * los campos marcados" que además salía en el banner de la página, es decir, detrás del `<dialog>`.
  */
-type FieldKey = 'name' | 'genres' | 'platforms' | 'years' | 'score' | 'hours';
+type FieldKey = 'name' | 'genres' | 'platforms' | 'years' | 'score' | 'hours' | 'review';
 type FieldErrorMap = Partial<Record<FieldKey, string>>;
 
 // En el orden en que se ven: el nombre y la nota arriba; plataformas, géneros y años en la fila de debajo.
-const FIELD_ORDER: FieldKey[] = ['name', 'score', 'platforms', 'genres', 'years', 'hours'];
+const FIELD_ORDER: FieldKey[] = ['name', 'score', 'platforms', 'genres', 'years', 'hours', 'review'];
 
 /** Id del control de cada campo, para llevar el foco al primero que falle. La puntuación no es un `input`. */
 const FIELD_INPUT_ID: Partial<Record<FieldKey, string>> = {
@@ -104,6 +104,7 @@ const FIELD_INPUT_ID: Partial<Record<FieldKey, string>> = {
   platforms: 'draft-platforms',
   years: 'draft-years',
   hours: 'draft-hours',
+  review: 'draft-review',
 };
 
 function isValidYearValue(value: string): boolean {
@@ -134,6 +135,16 @@ function parseHours(text: string): { invalid: boolean; value: number | null } {
   const parsed = Number(trimmed.replace(',', '.'));
   if (!Number.isFinite(parsed) || parsed < 0) return { invalid: true, value: null };
   return { invalid: false, value: normalizeHours(parsed) };
+}
+
+/**
+ * Cuántos caracteres le faltan al análisis para llegar al mínimo (0 si no le falta nada). Vacío vale —es opcional— y
+ * el que ya estaba guardado no se exige mientras su texto no cambie: el mínimo frena lo que se escribe, como los topes.
+ */
+function reviewMissing(review: string, saved: string): number {
+  const text = review.trim();
+  if (!text || text === saved.trim()) return 0;
+  return Math.max(0, GAME_LIMITS.reviewMin - text.length);
 }
 
 /** Cuántas sugerencias de un toque se ofrecen por campo (en una línea; lo que no cabe se desplaza). */
@@ -199,6 +210,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
   // A11y-3: mensaje anunciado por SR solo en umbrales (texto constante por banda → no se reanuncia por tecla).
   const reviewLiveMessage =
     reviewProgress >= 100 ? FORM_UI.charLimitReached : reviewProgress >= 90 ? FORM_UI.charNearLimit : '';
+  const reviewShortBy = supportsReview(currentTab) ? reviewMissing(draft.review, initialDraft.review) : 0;
   const isNew = !initialDraft.id;
   const nameAtMax = draft.name.length >= GAME_LIMITS.name;
   const mac = isMacPlatform();
@@ -448,6 +460,8 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
     if (supportsScore(currentTab) && resolveGrade({ grade: nextDraft.grade, score: nextDraft.score }) <= 0) {
       errors.score = VALIDATION_MESSAGES.scoreRequired;
     }
+    const reviewShort = supportsReview(currentTab) ? reviewMissing(nextDraft.review, initialDraft.review) : 0;
+    if (reviewShort) errors.review = VALIDATION_MESSAGES.reviewTooShort(GAME_LIMITS.reviewMin, reviewShort);
 
     setFieldErrors(errors);
     if (FIELD_ORDER.some((key) => errors[key])) {
@@ -516,6 +530,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
     picksLabel: string,
     taken: ReadonlyArray<string> = draft[key],
     errorMessage?: string,
+    required = false,
   ) => {
     const query = pending[key].trim();
     // Todas las que casan (no solo las que caben): cuantas menos quedan, más se encienden.
@@ -536,6 +551,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
           chipClassName={chipClassName}
           hint={tagHint(full, GAME_LIMITS.tagCount[key], pending[key].length >= maxLength, maxLength)}
           errorMessage={errorMessage}
+          required={required}
           maxLength={maxLength}
           full={full}
         />
@@ -558,7 +574,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
 
   const scoreField = supportsScore(currentTab) ? (
     <div className="fg form-score">
-      <span className="flabel">{isUnplayed(currentTab) ? FORM_UI.interestLabel : FORM_UI.scoreLabel}</span>
+      <span className="flabel is-required">{isUnplayed(currentTab) ? FORM_UI.interestLabel : FORM_UI.scoreLabel}</span>
       <div className={`score-input-shell ${fieldErrors.score ? 'has-error' : ''}`.trim()}>
         {scoreScale === 'grade' ? (
           <GradeLine
@@ -637,13 +653,14 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
             <Icon name={COMMON_ICONS.close} />
           </button>
         </div>
-        {/* LO OBLIGATORIO ARRIBA, LO OPCIONAL EN LA BANDEJA. Sin asteriscos ni «opcional» escrito: la diferencia la
-            pone el diseño (campos rellenos arriba; abajo, una bandeja de fondo apenas distinto, rótulos apagados y
-            campos de contorno discontinuo). Ver `.form-extra` en `_overlays-and-responsive.scss`. */}
+        {/* LO OBLIGATORIO ARRIBA, LO OPCIONAL EN LA BANDEJA. Lo obligatorio lleva además un asterisco al final del
+            rótulo (`.flabel.is-required`), y lo opcional no se rotula: lo distingue el diseño (abajo, una bandeja de fondo
+            apenas distinto, rótulos apagados y campos de contorno discontinuo). Ver `.form-extra` en
+            `_overlays-and-responsive.scss`. */}
         <div className="modal-body">
           <div className={`form-head ${scoreField ? '' : 'is-solo'}`.trim()}>
             <div className="fg form-name">
-              <label htmlFor="draft-name" className="flabel">{FORM_UI.nameLabel}</label>
+              <label htmlFor="draft-name" className="flabel is-required">{FORM_UI.nameLabel}</label>
               <input
                 id="draft-name"
                 className={`finput ${fieldErrors.name || duplicate ? 'has-error' : ''}`.trim()}
@@ -651,6 +668,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                 placeholder={FORM_UI.namePlaceholder}
                 autoComplete="off"
                 maxLength={Math.max(GAME_LIMITS.name, draft.name.length)}
+                aria-required
                 aria-invalid={duplicate || fieldErrors.name ? true : undefined}
                 aria-describedby={duplicate || fieldErrors.name || nameAtMax ? 'draft-name-error' : undefined}
                 onChange={(event) => {
@@ -671,9 +689,9 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
 
           <div className={`form-row ${supportsYears(currentTab) ? 'is-three' : ''}`.trim()}>
             {tagField('platforms', FORM_UI.platformsLabel, FORM_UI.platformsPlaceholder, 'chip-plat', suggestions.ranked.platforms,
-              QUICK_PICKS.platforms, FORM_UI.quickPicks.platforms, draft.platforms, fieldErrors.platforms)}
+              QUICK_PICKS.platforms, FORM_UI.quickPicks.platforms, draft.platforms, fieldErrors.platforms, true)}
             {tagField('genres', FORM_UI.genresLabel, FORM_UI.genresPlaceholder, 'chip-genre', suggestions.ranked.genres,
-              QUICK_PICKS.genres, FORM_UI.quickPicks.genres, draft.genres, fieldErrors.genres)}
+              QUICK_PICKS.genres, FORM_UI.quickPicks.genres, draft.genres, fieldErrors.genres, true)}
             {supportsYears(currentTab) ? (
               <div className="form-field">
                 <TagInput
@@ -690,6 +708,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                   chipClassName="chip-generic"
                   hint={tagHint(yearsFull, GAME_LIMITS.tagCount.years)}
                   errorMessage={fieldErrors.years}
+                  required
                   full={yearsFull}
                   digitsOnly
                   maxLength={4}
@@ -728,22 +747,30 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                   <label htmlFor="draft-review" className="flabel">{FORM_UI.reviewLabel}</label>
                   <textarea
                     id="draft-review"
-                    className="ftextarea"
+                    className={`ftextarea ${fieldErrors.review ? 'has-error' : ''}`.trim()}
                     rows={2}
                     // Un análisis que ya pasaba del tope (de antes de bajarlo) se puede acortar, pero no se recorta solo.
                     maxLength={Math.max(REVIEW_MAX_LENGTH, draft.review.length)}
                     value={draft.review}
                     placeholder={FORM_UI.reviewPlaceholder}
+                    aria-invalid={fieldErrors.review ? true : undefined}
+                    aria-describedby={fieldErrors.review ? 'draft-review-error' : undefined}
                     onChange={(event) => {
+                      clearFieldError('review');
                       setLocalDraft({ ...draft, review: capGrowth(event.target.value, draft.review, REVIEW_MAX_LENGTH) });
                     }}
                   />
                   {/* El conteo solo aparece al escribir: con el campo vacío, una cifra «0 / 22.500» sugería que
                       había que llenarlo. A11y-3: conteo visible sin aria-live (no se anuncia por pulsación). */}
-                  {reviewCount ? (
+                  {/* Por debajo del mínimo, lo que falta en vez del conteo; tras intentar guardar, el error. */}
+                  {fieldErrors.review ? (
+                    <small id="draft-review-error" className="tag-hint is-error">{fieldErrors.review}</small>
+                  ) : reviewCount ? (
                     <div className="field-footer">
                       <small className={`tag-hint ${reviewProgressClass}`.trim()}>
-                        {FORM_UI.charCount(reviewCount, REVIEW_MAX_LENGTH)}
+                        {reviewShortBy
+                          ? FORM_UI.charMissing(reviewShortBy, GAME_LIMITS.reviewMin)
+                          : FORM_UI.charCount(reviewCount, REVIEW_MAX_LENGTH)}
                       </small>
                     </div>
                   ) : null}

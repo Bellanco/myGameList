@@ -38,3 +38,10 @@ export const ROW_EXIT_MS = 220;
  * de antes del tope) se conserva entero, porque recortar en la sincronización sería borrar deseos sin avisar.
  */
 export const WISHLIST_MAX_GAMES = 100;
+
+/**
+ * Tope de la lista de deseos para quien tiene el claim `admin` (`hasAdminClaim`). Mismo criterio que
+ * `WISHLIST_MAX_GAMES`: solo frena las altas. El claim llega tarde (`useIsAdmin` empieza en `false`), así que hasta
+ * entonces rige el tope normal; lo que ya pasa de 100 no se toca.
+ */
+export const WISHLIST_MAX_GAMES_ADMIN = 400;

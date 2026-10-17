@@ -152,7 +152,11 @@ function readInitialState(): { data: TabData; meta: { updatedAt: number; etag: s
   };
 }
 
-export function useGameListViewModel() {
+/**
+ * @param wishlistMax tope de la lista de deseos para quien está mirando: `WISHLIST_MAX_GAMES`, o
+ *   `WISHLIST_MAX_GAMES_ADMIN` con el claim `admin` (lo decide `App`, que es quien escucha la sesión).
+ */
+export function useGameListViewModel(wishlistMax: number = WISHLIST_MAX_GAMES) {
   // Inicializador PEREZOSO (`useState(fn)`, no `useState(fn())`): sin él, cada render del hook —y este es el
   // hook raíz, así que re-renderiza con cada filtro, fila expandida, aviso y ciclo de sync— reparseaba y
   // renormalizaba la biblioteca completa solo para tirar el resultado.
@@ -170,7 +174,6 @@ export function useGameListViewModel() {
   const dataRef = useRef(data);
   dataRef.current = data;
   const [sort, setSort] = useState<Record<TabId, TabSort>>(DEFAULT_SORT);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [notice, setNotice] = useState<StatusNotice | null>(null);
   const [formModalOpen, setFormModalOpen] = useState(false);
   // `subjectId` es OPCIONAL y solo lo rellena quien borra una fila del listado: es lo que le permite a la vista
@@ -374,7 +377,7 @@ export function useGameListViewModel() {
   useEffect(() => () => window.clearTimeout(noticeTimerRef.current), []);
 
   // ¿Cabe otro juego en la lista de deseos? Solo cuenta para las altas: editar uno que ya está no añade nada.
-  const wishlistFull = data.d.length >= WISHLIST_MAX_GAMES;
+  const wishlistFull = data.d.length >= wishlistMax;
 
   const openNewGame = useCallback((tab: TabId) => {
     // Con la lista llena ni se abre el formulario: el aviso de la página quedaría tapado por el diálogo, y
@@ -419,7 +422,10 @@ export function useGameListViewModel() {
       migrated.sourceTab = sourceTab;
 
       if (targetTab === 'c') {
-        migrated.years = migrated.years.length ? migrated.years : [new Date().getFullYear()];
+        // Terminarlo AHORA es terminarlo este año: el año en curso entra siempre, también en un juego que ya traía
+        // otros (una rejugada que vuelve a cerrarse). Llega propuesto en el formulario y se puede quitar.
+        const thisYear = new Date().getFullYear();
+        migrated.years = [...new Set([...migrated.years, thisYear])].sort((a, b) => a - b);
         // Sin nota previa → por defecto 5★/100; con nota → conserva la fina y sincroniza el espejo.
         if (!migrated.score) {
           migrated.score = 5;
@@ -639,7 +645,6 @@ export function useGameListViewModel() {
             updatedAt: Date.now(),
           };
           persist(nextData);
-          setExpandedId(null);
           notify('ok', UI_MESSAGES.games.deleted);
           // Su reseña sale también del canal social, como al vaciarla en el formulario. Antes solo la retiraba la
           // reconciliación al abrir el hub, así que tus amistades la seguían viendo hasta que entraras. En tu propio
@@ -801,8 +806,6 @@ export function useGameListViewModel() {
     meta,
     setMeta,
     sort,
-    expandedId,
-    setExpandedId,
     notice,
     setNotice,
     formModalOpen,

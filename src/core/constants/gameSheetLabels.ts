@@ -1,0 +1,72 @@
+// TEXTOS DE LA FICHA DE UN JUEGO (el panel lateral que sustituye al detalle de la fila; ver
+// `docs/plan-ficha-de-juego-y-precios.md`). Aparte de `labels.ts` porque el panel llega por `lazy()`: allí viajarían
+// en el arranque de todo el mundo. Los rótulos del detalle (plataformas, puntos fuertes, «Ver análisis»…) siguen en
+// `UI_MESSAGES.detail`, que comparten la tabla y la ficha.
+import type { TabId } from '../../model/types/game';
+import { APP_LOCALE } from './locale';
+
+/** Tu lista, en la pastilla de la cabecera: dice dónde está el juego, no qué hacer con él. */
+const LIST_PILL: Record<TabId, string> = {
+  c: 'Completado',
+  v: 'Abandonado',
+  e: 'En curso',
+  p: 'En próximos',
+  d: 'En tus deseos',
+};
+
+/** La lista en la que tienes una entrega de la saga, en su línea («En completados»). */
+const LIST_SHORT: Record<TabId, string> = {
+  c: 'En completados',
+  v: 'En abandonados',
+  e: 'En curso',
+  p: 'En próximos',
+  d: 'En deseos',
+};
+
+const MONTH_YEAR = new Intl.DateTimeFormat(APP_LOCALE, { month: 'long', year: 'numeric' });
+const SHORT_MONTH_YEAR = new Intl.DateTimeFormat(APP_LOCALE, { month: 'short', year: 'numeric' });
+
+export const GAME_SHEET_UI = {
+  /** Nombre accesible del panel. */
+  panelAria: (name: string) => `Ficha de ${name}`,
+  close: 'Cerrar',
+  listPill: (tab: TabId) => LIST_PILL[tab],
+  /** Desde cuándo está en esa lista (`enteredAt`). */
+  since: (at: number) => `desde ${MONTH_YEAR.format(at)}`,
+  yourScore: 'Tu nota',
+  yourInterest: 'Tu interés',
+  friendsAverage: 'Media de tus amistades',
+  friendsAverageCount: (count: number) => `· ${count} ${count === 1 ? 'nota' : 'notas'}`,
+  friendsOwning: 'Lo tienen',
+  friendsCount: (count: number) => (count === 1 ? 'amistad' : 'amistades'),
+  /** La sección de quienes lo tienen, y la de quienes lo quieren (sus deseos, aparte y sin nota). */
+  friendsTitle: 'Tus amistades',
+  /** Solo junto al bloque de una amistad (F0.7): ahí ya no es evidente de quién son los datos (F0.14). */
+  yourData: 'Tus datos',
+  wishersTitle: 'Lo quieren',
+  /** Adelanto de su reseña, entre comillas latinas como el resto de citas de la app. */
+  friendSnippet: (snippet: string) => `«${snippet}»`,
+  friendOpenAria: (name: string) => `Ver el perfil de ${name}`,
+  /** Su reseña, en el bloque de la amistad desde cuyo perfil se abrió la ficha (F0.7). */
+  friendReviewAria: (name: string, game: string) => `Ver la reseña de ${name} de ${game}`,
+  /** El mes en que lo terminó (`finishedOn`, `AAAA-MM`), tras su lista: «Completado · sept. 2025». */
+  finishedOn: (yearMonth: string) => {
+    const [year, month] = yearMonth.split('-').map(Number);
+    return year && month ? SHORT_MONTH_YEAR.format(new Date(year, month - 1, 1)) : '';
+  },
+  /** Cuando alguna biblioteca no se pudo leer (sin red, un gist caído): se dice, sin error, y la ficha sigue. */
+  friendsMissing: (count: number) =>
+    count === 1 ? 'No se ha podido consultar la biblioteca de una amistad.' : `No se ha podido consultar la biblioteca de ${count} amistades.`,
+  /** El tiempo jugado, en las cifras de la cabecera: la cifra grande y la unidad pequeña («46 horas»). */
+  hours: (hours: number) => String(hours).replace('.', ','),
+  hoursUnit: (hours: number) => (hours === 1 ? 'hora' : 'horas'),
+  saga: 'Saga',
+  sameGenre: (genre: string) => `Más de «${genre}»`,
+  sagaOwn: (tab: TabId | null) => (tab ? LIST_SHORT[tab] : 'No lo tienes'),
+  sagaFriends: (count: number) => `${count} ${count === 1 ? 'amigo' : 'amigos'}`,
+  sagaOpenAria: (name: string) => `Abrir la ficha de ${name}`,
+  /** El nombre de un juego que abre su ficha desde otra pantalla (una reseña, el feed). */
+  openSheetAria: (name: string) => `Abrir la ficha de ${name}`,
+  platformsAria: 'Plataformas',
+  genresAria: 'Géneros',
+} as const;

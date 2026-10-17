@@ -117,6 +117,8 @@ export const VALIDATION_MESSAGES = {
   scoreRequired: 'Selecciona una puntuación.',
   hoursInvalid: 'Escribe las horas como un número, con decimales si hace falta (ej: 12,5).',
   hoursNegative: 'Las horas jugadas no pueden ser negativas.',
+  reviewTooShort: (min: number, missing: number) =>
+    `El análisis necesita al menos ${min} caracteres: faltan ${missing}. También puedes dejarlo vacío.`,
   /** Cabecera del resumen del pie del modal; debajo va la lista de lo que falta. */
   formSummary: (count: number) =>
     count === 1 ? 'Falta 1 cosa para poder guardar:' : `Faltan ${count} cosas para poder guardar:`,
@@ -197,6 +199,10 @@ export const APPEARANCE_UI = {
   wishlistAria: 'Visibilidad de la pestaña de la lista de deseos',
   wishlistShow: 'Mostrar',
   wishlistHide: 'Ocultar',
+  postComposerLabel: 'Publicaciones',
+  postComposerAria: 'Cuadro para publicar en la actividad social',
+  postComposerShow: 'Mostrar',
+  postComposerHide: 'Ocultar',
 } as const;
 
 /**
@@ -369,6 +375,8 @@ export const UI_MESSAGES = {
     sortDirection: (asc: boolean) => (asc ? 'De menor a mayor. Pulsa para invertir' : 'De mayor a menor. Pulsa para invertir'),
     toggleFilters: (open: boolean) => (open ? 'Ocultar filtros' : 'Mostrar filtros'),
     steamDeck: 'Steam Deck',
+    /** Deseados con los precios de IsThereAnyDeal encendidos: solo lo que está rebajado ahora. */
+    onSale: 'En oferta',
     removeFilter: (label: string) => `Quitar filtro ${label}`,
     genre: 'Género',
     allGenres: 'Todos los géneros',
@@ -421,6 +429,8 @@ export const UI_MESSAGES = {
       replay: 'Rejugar',
       retry: 'Dar otra oportunidad',
     },
+    /** Los chips de orden que solo salen en Deseados con los precios encendidos (no son columnas de la lista). */
+    priceSorts: { price: 'Precio', discount: 'Descuento' },
     replayBadge: (value: boolean) => `Rejugar: ${value ? 'Sí' : 'No'}`,
     retryBadge: (value: boolean) => `Dar otra oportunidad: ${value ? 'Sí' : 'No'}`,
   },
@@ -430,17 +440,12 @@ export const UI_MESSAGES = {
     genres: 'Géneros',
     yearsCompleted: 'Años en los que se completó',
     playtime: 'Tiempo jugado',
-    hoursSuffix: (hours: string) => `${hours} horas`,
     strengths: 'Puntos fuertes',
     weaknesses: 'Puntos débiles',
-    score: 'Puntuación',
-    interest: 'Interés',
     replayability: 'Rejugabilidad',
     retry: 'Dar otra oportunidad',
     review: 'Análisis',
-    /* El análisis ya no se vuelca en el detalle: se va a leer a su pantalla. El texto dice a DÓNDE lleva, no
-       qué hay dentro, porque quien lo pulsa ya sabe que escribió uno. */
-    reviewLink: 'Ver análisis',
+    /* El análisis se lee entero en su pantalla: el nombre accesible del acceso dice a DÓNDE lleva. */
     reviewLinkAria: (name: string) => `Ver análisis de ${name}`,
   },
 } as const;

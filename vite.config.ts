@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { copyFile } from 'node:fs/promises';
 import type { ServerResponse } from 'node:http';
 import { defineConfig, type Plugin } from 'vite';
@@ -37,6 +37,9 @@ import {
   tamanoPoster,
   urlDeImagenTmdb,
 } from './functions/_lib/tmdb';
+// Y los precios de IsThereAnyDeal: la misma resolución (caché, segunda pasada, normalización) que `/api/precios`.
+import { resolverPrecios, type CacheItad } from './functions/_lib/itad';
+import { leerTitulos, MAX_TITULOS } from './functions/api/precios';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version?: string };
 
@@ -58,11 +61,19 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 function serviceWorkerPrecache(): Plugin {
   const BUILD_ID_TOKEN = 'self.__SW_BUILD_ID__';
   const ASSETS_TOKEN = 'self.__PRECACHE_ASSETS__';
+  const DEFERRED_TOKEN = 'self.__PRECACHE_DEFERRED__';
+  /* LO PEREZOSO QUE TAMBIÉN TIENE QUE FUNCIONAR SIN RED. La ficha de un juego sustituye al detalle que se desplegaba
+     bajo la fila, que iba en el arranque y funcionaba sin red siempre. Si su chunk solo se guardara al usarse, sin red
+     y recién desplegado (la caché se estrena en cada build) tocar una fila no abriría nada, y Chromium ni siquiera
+     reintenta un `import()` fallido. Así que se precachea, pero APARTE del arranque: no bloquea el primer pintado y
+     `ci-validate` lo cuenta solo en el total. */
+  const DEFERRED_MODULES = ['/src/view/components/gameSheet/GameSheetPanel.tsx'];
   // El MISMO identificador, también dentro del documento (`<meta name="app-build">`). Es lo que permite a
   // `core/utils/appUpdate` comparar la versión que ejecuta la página con la que sirve el service worker en vez
   // de suponer que un relevo de controlador significa que la página está vieja (ver `index.html`).
   const DOC_BUILD_TOKEN = '__BUILD_ID__';
   let precachePaths: string[] = [];
+  let deferredPaths: string[] = [];
   let criticalFontPaths: string[] = [];
 
   return {
@@ -94,6 +105,30 @@ function serviceWorkerPrecache(): Plugin {
       }
 
       precachePaths = [...reachable, ...css].sort().map((file) => `/${file}`);
+
+      // Lo diferido: el chunk de cada módulo de `DEFERRED_MODULES` y lo que importa de forma estática que no esté ya
+      // en el arranque, más su CSS. Si un módulo no aparece (se ha renombrado o movido), se rompe el build: dejarlo
+      // fuera en silencio es justo el hueco sin red que esto cierra.
+      const deferred = new Set<string>();
+      for (const modulo of DEFERRED_MODULES) {
+        const raiz = [...chunks.entries()].find(([, chunk]) => chunk.facadeModuleId?.replace(/\\/g, '/').endsWith(modulo));
+        if (!raiz) throw new Error(`[service-worker-precache] No se ha encontrado el chunk de ${modulo} para precachearlo.`);
+        const porVisitar = [raiz[0]];
+        while (porVisitar.length > 0) {
+          const name = porVisitar.pop() as string;
+          if (reachable.has(name) || deferred.has(name)) continue;
+          deferred.add(name);
+          for (const imported of chunks.get(name)?.imports || []) {
+            if (chunks.has(imported)) porVisitar.push(imported);
+          }
+        }
+      }
+      const deferredCss = new Set<string>();
+      for (const name of deferred) {
+        const meta = (chunks.get(name) as { viteMetadata?: { importedCss?: Iterable<string> } } | undefined)?.viteMetadata;
+        for (const file of meta?.importedCss || []) if (!css.has(file)) deferredCss.add(file);
+      }
+      deferredPaths = [...deferred, ...deferredCss].sort().map((file) => `/${file}`);
     },
 
     // La fuente crítica va aparte: vive en `public/fonts/` (no la emite el bundle, así que no aparece en `bundle`)
@@ -120,9 +155,9 @@ function serviceWorkerPrecache(): Plugin {
 
       // Si los marcadores no están, el SW se desplegaría sin precache y la app volvería a no arrancar offline,
       // en silencio. Preferimos romper el build.
-      if (!source.includes(BUILD_ID_TOKEN) || !source.includes(ASSETS_TOKEN)) {
+      if (!source.includes(BUILD_ID_TOKEN) || !source.includes(ASSETS_TOKEN) || !source.includes(DEFERRED_TOKEN)) {
         throw new Error(
-          `[service-worker-precache] No se han encontrado los marcadores ${BUILD_ID_TOKEN} / ${ASSETS_TOKEN} en dist/service-worker.js. ` +
+          `[service-worker-precache] No se han encontrado los marcadores ${BUILD_ID_TOKEN} / ${ASSETS_TOKEN} / ${DEFERRED_TOKEN} en dist/service-worker.js. ` +
             'Si se han renombrado en public/service-worker.js, actualiza este plugin.',
         );
       }
@@ -130,11 +165,19 @@ function serviceWorkerPrecache(): Plugin {
         throw new Error('[service-worker-precache] La lista de assets del arranque ha salido vacía; el precache sería inútil.');
       }
 
+      /* SOLO LO QUE EXISTE. Una hoja que importan varios módulos (`personRow.scss`, de `HubPersonRow` y de la ficha) sale
+         en un chunk de JS propio que Vite VACÍA y borra al final, después de que este plugin haya hecho la lista: su
+         CSS ya va en ella (`importedCss`), pero el `.js` no llega a `dist/`. Precachear un fichero que no existe tumba
+         la instalación entera del service worker, así que se quita aquí, con `dist/` ya escrito. */
+      const existe = (path: string) => existsSync(new URL(`./dist${path}`, import.meta.url));
+      precachePaths = precachePaths.filter(existe);
+      deferredPaths = deferredPaths.filter(existe);
       const precache = [...precachePaths, ...criticalFontPaths];
-      const buildId = createHash('sha256').update(precache.join('\n')).digest('hex').slice(0, 12);
+      const buildId = createHash('sha256').update([...precache, ...deferredPaths].join('\n')).digest('hex').slice(0, 12);
       const patched = source
         .replace(BUILD_ID_TOKEN, JSON.stringify(buildId))
-        .replace(ASSETS_TOKEN, JSON.stringify(precache));
+        .replace(ASSETS_TOKEN, JSON.stringify(precache))
+        .replace(DEFERRED_TOKEN, JSON.stringify(deferredPaths));
 
       writeFileSync(swUrl, patched);
 
@@ -698,6 +741,96 @@ function localTmdbApi(): Plugin {
 }
 
 /**
+ * GEMELO DE `/api/precios` en desarrollo (P1 del plan de la ficha y los precios), como `localCoverApi` lo es de
+ * `/cover`: tira de `functions/_lib/itad`, el mismo módulo que la Function, con la clave de `.dev.vars`
+ * (`ITAD_API_KEY`). Lo que no tiene, y a propósito: la sesión (quien llama es quien ha levantado el servidor en su
+ * máquina, como en `localPremiosApi`), los topes por rango y por minuto, y la caché de Cloudflare, que aquí es un
+ * `Map` en memoria con el plazo más corto (el de mithril, 15 min) para no repetir llamadas a ITAD al recargar. Como
+ * mithril, también con la tercera pasada (la de las ediciones).
+ */
+function localPreciosApi(): Plugin {
+  const deDevVars = (clave: string): string => {
+    try {
+      const texto = readFileSync(new URL('./.dev.vars', import.meta.url), 'utf-8');
+      return new RegExp(`^${clave}=(.*)$`, 'm').exec(texto)?.[1]?.trim() ?? '';
+    } catch {
+      return '';
+    }
+  };
+  const memoria = new Map<string, { valor: unknown; guardadoEn: number; hasta: number }>();
+  const cache: CacheItad = {
+    async leer<T>(clave: string) {
+      const guardado = memoria.get(clave);
+      return guardado && guardado.hasta > Date.now() ? { valor: guardado.valor as T, guardadoEn: guardado.guardadoEn } : null;
+    },
+    async guardar(clave: string, valor: unknown, segundos: number, ahora: number) {
+      memoria.set(clave, { valor, guardadoEn: ahora, hasta: ahora + segundos * 1000 });
+    },
+  };
+  const enviar = (res: ServerResponse, status: number, cuerpo: unknown, cabeceras: Record<string, string> = {}): void => {
+    res.statusCode = status;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    for (const [nombre, valor] of Object.entries(cabeceras)) res.setHeader(nombre, valor);
+    res.end(JSON.stringify(cuerpo));
+  };
+
+  return {
+    name: 'local-precios-api',
+    apply: 'serve',
+
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.split('?')[0] !== '/api/precios' || req.method !== 'POST') {
+          next();
+          return;
+        }
+        let cuerpo = '';
+        req.on('data', (trozo) => { cuerpo += trozo; });
+        req.on('end', () => {
+          void (async () => {
+            const clave = deDevVars('ITAD_API_KEY');
+            if (!clave) {
+              enviar(res, 501, { error: 'No hay ITAD_API_KEY en .dev.vars: los precios no funcionan en desarrollo.' });
+              return;
+            }
+            let leido: Record<string, unknown> | null = null;
+            try {
+              leido = JSON.parse(cuerpo) as Record<string, unknown>;
+            } catch {
+              leido = null;
+            }
+            const titulos = leerTitulos(leido);
+            if (!titulos) {
+              enviar(res, 400, { error: `Hacen falta entre 1 y ${MAX_TITULOS} títulos` });
+              return;
+            }
+            try {
+              const { juegos, preguntoAItad, fallo } = await resolverPrecios(titulos, {
+                clave,
+                plazoMs: 15 * 60 * 1000,
+                cache,
+                presupuesto: { tomar: () => true },
+                ahora: Date.now(),
+                conEdiciones: true,
+              });
+              const diagnostico = { 'x-cache': preguntoAItad ? 'miss' : 'hit' };
+              if (fallo && !Object.values(juegos).some(Boolean)) {
+                enviar(res, 503, { error: 'No se ha podido consultar ITAD', unavailable: true }, diagnostico);
+                return;
+              }
+              enviar(res, 200, { juegos, ...(fallo ? { incompleto: true } : {}) }, diagnostico);
+            } catch {
+              enviar(res, 502, { error: 'No se pudo atender la petición de precios' });
+            }
+          })();
+        });
+      });
+    },
+  };
+}
+
+/**
  * GEMELO DE `/api/github-oauth` en desarrollo: el canje del `code` de «Conectar con GitHub» por el token. La lógica
  * y el porqué están en `scripts/devGithubOAuth.ts`, que llama a la misma Function de producción.
  *
@@ -749,6 +882,7 @@ export default defineConfig({
     localCoverApi(),
     localTmdbApi(),
     localGithubOAuthApi(),
+    localPreciosApi(),
   ],
   server: {
     port: 8000,

@@ -33,6 +33,8 @@ export const FORM_UI = {
   reviewLabel: 'Análisis',
   reviewPlaceholder: 'Un pequeño análisis del juego.',
   charCount: (count: number, max: number) => `${count.toLocaleString(APP_LOCALE)} / ${max.toLocaleString(APP_LOCALE)} caracteres`,
+  // Mientras un análisis nuevo o cambiado no llega al mínimo (`GAME_LIMITS.reviewMin`), el conteo dice cuánto falta.
+  charMissing: (missing: number, min: number) => `Faltan ${missing.toLocaleString(APP_LOCALE)} caracteres (mínimo ${min.toLocaleString(APP_LOCALE)})`,
   // A11y-3: mensajes de umbral para lectores de pantalla (texto constante por banda → se anuncian una vez al
   // cruzar el umbral, no en cada pulsación). El conteo numérico se deja como texto visible SIN aria-live.
   charNearLimit: 'Te acercas al límite de caracteres del análisis.',

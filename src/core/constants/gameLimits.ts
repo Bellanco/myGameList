@@ -14,6 +14,13 @@ export const GAME_LIMITS = {
   name: 80,
   /** Caracteres del análisis (antes 25.000; el más largo de la biblioteca tenía 2.381). */
   review: 22_500,
+  /**
+   * Caracteres MÍNIMOS de un análisis que se escribe (sin contar los espacios de los extremos), para que no sea una
+   * frase suelta. Elegido por el usuario el 15-10-2026: lo cumplían 95 de las 98 reseñas de su biblioteca (bajó de
+   * 250 a 200 para dejar algo de margen). Vacío sigue valiendo (el análisis es opcional), y uno más corto de antes se
+   * conserva mientras no se cambie su texto.
+   */
+  reviewMin: 200,
   /** Horas jugadas, como mucho. */
   hoursMax: 9_999,
   /** Decimales de las horas («12,25»). */

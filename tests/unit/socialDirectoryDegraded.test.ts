@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SocialDirectoryEntry } from '../../src/viewmodel/social/socialFeed';
 
@@ -88,7 +88,7 @@ describe('useSocialDirectory con el servicio limitado', () => {
     getSocialProfilesByUid.mockRejectedValue(Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' }));
     const { result, reportFailure } = montar(['ana']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.rawSocialDirectory).toEqual(idb.stale));
     // Con copia, sin aviso (docs/plan-feed-sin-vacio.md, Fase 1): lo guardado se enseña tal cual.
@@ -107,7 +107,7 @@ describe('useSocialDirectory con el servicio limitado', () => {
     });
     const { result, reportFailure } = montar(['ana', 'bruno']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(result.current.rawSocialDirectory.length).toBe(3));
     const ana = result.current.rawSocialDirectory.find((entry) => entry.uid === 'ana');
@@ -123,7 +123,7 @@ describe('useSocialDirectory con el servicio limitado', () => {
     readPublicSocialGistById.mockResolvedValue({ profile: { name: 'x', visibility: VISIBILIDAD }, activity: [], posts: [], moves: [], updatedAt: 1 });
     const { result, setNetworkFailure } = montar(['ana']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     await waitFor(() => expect(idb.putCachedSocialDirectory).toHaveBeenCalled());
     expect(setNetworkFailure).toHaveBeenCalledWith(false);
@@ -141,7 +141,7 @@ describe('useSocialDirectory y los «me gusta»', () => {
     getPublicSocialReactions.mockImplementation((gistId: string) => (gistId === 'ana-social' ? [vivo, lapida] : []));
     const { result } = montar(['ana']);
 
-    await result.current.hydrateSocialDirectory();
+    await act(() => result.current.hydrateSocialDirectory());
 
     // Se espera a la ENTRADA, no a que se guarde la copia: guardar puede ir por delante del estado de React, y bajo
     // carga (la suite entera) la entrada aún no estaba al leerla.

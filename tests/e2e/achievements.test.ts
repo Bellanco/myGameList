@@ -234,8 +234,9 @@ test.describe('logros · el aviso del instante', () => {
   /**
    * Completa el juego que está en curso: la escritura que cruza el umbral.
    *
-   * Son DOS pasos y no uno: «Pasar a completados» no mueve nada por sí solo, abre el formulario del juego para
-   * que la ficha se complete antes de cerrarlo, y el movimiento —y con él la evaluación— ocurre al guardar.
+   * Son DOS pasos y no uno: «Pasar a completados», en la ficha del juego, no mueve nada por sí solo; abre el
+   * formulario para que sus datos se completen antes de cerrarlo, y el movimiento —y con él la evaluación— ocurre
+   * al guardar. Al cambiar de lista, la ficha se cierra (`App`), y la cápsula queda a la vista.
    */
   async function completarElQueCruza(page: Page, cerrados = 9): Promise<void> {
     await page.goto('/en-curso');

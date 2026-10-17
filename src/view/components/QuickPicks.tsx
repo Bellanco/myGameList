@@ -1,4 +1,4 @@
-import { memo, useRef, type CSSProperties } from 'react';
+import { memo, useEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import { FORM_UI } from '../../core/constants/formLabels';
 
 /**
@@ -8,6 +8,10 @@ import { FORM_UI } from '../../core/constants/formLabels';
  * Como el botón tocado desaparece, el foco se iría al `body` —y con él el Tab y ⌘↵—: pasa al botón que ocupa su
  * sitio, o al campo si ya no queda ninguno. Si la fila estaba filtrada por lo escrito (`returnToField`), vuelve
  * siempre al campo: lo escrito se vacía al elegir y lo natural es seguir tecleando la siguiente.
+ *
+ * FUERA DEL ORDEN DEL TABULADOR: Tab salta de campo a campo, no por cada sugerencia. Se llega a ellas con ↓ desde
+ * el campo; dentro, ← → las recorren y ↑ vuelve al campo. La fila lleva también `tabIndex={-1}`: es un contenedor
+ * con desplazamiento y, sin nada enfocable dentro, Chrome lo mete él mismo en el tabulador (una parada en blanco).
  *
  * `glow` ilumina cada sugerencia según lo cerca que esté lo escrito de su nombre (de 0 a 1, en `--pick-glow`).
  */
@@ -36,7 +40,44 @@ export const QuickPicks = memo(function QuickPicks({
   const groupRef = useRef<HTMLDivElement>(null);
   const takenKeys = new Set(taken.map((value) => String(value).toLocaleLowerCase()));
   const free = options.filter((option) => !takenKeys.has(String(option).toLocaleLowerCase()));
-  if (!free.length) return null;
+  const hasPicks = free.length > 0;
+
+  // ↓ en el campo entra en la fila (y el lector lo anuncia). El campo es de otro componente (`TagInput`): por su id.
+  useEffect(() => {
+    const field = hasPicks ? document.getElementById(fieldId) : null;
+    if (!field) return undefined;
+    const onFieldKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'ArrowDown' || event.altKey || event.metaKey || event.ctrlKey || event.shiftKey) return;
+      const first = groupRef.current?.querySelector<HTMLButtonElement>('.quick-pick');
+      if (!first) return;
+      event.preventDefault();
+      first.focus();
+    };
+    field.addEventListener('keydown', onFieldKeyDown);
+    field.setAttribute('aria-keyshortcuts', 'ArrowDown');
+    return () => {
+      field.removeEventListener('keydown', onFieldKeyDown);
+      field.removeAttribute('aria-keyshortcuts');
+    };
+  }, [fieldId, hasPicks]);
+
+  if (!hasPicks) return null;
+
+  const onGroupKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const buttons = Array.from(groupRef.current?.querySelectorAll<HTMLButtonElement>('.quick-pick') ?? []);
+    const index = buttons.indexOf(event.target as HTMLButtonElement);
+    if (index < 0) return;
+    const target =
+      event.key === 'ArrowRight' ? buttons[Math.min(index + 1, buttons.length - 1)]
+        : event.key === 'ArrowLeft' ? buttons[Math.max(index - 1, 0)]
+          : event.key === 'Home' ? buttons[0]
+            : event.key === 'End' ? buttons[buttons.length - 1]
+              : event.key === 'ArrowUp' ? document.getElementById(fieldId)
+                : null;
+    if (!target) return;
+    event.preventDefault();
+    target.focus();
+  };
 
   const pick = (value: string, index: number) => {
     onPick(value);
@@ -48,11 +89,13 @@ export const QuickPicks = memo(function QuickPicks({
   };
 
   return (
-    <div className="quick-picks" role="group" aria-label={label} ref={groupRef}>
+    <div className="quick-picks" role="group" aria-label={label} ref={groupRef} tabIndex={-1}
+      onKeyDown={onGroupKeyDown}>
       {free.map((option, index) => (
         <button
           key={option}
           type="button"
+          tabIndex={-1}
           className={glow ? 'quick-pick is-matching' : 'quick-pick'}
           style={glow ? ({ '--pick-glow': glow(String(option)).toFixed(2) } as CSSProperties) : undefined}
           aria-label={FORM_UI.quickPicks.add(option)}

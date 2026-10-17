@@ -16,6 +16,7 @@ export const DEFAULT_FILTERS: ToolbarFilters = {
   hours: '',
   only: false,
   deck: false,
+  sale: false,
 };
 
 // Claves de la query string (cortas y legibles); géneros/plataformas van como valores repetidos.
@@ -27,6 +28,7 @@ const PARAM = {
   hours: 'hours',
   only: 'only',
   deck: 'deck',
+  sale: 'sale',
 } as const;
 
 const SCORE_LEVELS = [5, 4, 3, 2, 1] as const;
@@ -40,6 +42,7 @@ export function parseFilters(params: URLSearchParams): ToolbarFilters {
     hours: params.get(PARAM.hours) ?? '',
     only: params.get(PARAM.only) === '1',
     deck: params.get(PARAM.deck) === '1',
+    sale: params.get(PARAM.sale) === '1',
   };
 }
 
@@ -53,6 +56,7 @@ export function serializeFilters(filters: ToolbarFilters): URLSearchParams {
   if (filters.hours) params.set(PARAM.hours, filters.hours);
   if (filters.only) params.set(PARAM.only, '1');
   if (filters.deck) params.set(PARAM.deck, '1');
+  if (filters.sale) params.set(PARAM.sale, '1');
   return params;
 }
 
@@ -64,11 +68,13 @@ export function countActiveFilters(filters: ToolbarFilters): number {
     (filters.score ? 1 : 0) +
     (filters.hours ? 1 : 0) +
     (filters.only ? 1 : 0) +
-    (filters.deck ? 1 : 0)
+    (filters.deck ? 1 : 0) +
+    (filters.sale ? 1 : 0)
   );
 }
 
-// Filtra (sin ordenar; el orden lo aplica el view-model). Género/plataforma: igualdad exacta + OR
+// Filtra (sin ordenar; el orden lo aplica el view-model). «En oferta» (`sale`) no se aplica aquí: depende de los
+// precios, que no están en `GameItem`; lo aplica `App` con `onSaleOnly` (core/prices/priceSort). Género/plataforma: igualdad exacta + OR
 // dentro de cada dimensión. El texto libre (`search`) sí usa subcadena, que es lo correcto, y sin distinguir acentos
 // ni signos (`matchesSearch`): «pokemon» encuentra «Pokémon».
 export function filterGames(games: GameItem[], filters: ToolbarFilters, tab: TabId): GameItem[] {

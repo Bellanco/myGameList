@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { JUEGOS, sembrarBiblioteca } from './seed';
+import { JUEGOS, JUEGO_AJENO, sembrarAmistades, sembrarBiblioteca } from './seed';
+import { gameSheetSlug } from '../../src/core/utils/gameSheetPath';
 import { PALETTES } from '../../src/core/constants/palettes';
 import { edicionAbierta, edicionPublicada, sirveFirestore } from './premiosFirestore';
 
@@ -94,13 +95,42 @@ async function animacionesDeEntradaTerminadas(page: Page): Promise<void> {
   });
 }
 
-/** Deja la lista pintada y una fila abierta: es el estado con más color y más controles a la vista. */
-async function listaConDetalleAbierto(page: Page): Promise<void> {
+/** Deja la lista pintada: la tabla con sus chips, la barra de filtros y la de pestañas. */
+async function listaPintada(page: Page): Promise<void> {
   await page.goto('/completados');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Lista del completista');
-  const fila = page.locator(`button[aria-controls="game-detail-${JUEGOS[0].id}"]`);
-  await fila.click();
-  await expect(fila).toHaveAttribute('aria-expanded', 'true');
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/** Abre la ficha de un juego sobre la lista: es el estado con más color y más controles a la vista. */
+async function fichaAbierta(page: Page): Promise<void> {
+  await listaPintada(page);
+  await page.locator('button[aria-haspopup="dialog"]', { hasText: JUEGOS[0].name }).first().click();
+  await expect(page.getByRole('dialog', { name: `Ficha de ${JUEGOS[0].name}` })).toBeVisible();
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/**
+ * La ficha con TUS AMISTADES (F3): el renglón de persona del hub, con la piel de cada tema, la media en la cabecera y
+ * «Lo quieren». Sin esto, el contraste de esos renglones dentro del panel no lo miraba nadie.
+ */
+async function fichaConAmistades(page: Page): Promise<void> {
+  await listaPintada(page);
+  await sembrarAmistades(page, JUEGOS[0].name);
+  await page.locator('button[aria-haspopup="dialog"]', { hasText: JUEGOS[0].name }).first().click();
+  await expect(page.getByRole('dialog', { name: `Ficha de ${JUEGOS[0].name}` }).getByText('Tus amistades', { exact: true })).toBeVisible();
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/**
+ * La ficha de un juego que NO tienes, abierta desde el perfil de una amistad (F5): su bloque arriba (sus chips, su
+ * reseña con la nota) y la barra de añadir a deseados o a próximos en vez de la de mover y borrar.
+ */
+async function fichaAjenaConBloque(page: Page): Promise<void> {
+  await listaPintada(page);
+  await sembrarAmistades(page, JUEGOS[0].name, { indice: true });
+  await page.goto(`/completados?juego=${gameSheetSlug(JUEGO_AJENO)}&de=p-lucia`);
+  await expect(page.getByRole('dialog', { name: `Ficha de ${JUEGO_AJENO}` }).locator('.gs-sec-de-amistad')).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -373,7 +403,10 @@ async function contrastesDeLaBarraDeProgreso(page: Page): Promise<Array<{ rareza
 }
 
 const PANTALLAS: ReadonlyArray<{ nombre: string; amplia: boolean; deseos?: boolean; abrir: (page: Page) => Promise<void> }> = [
-  { nombre: 'lista', amplia: false, abrir: listaConDetalleAbierto },
+  { nombre: 'lista', amplia: false, abrir: listaPintada },
+  { nombre: 'ficha', amplia: false, abrir: fichaAbierta },
+  { nombre: 'ficha con amistades', amplia: false, abrir: fichaConAmistades },
+  { nombre: 'ficha ajena con bloque', amplia: false, abrir: fichaAjenaConBloque },
   { nombre: 'panel', amplia: true, deseos: true, abrir: panelDeEstadisticas },
   { nombre: 'ajustes', amplia: false, abrir: pantallaDeAjustes },
   { nombre: 'menú de ajustes', amplia: false, abrir: menuDeAjustesAbierto },

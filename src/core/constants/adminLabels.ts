@@ -1066,6 +1066,18 @@ export const ADMIN_SHELL_UI = {
     resets: (time: string) => `se reinicia a las ${time}`,
     projection: (percent: number) => `a este ritmo, ${percent} % al acabar el día`,
     yesterday: (value: string) => `ayer: ${value}`,
+    /** Aparte de los techos: su límite no es diario, sino de 1.000 llamadas cada 5 minutos (`itadUso.ts`). */
+    itad: {
+      title: 'IsThereAnyDeal',
+      calls: 'Llamadas hoy',
+      denied: 'Peticiones sin cupo hoy',
+      deniedHint: 'Precios que no se pudieron pedir porque ITAD o nuestro tope por minuto dijeron que no',
+      rules:
+        'Su límite es de 1.000 llamadas cada 5 minutos por clave, no por día. Lo que contesta la caché no cuenta. Las llamadas se apuntan por lotes de 10; las peticiones sin cupo, una a una.',
+      resets: (time: string) => `El día es el UTC: se reinicia a las ${time}.`,
+      notConfiguredHint: 'Falta el secreto ITAD_API_KEY.',
+      failed: 'No se pudo leer su contador en KV.',
+    },
     panelCost: 'Lo que cuesta este panel',
     panelCostRows: {
       census: 'Abrir el censo',
@@ -1155,6 +1167,8 @@ export const ADMIN_SHELL_UI = {
     noDate: 'sin fechas',
     noName: 'Sin nombre',
     you: 'tú',
+    /** El de su cuenta de Google: la fila lleva el del perfil social si lo tiene. */
+    realName: 'Nombre',
     email: 'Correo',
     noEmail: 'sin correo',
     uid: 'Identificador',

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // De qué depende que se pueda ofrecer compartir. El hook no decide cuotas (eso lo resuelve la Function), pero sí
@@ -33,7 +33,7 @@ beforeEach(() => {
 describe('useShareViewModel — a quién se le puede ofrecer compartir', () => {
   it('sin sesión y sin espacio social en este navegador: nada que ofrecer ni que explicar', async () => {
     const { result } = renderHook(() => useShareViewModel());
-    await result.current.refresh();
+    await act(() => result.current.refresh());
 
     await waitFor(() => expect(result.current.available).toBe(false));
     expect(result.current.hasSocialSpace).toBe(false);
@@ -46,7 +46,7 @@ describe('useShareViewModel — a quién se le puede ofrecer compartir', () => {
     getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
 
     const { result } = renderHook(() => useShareViewModel());
-    await result.current.refresh();
+    await act(() => result.current.refresh());
 
     await waitFor(() => expect(result.current.available).toBe(false));
     expect(result.current.hasSocialSpace).toBe(true);
@@ -57,7 +57,7 @@ describe('useShareViewModel — a quién se le puede ofrecer compartir', () => {
     getSocialSyncConfig.mockReturnValue({ token: '', gistId: '   ', etag: null, lastRemoteUpdatedAt: 0 });
 
     const { result } = renderHook(() => useShareViewModel());
-    await result.current.refresh();
+    await act(() => result.current.refresh());
 
     await waitFor(() => expect(result.current.available).toBe(false));
     expect(result.current.hasSocialSpace).toBe(false);
@@ -68,12 +68,10 @@ describe('useShareViewModel — a quién se le puede ofrecer compartir', () => {
     getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
 
     const { result } = renderHook(() => useShareViewModel());
-    await result.current.refresh();
+    await act(() => result.current.refresh());
 
     await waitFor(() => expect(result.current.available).toBe(true));
     expect(listMyShares).toHaveBeenCalledOnce();
     expect(result.current.quota).toEqual({ maxActive: 5, ttlDays: 7 });
-    // El nombre de la cuenta de Google coincide con el nick: se avisa antes de publicar con él.
-    expect(result.current.nickIsAccountName).toBe(true);
   });
 });

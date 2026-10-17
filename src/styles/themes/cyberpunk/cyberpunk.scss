@@ -351,16 +351,18 @@
 :root[data-palette="cyberpunk"] .chip-plat    { --chipc: #00f0ff; }
 :root[data-palette="cyberpunk"] .chip-genre   { --chipc: #fcee0a; }
 :root[data-palette="cyberpunk"] .chip-pf      { --chipc: #43e8c8; }
-:root[data-palette="cyberpunk"] .chip-pd      { --chipc: #ff2b56; }
+/* Débiles, un punto más claro que el carmesí de la tríada (#ff2b56): sobre su velo y el panel de la ficha se
+   quedaba en 4,45:1 (16-10-2026). */
+:root[data-palette="cyberpunk"] .chip-pd      { --chipc: #ff3d64; }
 :root[data-palette="cyberpunk"] .chip-generic { --chipc: #ff2a6d; }
 /* Tema CLARO: el fondo es claro, así que los tonos neón puros no se distinguían (y el amarillo puro es ilegible).
    Se usan versiones OSCURAS y saturadas de cada tono para que el chip destaque y el texto se lea. */
 /* Plataforma y género, un punto más hondos que al principio (#0079a3, #8a6d00): sobre su propio velo se quedaban en
-   3,8:1 (09-10-2026). */
+   3,8:1 (09-10-2026). Fuertes y débiles, igual (#0c8a72, #c5003c): 3,18 y 4,18 en los renglones (16-10-2026). */
 :root[data-palette="cyberpunk"][data-theme="light"] .chip-plat    { --chipc: #00658a; }
 :root[data-palette="cyberpunk"][data-theme="light"] .chip-genre   { --chipc: #6f5700; }
-:root[data-palette="cyberpunk"][data-theme="light"] .chip-pf      { --chipc: #0c8a72; }
-:root[data-palette="cyberpunk"][data-theme="light"] .chip-pd      { --chipc: #c5003c; }
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-pf      { --chipc: #096957; }
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-pd      { --chipc: #b80038; }
 :root[data-palette="cyberpunk"][data-theme="light"] .chip-generic { --chipc: #b3005a; }
 :root[data-palette="cyberpunk"] .chip-plat,
 :root[data-palette="cyberpunk"] .chip-genre,
@@ -559,10 +561,10 @@
 :root[data-palette="cyberpunk"] .fab-roulette:hover { filter: none; box-shadow: 0 0 22px rgba(0, 240, 255, .85); }
 
 /* ── §13 · Barra de navegación inferior: HUD — filete cian + barra amarilla lateral, esquinas rectas. ── */
-:root[data-palette="cyberpunk"] .bottom-nav-inner { border: 1px solid var(--cyber-edge); border-left: 3px solid var(--cyber-yellow); border-radius: 0; background: var(--surface); }
+:root[data-palette="cyberpunk"] :is(.bottom-nav-inner, .tabs-inner) { border: 1px solid var(--cyber-edge); border-left: 3px solid var(--cyber-yellow); border-radius: 0; background: var(--surface); }
 /* El fondo del HOVER (`.bottom-nav-btn`) lleva el mismo canto que el indicador del activo: con la pastilla de la
    casa, al pasar por encima aparecía una cápsula dentro de una barra de esquinas vivas. */
-:root[data-palette="cyberpunk"] :is(.bottom-nav-ind, .bottom-nav-btn) { border-radius: 0; }
+:root[data-palette="cyberpunk"] :is(.bottom-nav-ind, .bottom-nav-btn, .tab-ind, .tab-btn) { border-radius: 0; }
 
 /* ══ EFECTOS · subrayado/halo neón en enlaces al hover (se suma al glitch de firma). Solo `data-effects="on"`. ══ */
 :root[data-effects="on"][data-palette="cyberpunk"] .hub-name-link:hover,
@@ -944,24 +946,19 @@
   --stats-num: var(--font-mono);
 }
 
-/* ── §16 · LAS PESTAÑAS DE ESCRITORIO: marco HUD, como la barra de abajo —filete cian y la barra amarilla
+/* ── §16 · LAS PESTAÑAS DE LAS LISTAS: el marco HUD de la barra de abajo (§13) —filete cian y la barra amarilla
    a la izquierda—, con la activa en amarillo neón. El contador no se enmarca: en esta interfaz el amarillo
    ya es la marca de «esto es lo que importa». ── */
-:root[data-palette="cyberpunk"] .tabs {
-  border-bottom: 1px solid var(--cyber-cyan);
-  border-left: 3px solid var(--cyber-yellow);
-}
 /* EL AMARILLO DE TEXTO VA POR `--cyber-yellow-fg`, no por el ácido puro: en claro este es el mismo amarillo
    sobre un gris claro y se queda en 1,26:1. La barra de la izquierda sí conserva el ácido —es relleno, como en
    la barra de abajo—; lo que se LEE y el subrayado que señala usan el tono hondo. */
 :root[data-palette="cyberpunk"] .tab-btn.active { color: var(--cyber-yellow-fg); }
-:root[data-palette="cyberpunk"] .tab-underline {
-  height: 2px;
-  border-radius: 0;
-  background: var(--cyber-yellow-fg);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--cyber-yellow) 60%, transparent);
+:root[data-palette="cyberpunk"] .tab-ind {
+  box-shadow: inset 0 0 0 1px rgba(var(--steam-rgb),.25), inset 0 -2px 0 var(--cyber-yellow-fg),
+    0 6px 12px -6px color-mix(in srgb, var(--cyber-yellow) 60%, transparent);
 }
 :root[data-palette="cyberpunk"] .count-badge {
+  --tab-count-bg: transparent;
   font-family: var(--font-mono);
   color: var(--cyber-yellow-fg);
 }

@@ -459,3 +459,16 @@
     --cover-veil-c: 99%;
   }
 }
+
+/* EL CHIP DEL JUEGO QUE ABRE SU FICHA (F5 del plan de la ficha): el mismo rótulo de juego del hub, como botón. Sin el
+   aspecto de botón del navegador, y con la promesa de «se pulsa» al pasar por encima, como el nombre de un juego en
+   los avisos del feed. */
+button.hub-feed-game-chip.is-openable {
+  font-family: inherit;
+  cursor: pointer;
+  text-align: inherit;
+}
+
+button.hub-feed-game-chip.is-openable:hover { color: var(--fg-link); border-color: color-mix(in srgb, var(--fg-link) 45%, var(--border)); }
+
+button.hub-feed-game-chip.is-openable:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }

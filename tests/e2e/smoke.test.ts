@@ -32,15 +32,17 @@ test.describe('smoke del build de producción', () => {
       await expect(page.getByRole('button', { name: new RegExp(juego.name) })).toBeVisible();
     }
 
-    // 2) Interacción: desplegar el detalle de una fila. Se localiza por `aria-controls` (el atributo que
-    // identifica al disparador de ESE detalle) y no por nombre: al desplegarse aparecen los botones "Editar",
-    // "Eliminar" y "Pasa a…", que llevan el nombre del juego en su etiqueta y harían ambigua la búsqueda.
-    const fila = page.locator(`button[aria-controls="game-detail-${JUEGOS[0].id}"]`);
-    await expect(fila).toHaveAttribute('aria-expanded', 'false');
-    await fila.click();
-    await expect(fila).toHaveAttribute('aria-expanded', 'true');
-    // El detalle desplegado trae las acciones de la fila, que es la prueba de que se ha abierto de verdad.
-    await expect(page.getByRole('button', { name: `Editar - ${JUEGOS[0].name}` })).toBeVisible();
+    // 2) Interacción: abrir la ficha de un juego. Es un panel modal en un chunk perezoso precacheado, así que
+    // abrirla prueba también que ese chunk llega en el build. Sus acciones son la prueba de que se ha pintado de
+    // verdad, y «atrás» la cierra y quita `?juego=` de la URL.
+    await page.locator('button[aria-haspopup="dialog"]', { hasText: JUEGOS[0].name }).first().click();
+    const ficha = page.getByRole('dialog', { name: `Ficha de ${JUEGOS[0].name}` });
+    await expect(ficha).toBeVisible();
+    await expect(ficha.getByRole('button', { name: `Editar - ${JUEGOS[0].name}` })).toBeVisible();
+    await expect(page).toHaveURL(/[?&]juego=/);
+    await page.goBack();
+    await expect(ficha).toBeHidden();
+    await expect(page).not.toHaveURL(/[?&]juego=/);
 
     // 3) Interacción: cambiar de lista. La vergüenza está vacía, así que debe salir su estado vacío.
     await page.getByRole('button', { name: /Lista de la vergüenza/ }).click();

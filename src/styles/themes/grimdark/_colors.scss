@@ -77,6 +77,12 @@
   --chip-plat-fg: #463483;
   --chip-plat-bg: rgba(70,52,131,.10);
   --chip-plat-border: rgba(70,52,131,.28);
+  /* Tinta de los chips de años, puntos fuertes y débiles: la de siempre, un punto más honda. Sobre su velo y
+     este papel, la común se quedaba por debajo de 4,5:1 (medido el 16-10-2026 en los renglones, que son el
+     peor fondo); estas llegan a 4,6. */
+  --chip-generic-fg: #825500;
+  --chip-pf-fg: #19643f;
+  --chip-pd-fg: #9a2f23;
   --hub-text: #1b1e1a;
   --hub-text-muted: #565b4e;
   --tint-rgb: 26,30,24;

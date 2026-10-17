@@ -1624,15 +1624,29 @@
   cursor: pointer;
 }
 
-a.kin-have-name {
+a.kin-have-name,
+button.kin-have-name {
   text-decoration: none;
   text-underline-offset: 2px;
 }
 
-a.kin-have-name:hover { text-decoration: underline; }
+/* El botón que abre la ficha se lee igual que el enlace: el nombre, sin caja. */
+button.kin-have-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+}
+
+a.kin-have-name:hover,
+button.kin-have-name:hover { text-decoration: underline; }
 
 .kin-chip-link:focus-visible,
-a.kin-have-name:focus-visible {
+a.kin-have-name:focus-visible,
+button.kin-have-name:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 3px;
@@ -2320,16 +2334,16 @@ a.kin-have-name:focus-visible {
   padding-right: 2.4rem;
 }
 
-/* La tarjeta del podio con reseña se abre entera, igual que las fichas del resto del top: el filo lateral es
+/* La tarjeta del podio que abre algo (la ficha o la reseña) se abre entera, igual que las fichas del resto del top: el filo lateral es
    la señal y el botón invisible de encima, el objetivo. */
-.podium-step.has-review {
+.podium-step.is-openable {
   border-left-width: 3px;
   cursor: pointer;
   transition: background .15s ease;
 }
 
-.podium-step.has-review:hover { background: var(--surface-elevated); }
-.podium-step.has-review:hover .podium-quote { color: var(--text); }
+.podium-step.is-openable:hover { background: var(--surface-elevated); }
+.podium-step.is-openable:hover .podium-quote { color: var(--text); }
 
 /* El resto del top, con la misma receta: puesto al fondo y una barra de nota al pie. Puestas en rejilla, las
    barras dejan ver de un golpe cómo caen las notas del cuarto al quince. */
@@ -2374,15 +2388,15 @@ a.kin-have-name:focus-visible {
   pointer-events: none;
 }
 
-/* Matiz de que esa ficha lleva reseña y se puede abrir: un filo lateral, nada más. Con un icono o una pastilla,
+/* Matiz de que esa ficha se puede abrir: un filo lateral, nada más. Con un icono o una pastilla,
    doce fichas seguidas se llenaban de adornos y el nombre dejaba de ser lo primero. */
-.top-chips li.has-review {
+.top-chips li.is-openable {
   border-left: 2px solid color-mix(in oklch, var(--steam) 55%, transparent);
   cursor: pointer;
   transition: border-color .15s ease, background .15s ease;
 }
 
-.top-chips li.has-review:hover {
+.top-chips li.is-openable:hover {
   border-left-color: var(--steam);
   background: var(--surface-elevated);
 }
@@ -3065,6 +3079,8 @@ a.kin-have-name:focus-visible {
    cuelga el cuerpo de su número. */
 .game-cards .stars { font-size: var(--fs-3xs); margin-left: auto; }
 .game-cards .score-ring { --sz: 1.55rem; margin-left: auto; }
+/* La caja que abre la ficha lleva el botón invisible de las fichas del top; el anillo de foco sigue su esquina. */
+.game-cards .top-chip-open:focus-visible { border-radius: 4px; }
 
 
 /* ---- Interacción -------------------------------------------------------------------------------------- */

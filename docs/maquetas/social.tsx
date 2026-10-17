@@ -53,7 +53,12 @@ import { LADDERS } from '../../src/core/achievements/catalog';
 import type { AchievementState } from '../../src/core/achievements/types';
 import { ADMIN_ONLY_TIER, type ProfileTier } from '../../src/core/constants/tiers';
 import type { RelationshipState, SocialSharedGame } from '../../src/model/types/social';
-import type { GameItem, TabId } from '../../src/model/types/game';
+import type { GameItem, TabData, TabId } from '../../src/model/types/game';
+import { GameSheetPanelView, type GameSheetSocialData } from '../../src/view/components/gameSheet/GameSheetPanel';
+import type { PrecioItad } from '../../src/model/types/prices';
+import type { GameSheetSignal } from '../../src/core/gameSheet/buildGameSheet';
+import { gameSheetSlug } from '../../src/core/utils/gameSheetPath';
+import { TAB_ACTIONS } from '../../src/core/constants/labels';
 import type { RelatedReview } from '../../src/core/social/relatedReviews';
 
 // ─── Tema ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -820,6 +825,112 @@ function Pasarela({ caso }: { caso: string }) {
   );
 }
 
+// ─── La ficha de un juego (F6 del plan de la ficha) ──────────────────────────────────────────────────────────
+// La ficha REAL (`GameSheetPanelView`) con lo de tus amistades inventado: en la app lo carga `GameSheetPanel` de la
+// copia del directorio en IndexedDB, y aquí no se siembra nada porque el origen de desarrollo es el de la app.
+// Variantes (`abrir`): con amistades (por defecto), sin espacio social, abierta desde el perfil de Marta (su bloque
+// arriba, F0.7), un juego que no tienes, y con precio un deseo (P3) y un juego que no tienes (P5). En la app el precio
+// lo pide `GameSheetPanel` a `/api/precios`; aquí llega inventado.
+const MI_HOLLOW: GameItem = {
+  id: 1, _ts: 1, name: 'Hollow Knight', platforms: ['Switch', 'PC'], genres: ['Metroidvania', 'Acción'], steamDeck: true,
+  review: 'Un mapa que se descubre a mano y unos jefes que piden paciencia. La música de Christopher Larkin hace la mitad del trabajo: cada zona suena a lo que es.',
+  score: 5, grade: 92, hours: 46, years: [2024, 2018], strengths: ['Exploración', 'Música', 'Jefes'], weaknesses: ['Mapa de pago'],
+  replayable: true, enteredAt: { c: new Date(2024, 0, 20).getTime() },
+};
+const MI_BIBLIOTECA: TabData = {
+  c: [MI_HOLLOW],
+  v: [],
+  e: [],
+  p: [],
+  d: [{ id: 2, _ts: 1, name: 'Hollow Knight: Silksong', platforms: ['Switch'], genres: ['Metroidvania'], steamDeck: false, review: '', grade: 85, score: 4 }],
+  deleted: [],
+  updatedAt: 0,
+};
+// El precio de Silksong: en su mínimo histórico, con descuento y dos tiendas más (el recuadro completo, F0.15), en una
+// tienda de nombre largo y con los tres mínimos iguales, que es lo que más alto lo hacía.
+const PRECIO_SILKSONG: PrecioItad = {
+  titulo: 'Hollow Knight: Silksong',
+  itadId: 'silksong',
+  mejor: { tienda: 'IndieGala Store', precio: 15.99, normal: 19.99, descuento: 20, hasta: new Date(Date.now() + 6 * 864e5).toISOString(), url: 'https://isthereanydeal.com/' },
+  otras: [
+    { tienda: 'Steam', precio: 17.99, normal: 19.99, descuento: 10, hasta: null, url: 'https://isthereanydeal.com/' },
+    { tienda: 'Epic Game Store', precio: 19.99, normal: 19.99, descuento: 0, hasta: null, url: 'https://isthereanydeal.com/' },
+  ],
+  minimos: { historico: { precio: 15.99, fecha: '2026-06-14T00:00:00Z' }, anio: 15.99, tresMeses: 15.99 },
+  urlFicha: 'https://isthereanydeal.com/',
+  bundles: [],
+};
+// El de Outer Wilds, un juego que no tienes (P5): sin oferta ahora y por encima de su mínimo.
+const PRECIO_OUTER: PrecioItad = {
+  titulo: 'Outer Wilds',
+  itadId: 'outer-wilds',
+  mejor: { tienda: 'Steam', precio: 24.99, normal: 24.99, descuento: 0, hasta: null, url: 'https://isthereanydeal.com/' },
+  otras: [{ tienda: 'Epic Game Store', precio: 24.99, normal: 24.99, descuento: 0, hasta: null, url: 'https://isthereanydeal.com/' }],
+  minimos: { historico: { precio: 9.99, fecha: '2025-11-27T00:00:00Z' }, anio: 9.99, tresMeses: 14.99 },
+  urlFicha: 'https://isthereanydeal.com/',
+  bundles: [],
+};
+const ref = (p: Persona) => ({ id: p.id, name: p.displayName });
+const SENALES: GameSheetSignal[] = [
+  { kind: 'review', friend: ref(MARTA), gameName: 'Hollow Knight', grade: 92, snippet: 'Precioso, enorme y cruel en la justa medida. El mapa que compras a trozos es de lo mejor del género.', at: hace(3, 20, 0) },
+  { kind: 'review', friend: ref(IVAN), gameName: 'Hollow Knight', grade: 84, snippet: 'Me perdí demasiadas veces, pero volvería a perderme.', at: hace(9, 22, 0) },
+  { kind: 'move', friend: ref(LUCIA), gameName: 'Hollow Knight', tab: 'e', at: hace(1, 18, 0) },
+  { kind: 'library', friend: ref(NACHO), tab: 'c', item: { ...MI_HOLLOW, id: 40, review: '', grade: 76, finishedOn: '2025-03' } },
+  { kind: 'move', friend: ref(PAULA), gameName: 'Hollow Knight', tab: 'd', at: hace(2, 12, 0) },
+  { kind: 'review', friend: ref(MARTA), gameName: 'Outer Wilds', grade: 96, snippet: ACTIVIDAD[MARTA.id][0].snippet, at: hace(5, 21, 0) },
+  { kind: 'move', friend: ref(NACHO), gameName: 'Outer Wilds', tab: 'p', at: hace(4, 10, 0) },
+];
+const MARTA_HOLLOW: GameSheetSocialData['friendEntry'] = {
+  friend: ref(MARTA),
+  tab: 'c',
+  item: {
+    ...MI_HOLLOW, id: JUEGOS['Hollow Knight'].id, platforms: ['Switch'], steamDeck: false, hours: null, grade: 92, years: [2024],
+    strengths: ['Arte', 'Combate'], weaknesses: [], replayable: true, finishedOn: '2024-05',
+    review: 'Precioso, enorme y cruel en la justa medida. El mapa que compras a trozos es de lo mejor del género, y el final verdadero merece cada hora.',
+  },
+};
+const MARTA_OUTER: GameSheetSocialData['friendEntry'] = {
+  friend: ref(MARTA),
+  tab: 'c',
+  item: {
+    id: JUEGOS['Outer Wilds'].id, _ts: 1, name: 'Outer Wilds', platforms: ['PS5'], genres: ['Aventura', 'Exploración'], steamDeck: false,
+    review: ACTIVIDAD[MARTA.id][0].snippet, grade: 96, years: [2026], strengths: ['Misterio'], finishedOn: '2026-02',
+  },
+};
+
+function Ficha() {
+  const caso = params.get('abrir') || '';
+  const ajeno = caso === 'ajeno' || caso === 'ajeno-precio';
+  const deseo = caso === 'deseo';
+  const social: GameSheetSocialData = caso === 'sin-social'
+    ? { signals: [], missing: 0, friendEntry: null }
+    : {
+      signals: SENALES,
+      missing: caso === 'de-amistad' || ajeno ? 0 : 1,
+      friendEntry: caso === 'de-amistad' ? MARTA_HOLLOW : ajeno ? MARTA_OUTER : null,
+    };
+  return (
+    <>
+      {caso === 'de-amistad' || ajeno ? <Perfil /> : <Feed />}
+      <GameSheetPanelView
+        open
+        data={MI_BIBLIOTECA}
+        slug={gameSheetSlug(ajeno ? 'Outer Wilds' : deseo ? 'Hollow Knight: Silksong' : 'Hollow Knight')}
+        onClose={avisar('cierra la ficha (Esc, la X, pulsar fuera, «atrás» o deslizarla)')}
+        onOpenGame={avisar('abre la ficha de esa entrega')}
+        tabActions={TAB_ACTIONS}
+        onEdit={avisar('abre el formulario')}
+        onDelete={avisar('borra el juego')}
+        onMigrate={avisar('lo mueve de lista')}
+        reviewTarget={() => ({ to: '/stats/resenas' })}
+        onAddGame={avisar('lo añade a esa lista')}
+        {...social}
+        price={deseo ? PRECIO_SILKSONG : caso === 'ajeno-precio' ? PRECIO_OUTER : undefined}
+      />
+    </>
+  );
+}
+
 const RUTA_MARTA = `/social/profiles/${MARTA.id}`;
 const RUTA_PROPIA = '/social/profiles/yo';
 const subruta = vista === 'resenas' ? '/reviews' : vista === 'publicaciones' ? '/posts' : '';
@@ -873,6 +984,12 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
   globales: { nombre: 'Logros: vista global', ruta: `${RUTA_MARTA}/globales`, pintar: () => <Logros global /> },
   resena: { nombre: 'Reseña (desde el feed)', ruta: `/social/user/${IVAN.actor}/game/${EVENTO.gameId}/review`, pintar: () => <Resena /> },
   'resena-perfil': { nombre: 'Reseña (desde un perfil)', ruta: `/social/profiles/${IVAN.id}/game/${EVENTO.gameId}/review`, pintar: () => <ResenaDePerfil /> },
+  // No es del hub —el panel lo monta `App` encima de cualquier pantalla—, pero así se ve en los ocho temas sin sesión.
+  ficha: {
+    nombre: 'Ficha de un juego',
+    ruta: ['de-amistad', 'ajeno', 'ajeno-precio'].includes(params.get('abrir') || '') ? RUTA_MARTA : '/social',
+    pintar: () => <Ficha />,
+  },
 };
 
 /** Las combinaciones de `vista` y `abrir` que tienen sentido, para la barra. */
@@ -893,6 +1010,14 @@ const VARIANTES: Record<string, Array<{ nombre: string; vista?: string; abrir?: 
     { nombre: 'Ha cambiado, con espera', abrir: 'espera' },
   ],
   'resumen-publico': [{ nombre: 'Con la parte social' }, { nombre: 'Sin la app', abrir: 'sin-app' }],
+  ficha: [
+    { nombre: 'Con amistades' },
+    { nombre: 'Sin espacio social', abrir: 'sin-social' },
+    { nombre: 'Desde el perfil de Marta', abrir: 'de-amistad' },
+    { nombre: 'Un juego que no tienes', abrir: 'ajeno' },
+    { nombre: 'Un deseo con su precio', abrir: 'deseo' },
+    { nombre: 'Un juego que no tienes, con precio', abrir: 'ajeno-precio' },
+  ],
   'perfil-propio': [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Publicaciones', vista: 'publicaciones' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
 };
 

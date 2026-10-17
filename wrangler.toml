@@ -33,6 +33,7 @@ APPCHECK_EDGE_MODE = "monitor"
 # aparece en las peticiones y no es secreto. El IGDB_CLIENT_SECRET NO va aquí: se sube cifrado con
 # `npx wrangler pages secret put IGDB_CLIENT_SECRET` y, en local, vive en `.dev.vars` (ignorado por git).
 IGDB_CLIENT_ID = "mc9va4neod74eulaiqaft6dzrnwkob"
+ITAD_CLIENT_ID = "635c6975ee64fb3e"
 
 # Reseñas compartidas con enlace público (ver docs/plan-compartir-resenas.md). En local se usa el namespace de
 # vista previa a propósito: así una prueba nunca escribe en los datos que están sirviendo enlaces reales.
@@ -61,6 +62,7 @@ APPCHECK_EDGE_MODE = "monitor"
 # aparece en las peticiones y no es secreto. El IGDB_CLIENT_SECRET NO va aquí: se sube cifrado con
 # `npx wrangler pages secret put IGDB_CLIENT_SECRET` y, en local, vive en `.dev.vars` (ignorado por git).
 IGDB_CLIENT_ID = "mc9va4neod74eulaiqaft6dzrnwkob"
+ITAD_CLIENT_ID = "635c6975ee64fb3e"
 
 [[env.preview.kv_namespaces]]
 binding = "SHARES"
@@ -83,6 +85,7 @@ APPCHECK_EDGE_MODE = "monitor"
 # aparece en las peticiones y no es secreto. El IGDB_CLIENT_SECRET NO va aquí: se sube cifrado con
 # `npx wrangler pages secret put IGDB_CLIENT_SECRET` y, en local, vive en `.dev.vars` (ignorado por git).
 IGDB_CLIENT_ID = "mc9va4neod74eulaiqaft6dzrnwkob"
+ITAD_CLIENT_ID = "635c6975ee64fb3e"
 
 [[env.production.kv_namespaces]]
 binding = "SHARES"

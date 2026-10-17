@@ -3,6 +3,7 @@ import { useScoreScale } from '../hooks/useScoreScale';
 import { HubAvatar } from './socialhub/HubAvatar';
 import { scoreInMetadata } from './ReviewDetailBody';
 import { StarRating } from './StarRating';
+import { GAME_SHEET_UI } from '../../core/constants/gameSheetLabels';
 // Las cuatro pantallas que montan esta cabecera no comparten chunk: dos van en el del hub social, una en el del
 // panel de estadísticas y otra en el de la página pública. Ver `styles/reviews.scss`.
 import '../../styles/reviews.scss';
@@ -38,6 +39,11 @@ export interface ReviewDetailHeadProps {
    * medallón «¿?» los pinta `ReviewDetailBody`, que recibe la misma puntuación.
    */
   score: ScoredLike;
+  /**
+   * Abrir la ficha del juego (F5 del plan de la ficha): con él, el chip del juego es un botón. Sin él —la página
+   * pública de un enlace, que se monta sin la app; la ficha de la ruleta, que ya es un modal— sigue siendo un rótulo.
+   */
+  onOpenGame?: () => void;
 }
 
 /**
@@ -63,7 +69,7 @@ export interface ReviewDetailHeadProps {
  *
  * NO INCLUYE el cuerpo (texto y metadatos): eso es `ReviewDetailBody`, y las dos se montan juntas.
  */
-export function ReviewDetailHead({ gameName, author, dateLabel, score }: ReviewDetailHeadProps) {
+export function ReviewDetailHead({ gameName, author, dateLabel, score, onOpenGame }: ReviewDetailHeadProps) {
   const scale = useScoreScale();
   // El avatar cuelga de poder visitar el perfil, no de tener foto: sin `onOpen` no se pinta ninguno, tampoco la
   // silueta. En la página pública eso importa dos veces, porque la silueta sale del sprite de iconos y allí no
@@ -102,7 +108,15 @@ export function ReviewDetailHead({ gameName, author, dateLabel, score }: ReviewD
               : gameName}
           </h3>
           {/* El chip solo existe para decir el juego cuando el titular lo ocupa la persona. */}
-          {author && gameName ? <span className="hub-feed-game-chip">{gameName}</span> : null}
+          {author && gameName ? (
+            onOpenGame ? (
+              <button className="hub-feed-game-chip is-openable" type="button" aria-label={GAME_SHEET_UI.openSheetAria(gameName)} onClick={onOpenGame}>
+                {gameName}
+              </button>
+            ) : (
+              <span className="hub-feed-game-chip">{gameName}</span>
+            )
+          ) : null}
         </div>
       </header>
       {dateLabel ? <p className="hub-feed-date">{dateLabel}</p> : null}

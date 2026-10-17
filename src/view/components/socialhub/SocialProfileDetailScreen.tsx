@@ -192,6 +192,8 @@ function SocialProfileDetailScreenBase({
   onDeletePost,
   onOpenReview,
   reviewLink,
+  profileId = '',
+  openGameSheet,
   profileLoading = false,
   status,
   statusKind,
@@ -246,6 +248,10 @@ function SocialProfileDetailScreenBase({
   onOpenReview: (gameId: number) => void;
   /** Destino del «Ver análisis» de la fila expandida del listado: la reseña de este perfil dentro del hub. */
   reviewLink?: (gameId: number) => { to: string; state?: unknown };
+  /** El `id` de este perfil en el directorio: la ficha de un juego abierta desde aquí lleva su bloque (`?de=`). */
+  profileId?: string;
+  /** Abrir la ficha de un juego (F5 del plan de la ficha): la pasa `SocialHub`. */
+  openGameSheet?: (name: string, options?: { friendId?: string }) => void;
   /** El perfil todavía puede aparecer (el directorio se está hidratando): sin él, se espera en vez de decir que no está. */
   profileLoading?: boolean;
   status: string;
@@ -298,7 +304,12 @@ function SocialProfileDetailScreenBase({
   useEffect(() => {
     if (openSummaryOnMount) setShowSummary(true);
   }, [openSummaryOnMount]);
-  const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
+  /* TOCAR UN JUEGO DE SUS LISTAS ABRE SU FICHA, con el bloque de esta persona arriba (F0.7): sus datos y su reseña,
+     encima de lo tuyo y de lo de tus demás amistades. En tu propio perfil, la ficha de siempre. */
+  const openGameFromList = useCallback(
+    (game: GameItem) => openGameSheet?.(game.name, { friendId: isOwnProfile ? '' : profileId }),
+    [openGameSheet, isOwnProfile, profileId],
+  );
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
   const loadMoreRef = useRef<HTMLButtonElement>(null);
   const [gameQuery, setGameQuery] = useState('');
@@ -770,16 +781,12 @@ function SocialProfileDetailScreenBase({
                     // 15 que se pinta: decía «15 juegos» con doscientos en la lista.
                     totalCount={filteredGames.length}
                     currentTab={currentTab}
-                    expandedId={expandedByTab[currentTab] ?? null}
-                    onExpandedChange={(id) => setExpandedByTab((prev) => ({ ...prev, [currentTab]: id }))}
+                    onOpenGame={openGameFromList}
                     onEdit={() => undefined}
-                    onDelete={() => undefined}
-                    onMigrate={() => undefined}
-                    tabActions={[]}
                     sort={sortByTab[currentTab]}
                     onSort={handleSort}
                     readOnly
-                    // El mismo «Ver análisis» que en tus listas, pero a la reseña de ESTE perfil en el hub: la
+                    // El acceso al análisis de la caja del mosaico, pero a la reseña de ESTE perfil en el hub: la
                     // que abre también su pestaña de reseñas.
                     reviewLink={reviewLink}
                     /* LAS CARÁTULAS AJENAS, PARA TODOS Y CON SU PROPIO CUPO. Tu biblioteca la calienta el
@@ -805,7 +812,6 @@ function SocialProfileDetailScreenBase({
                       showYears: false,
                       showReplayable: !activeProfileDetail.visibility?.hideReplayable,
                       showRetry: !activeProfileDetail.visibility?.hideRetry,
-                      showHours: !activeProfileDetail.visibility?.hideGameTime,
                       // Sin enlace a dónde llevar, el análisis se queda en su pestaña ("Reseñas").
                       showReview: Boolean(reviewLink),
                     }}

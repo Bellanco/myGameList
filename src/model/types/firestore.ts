@@ -202,6 +202,17 @@ export interface FirestorePublicConfig {
    */
   gameScenes?: boolean;
   /**
+   * Integración con IsThereAnyDeal (P0.1 y P0.4 del plan de la ficha y los precios). Por defecto AUSENTE, que se lee
+   * como apagada: encenderla autoriza a que el servidor pregunte a ITAD por los títulos de tu lista de deseos. Viaja
+   * con la cuenta.
+   */
+  itad?: boolean;
+  /**
+   * Cuadro para publicar en la actividad social (Ajustes › Diseño, solo con rango que publica). AUSENTE se lee como
+   * visible: esconderlo es lo que se elige. No cambia lo que se puede publicar, solo si el cuadro está a la vista.
+   */
+  showPostComposer?: boolean;
+  /**
    * F4 — de qué listas ve su dueño los mensajes de actividad, como letras en orden canónico ('cevp' = todas,
    * '' = ninguna). Ajuste de LECTURA: no cambia lo que se publica ni lo que ven los demás. Vive aquí (owner-only)
    * y no en el perfil público por lo mismo que el consentimiento: es dato del dueño, y así le sigue entre

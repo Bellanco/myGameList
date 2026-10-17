@@ -35,6 +35,7 @@ const TODAS = [
   'perfil-propio', 'perfil-propio&vista=publicaciones', 'ajustes', 'logros', 'globales', 'resena', 'resena-perfil',
   'compartir-resumen', 'compartir-resumen&abrir=al-dia', 'compartir-resumen&abrir=cambiado', 'compartir-resumen&abrir=espera',
   'resumen-publico', 'resumen-publico&abrir=sin-app',
+  'ficha', 'ficha&abrir=sin-social', 'ficha&abrir=de-amistad', 'ficha&abrir=ajeno', 'ficha&abrir=deseo', 'ficha&abrir=ajeno-precio',
 ];
 const PANTALLAS = args.pantallas ? args.pantallas.split(',') : TODAS;
 
@@ -54,6 +55,12 @@ for (const pantalla of PANTALLAS) {
       await pagina.waitForLoadState('networkidle');
       await pagina.evaluate(() => document.fonts.ready.then(() => undefined));
       await pagina.waitForTimeout(400);
+      // Las animaciones de entrada que duran más que esa espera (el panel de la ficha, ~0,44 s): sin esto, la captura
+      // lo pillaba a medio entrar. Con tope, porque las de bucle infinito (un esqueleto que late) no terminan nunca.
+      await pagina.evaluate(() => Promise.race([
+        Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))),
+        new Promise((listo) => setTimeout(listo, 1500)),
+      ]).then(() => undefined));
       const nombre = `${pantalla.replace(/[&=]/g, '_')}__${tema}-${modo}.png`;
       await pagina.screenshot({ path: join(SALIDA, nombre), fullPage: true });
       if (errores.length) {

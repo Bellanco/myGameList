@@ -214,6 +214,8 @@ Para un resumen semanal eso es poco. Por eso la cápsula debe ser solo el aviso:
   hacerse **perezoso**, al pedir cada carátula, nunca en bloque. Mientras no haya id, el nombre sigue de respaldo.
 
 **C2 · Ficha de juego · M–L · coste: lecturas de GitHub, 0 de Firestore.**
+- **Plan cerrado (15-10-2026):** `docs/plan-ficha-de-juego-y-precios.md`; la ficha construida se ve en
+  `docs/maquetas/social.html?pantalla=ficha`. Allí la ficha es un panel lateral que sustituye al detalle de la fila.
 - Una pantalla por juego (`/juego/:clave`), con tu entrada y «tus amistades y este juego»: en qué lista lo
   tiene cada una, su nota, el adelanto de su reseña y la media entre amistades.
 - Abajo, la saga: las otras entregas en tus listas y en las de tus amistades.

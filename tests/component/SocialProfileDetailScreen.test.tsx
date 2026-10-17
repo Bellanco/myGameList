@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { ADMIN_ONLY_TIER } from '../../src/core/constants/tiers';
@@ -315,7 +315,7 @@ describe('SocialProfileDetailScreen — resumen del año', () => {
       activeProfileDetail: friend([of2025(1, 'Halo', { finishedOn: '2025-05' }), of2025(2, 'Zelda', { finishedOn: '2025-05', grade: 70 })]),
       viewerCompleted: [of2025(10, 'zelda', { grade: 95 })],
     });
-    screen.getByRole('button', { name: YEAR_SUMMARY_UI.button }).click();
+    fireEvent.click(screen.getByRole('button', { name: YEAR_SUMMARY_UI.button }));
 
     expect(await screen.findByText(YEAR_SUMMARY_UI.title(2025))).toBeInTheDocument();
     expect(await screen.findByText(YEAR_SUMMARY_UI.when.top({ own: false, name: 'Ada' }, [4], 2))).toBeInTheDocument();
@@ -361,7 +361,7 @@ describe('SocialProfileDetailScreen — resumen del año', () => {
       viewerCompleted: [of2025(1, 'Halo')],
       yearSummarySignal,
     });
-    screen.getByRole('button', { name: YEAR_SUMMARY_UI.button }).click();
+    fireEvent.click(screen.getByRole('button', { name: YEAR_SUMMARY_UI.button }));
     await screen.findByText(YEAR_SUMMARY_UI.title(2025));
     expect(yearSummarySignal.announce).not.toHaveBeenCalled();
   });
@@ -397,7 +397,7 @@ describe('SocialProfileDetailScreen — resumen del año', () => {
       activeProfileDetail: { displayName: 'Yo', visibility, sharedLists: { c: [], v: [], e: [], p: [] } },
       viewerCompleted: [of2025(1, 'Halo', { enteredAt: { c: at('2025-03-08') } }), of2025(2, 'Zelda', { enteredAt: { c: at('2025-11-15') } })],
     });
-    screen.getByRole('button', { name: YEAR_SUMMARY_UI.button }).click();
+    fireEvent.click(screen.getByRole('button', { name: YEAR_SUMMARY_UI.button }));
     expect(await screen.findByRole('img', { name: YEAR_SUMMARY_UI.when.calendarAria })).toBeInTheDocument();
     expect(screen.getByText(YEAR_SUMMARY_UI.cover.finished({ own: true, name: 'Yo' }, 2))).toBeInTheDocument();
   });

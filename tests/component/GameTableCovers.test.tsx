@@ -34,12 +34,8 @@ function pinta(forma: 'grid' | 'list', juegos: GameItem[], tab: TabId = 'c', all
     <GameTable
       games={juegos}
       currentTab={tab}
-      expandedId={null}
-      onExpandedChange={vi.fn()}
+      onOpenGame={vi.fn()}
       onEdit={vi.fn()}
-      onDelete={vi.fn()}
-      onMigrate={vi.fn()}
-      tabActions={[]}
       coverPolicy={{ allowed: allowCovers }}
     />,
   );
@@ -114,12 +110,8 @@ describe('qué carátulas pide el listado', () => {
       <GameTable
         games={[juego(1, 'Celeste')]}
         currentTab="c"
-        expandedId={null}
-        onExpandedChange={vi.fn()}
+        onOpenGame={vi.fn()}
         onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onMigrate={vi.fn()}
-        tabActions={[]}
         coverPolicy={{ allowed: true }}
       />,
     );
@@ -158,12 +150,8 @@ describe('qué carátulas pide el listado', () => {
       <GameTable
         games={juegos}
         currentTab="c"
-        expandedId={null}
-        onExpandedChange={vi.fn()}
+        onOpenGame={vi.fn()}
         onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onMigrate={vi.fn()}
-        tabActions={[]}
         coverPolicy={{ allowed: true }}
       />,
       { container: contenedor },
@@ -223,12 +211,8 @@ describe('qué carátulas pide el listado', () => {
       <GameTable
         games={[ajeno]}
         currentTab="c"
-        expandedId={null}
-        onExpandedChange={vi.fn()}
+        onOpenGame={vi.fn()}
         onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onMigrate={vi.fn()}
-        tabActions={[]}
         coverPolicy={{ allowed: true, preferKnown: true }}
       />,
     );
@@ -262,12 +246,8 @@ describe('qué carátulas pide el listado', () => {
       <GameTable
         games={juegos}
         currentTab="c"
-        expandedId={null}
-        onExpandedChange={vi.fn()}
+        onOpenGame={vi.fn()}
         onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onMigrate={vi.fn()}
-        tabActions={[]}
         coverPolicy={{ cachedOnly: true, preferKnown: true }}
       />,
     );
@@ -341,12 +321,8 @@ describe('qué carátulas pide el listado', () => {
       <GameTable
         games={[juego(1, 'Celeste')]}
         currentTab="c"
-        expandedId={null}
-        onExpandedChange={vi.fn()}
+        onOpenGame={vi.fn()}
         onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onMigrate={vi.fn()}
-        tabActions={[]}
       />,
     );
     expect(apagado.container.querySelector('.game-cover-img')).toBeNull();
@@ -364,12 +340,8 @@ describe('qué carátulas pide el listado', () => {
       <GameTable
         games={[juego(1, 'Celeste')]}
         currentTab="c"
-        expandedId={null}
-        onExpandedChange={vi.fn()}
+        onOpenGame={vi.fn()}
         onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onMigrate={vi.fn()}
-        tabActions={[]}
       />,
     );
 

@@ -6,7 +6,7 @@
 //
 // La lógica de aplicación debe seguir siendo IDÉNTICA a la de `public/theme-init.js`, que corre antes del primer
 // render para evitar el flash de tema/paleta/caja.
-import { COVERS_KEY, EFFECTS_KEY, GAME_SCENES_KEY, GRID_SIZE_KEY, LIST_SHAPE_KEY, PALETTE_KEY, PALETTE_LOCK_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY, WISHLIST_KEY } from '../../core/constants/storageKeys';
+import { COVERS_KEY, EFFECTS_KEY, GAME_SCENES_KEY, GRID_SIZE_KEY, ITAD_KEY, LIST_SHAPE_KEY, PALETTE_KEY, PALETTE_LOCK_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY, WISHLIST_KEY } from '../../core/constants/storageKeys';
 import { DEFAULT_PALETTE, paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { createPreferenceStore, hydratePreferencesFromCloud } from '../../model/repository/preferenceStore';
 import { loadPaletteSkin } from './paletteSkin';
@@ -233,6 +233,20 @@ export const gameScenesPreference = createPreferenceStore<boolean>({
 });
 
 /**
+ * LA INTEGRACIÓN CON ISTHEREANYDEAL (P0.1 del plan de la ficha y los precios): un solo interruptor que enciende los
+ * precios de Deseados y de la ficha y el botón de traer la lista de ITAD. Apagada por defecto, como las carátulas, y
+ * por lo mismo: encenderla es lo que autoriza a que el servidor pregunte a ITAD por los títulos de tu lista de deseos.
+ * Por eso `parse` exige el `'on'` explícito. Viaja con la cuenta (P0.4); solo se ofrece con espacio social (P0.2).
+ */
+export const itadPreference = createPreferenceStore<boolean>({
+  key: ITAD_KEY,
+  parse: (raw) => raw === 'on',
+  serialize: onOff.serialize,
+  cloudField: 'itad',
+  fromCloud: onOff.fromCloud,
+});
+
+/**
  * LA PESTAÑA DE LA LISTA DE DESEOS. Visible por defecto —`parse` solo la apaga con un `'off'` explícito, al revés
  * que el botón de Steam—, porque es una lista como las demás y esconderla es lo que se elige, no lo que se da.
  *
@@ -255,6 +269,9 @@ export const wishlistPreference = createPreferenceStore<boolean>({
  * el módulo pequeño y no este, para no arrastrar las preferencias de apariencia a su chunk.
  */
 export { feedMoveTabsPreference } from '../../model/repository/feedMovePreference';
+
+/** El cuadro para publicar del feed: re-exportada aquí para registrarla en el arranque, igual que la de arriba. */
+export { postComposerPreference } from '../../model/repository/postComposerPreference';
 
 function toggleRootFlag(attribute: string, on: boolean): void {
   const root = document.documentElement;

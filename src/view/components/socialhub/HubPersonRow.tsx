@@ -1,6 +1,8 @@
 import type React from 'react';
 import { refEntradaDeFondo } from '../../../core/utils/entradaDeImagen';
 import { HubAvatar } from './HubAvatar';
+// Sus estilos van con el componente y no en `social.scss`: lo pinta también la ficha de un juego (ver la hoja).
+import '../../../styles/personRow.scss';
 
 /**
  * RENGLÓN DE PERSONA de «Perfiles» (`/social/profiles`), para amigos y para el resto (14-10-2026): avatar, nombre,

@@ -191,10 +191,7 @@
    mientras se anima (por eso son desplazamientos y no escalas). */
 @media (prefers-reduced-motion: no-preference) {
   tbody tr.main-row.is-entering { animation: rowEnter .26s ease-out; }
-  /* También la fila de DETALLE: si el juego que se borra estaba desplegado, son dos `<tr>` y tienen que irse
-     juntas, o el detalle se quedaría un instante solo, colgando de una fila que ya no está. */
-  tbody tr.main-row.is-leaving,
-  tbody tr.detail-row.is-leaving { animation: rowLeave .22s ease-in forwards; }
+  tbody tr.main-row.is-leaving { animation: rowLeave .22s ease-in forwards; }
 }
 
 @keyframes rowEnter {
@@ -207,10 +204,9 @@
   to   { opacity: 0; transform: translateX(-18px); }
 }
 
-/* La fila que se está yendo ya no es pulsable: durante esos 220 ms sigue en el DOM y un clic ahí abriría el
-   detalle de un juego que está a punto de no existir. */
-tbody tr.main-row.is-leaving,
-tbody tr.detail-row.is-leaving { pointer-events: none; }
+/* La fila que se está yendo ya no es pulsable: durante esos 220 ms sigue en el DOM y un clic ahí abriría la
+   ficha de un juego que está a punto de no existir. */
+tbody tr.main-row.is-leaving { pointer-events: none; }
 
 /* ══ 5 · IMÁGENES QUE LLEGAN ═══════════════════════════════════════════════════════════════════════════════
    Toda imagen ENTRA, ninguna aparece: el avatar, la carátula de fondo de un renglón, la foto de una publicación.

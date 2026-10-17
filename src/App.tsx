@@ -2,8 +2,13 @@ import { Suspense, ViewTransition, addTransitionType, lazy, startTransition, use
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ORDER, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
-import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS, WISHLIST_MAX_GAMES } from './core/constants/uiConfig';
-import { TAB_IDS, type TabData, type TabId } from './model/types/game';
+import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS, WISHLIST_MAX_GAMES, WISHLIST_MAX_GAMES_ADMIN } from './core/constants/uiConfig';
+import { TAB_IDS, type GameItem, type TabData, type TabId } from './model/types/game';
+import { PROFILE_TIER_PRICE_FOREIGN_GAMES, PROFILE_TIER_PRICE_TTL_MS, hasUnlimitedWishlist } from './core/constants/tiers';
+import { DEFAULT_SORT, sortGames } from './core/utils/sortGames';
+import { useOwnTier } from './viewmodel/useOwnTier';
+import { useWishlistPrices } from './viewmodel/prices/useWishlistPrices';
+import { useItad } from './view/hooks/useItad';
 import { decideReviewPublication } from './core/social/reviewPublication';
 import { applyReviewPublication } from './viewmodel/applyReviewPublication';
 import { copyText } from './core/utils/clipboard';
@@ -38,6 +43,7 @@ import { useSyncViewModel } from './viewmodel/useSyncViewModel';
 import { GithubConnectionProvider, type GithubConnection } from './viewmodel/sync/githubConnection';
 import { resolveSyncBadge } from './viewmodel/syncBadge';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
+import { useIsAdmin } from './view/hooks/useIsAdmin';
 import { useSocialProfileStatus } from './view/hooks/useSocialProfileSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
@@ -56,6 +62,9 @@ import { normalizeName } from './core/utils/normalizeName';
 import { useImportInbox } from './viewmodel/useImportInbox';
 import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
 import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
+import { useGameSheetParam } from './viewmodel/gameSheet/useGameSheetParam';
+import { gameSheetSearch, gameSheetSlug, ownGameSheetTab } from './core/utils/gameSheetPath';
+import { statsReviewPath } from './core/utils/reviewPath';
 import { runWhenIdle } from './core/utils/idle';
 import { carryStamps } from './core/utils/gameStamps';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
@@ -92,6 +101,24 @@ const FiltersSettings = lazy(() => import('./view/components/settings/FiltersSet
 /* La ruleta de los listados va por su envoltorio, no por el modal desnudo: así el pool y la ponderación
    se calculan DENTRO del chunk perezoso en vez de en el arranque (ver `ListsRouletteModal`). */
 const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.ListsRouletteModal })));
+/* LA FICHA DE UN JUEGO, el panel lateral que sustituye al detalle de la fila (ver `GameSheetPanel`). Como la ruleta:
+   perezosa, montada al abrirse por primera vez y precargada en idle. Además va PRECACHEADA por el service worker
+   (plugin `service-worker-precache` de `vite.config.ts`): sin red y recién desplegado, tocar una fila tiene que
+   seguir abriendo algo, como abría el detalle. */
+const importGameSheetPanel = () => import('./view/components/gameSheet/GameSheetPanel');
+const GameSheetPanel = lazy(() => importGameSheetPanel().then((module) => ({ default: module.GameSheetPanel })));
+/* LOS PRECIOS DE ISTHEREANYDEAL (P3 del plan de la ficha y los precios): su propio chunk, que solo se pide con el
+   interruptor encendido y Deseados abierta. Sin red y sin el chunk, la lista se queda sin precios y sin errores. */
+type PricesChunk = Pick<typeof import('./view/components/prices/Prices'), 'PriceTag' | 'PricesCredit'>;
+const SIN_PRECIOS: PricesChunk = { PriceTag: () => null, PricesCredit: () => null };
+const importPrices = (): Promise<PricesChunk> => import('./view/components/prices/Prices').catch(() => SIN_PRECIOS);
+const PriceTag = lazy(() => importPrices().then((module) => ({ default: module.PriceTag })));
+/** Los chips de orden de Deseados con precios: los ordena `App` (`sortByPrice`), no el view-model. */
+const PRICE_SORTS = [
+  { header: UI_MESSAGES.table.priceSorts.price, key: 'price' },
+  { header: UI_MESSAGES.table.priceSorts.discount, key: 'discount' },
+];
+const PricesCredit = lazy(() => importPrices().then((module) => ({ default: module.PricesCredit })));
 const PublicReviewScreen = lazy(() => import('./view/components/PublicReviewScreen').then((module) => ({ default: module.PublicReviewScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
@@ -253,7 +280,16 @@ export default function App() {
     : matchAppSection(location.pathname);
   const legalDocId = getLegalDocId(location.pathname);
 
-  const vm = useGameListViewModel();
+  // El administrador tiene más sitio en la lista de deseos. `App` no se monta en la página pública de una reseña
+  // (`main.tsx` la sirve sola), así que escuchar aquí la sesión no carga Firebase donde no debe.
+  const isAdmin = useIsAdmin();
+  // El rango propio: mithril tiene Deseados sin tope (P3 del plan de la ficha y los precios), y el plazo de los
+  // precios depende de él. `null` mientras no se sabe: rige el tope de siempre, que solo frena altas.
+  const ownTier = useOwnTier();
+  const wishlistMax = ownTier && hasUnlimitedWishlist(ownTier)
+    ? Number.POSITIVE_INFINITY
+    : isAdmin ? WISHLIST_MAX_GAMES_ADMIN : WISHLIST_MAX_GAMES;
+  const vm = useGameListViewModel(wishlistMax);
   // F2: enlaza la sesión de Google con la escala de puntuación (hidrata desde Firestore / resetea al salir);
   // devuelve el uid para gatear la opción en Ajustes. Se monta aquí para que la escala esté en toda la app.
   const { uid: scoreScaleUid, ready: authReady } = useScoreScaleSession();
@@ -292,6 +328,31 @@ export default function App() {
   // y lo que se añade desde la ruleta de un amigo va a próximos, para no mandarlo a una lista que no se ve.
   const { showWishlist } = useShowWishlist();
   const visibleTabs = useMemo(() => (showWishlist ? TAB_ORDER : TAB_ORDER.filter((tab) => tab !== 'd')), [showWishlist]);
+  /* LOS PRECIOS, SOLO EN DESEADOS (P3): con el interruptor de IsThereAnyDeal encendido, con espacio social (P0.2) y con
+     la lista de deseos a la vista, y se piden con ella abierta. De lo que ya tienes en otra lista —próximos, en curso,
+     abandonados o completados— no se enseña precio (17-10-2026, decisión del usuario: Próximos los tuvo un día). El
+     plazo es el del rango de quien mira (P0.7): mientras no se sabe, se pinta lo guardado y no se pide nada. */
+  const { itad } = useItad();
+  const pricesOn = itad && hasSocialProfile;
+  const priceTtlMs = pricesOn && ownTier ? PROFILE_TIER_PRICE_TTL_MS[ownTier] : null;
+  // En la ficha de un juego que no tienes, solo mithril; mientras no se sabe el rango, nada.
+  const foreignPricesOn = pricesOn && Boolean(ownTier && PROFILE_TIER_PRICE_FOREIGN_GAMES[ownTier]);
+  const priceTab = currentTab === 'd' && showWishlist;
+  const wishlistTitles = useMemo(
+    () => (pricesOn && activeSection === 'lists' && priceTab ? vm.data.d.map((game) => game.name) : null),
+    [pricesOn, activeSection, priceTab, vm.data.d],
+  );
+  const wishlistPrices = useWishlistPrices(wishlistTitles, priceTtlMs);
+  const renderPrice = useMemo(
+    () => (wishlistPrices
+      ? (game: GameItem) => (
+        <Suspense fallback={null}>
+          <PriceTag precio={wishlistPrices.prices[game.name]} name={game.name} />
+        </Suspense>
+      )
+      : undefined),
+    [wishlistPrices],
+  );
   useEffect(() => {
     if (!showWishlist && currentTab === 'd' && activeSection === 'lists') {
       navigate(TAB_ROUTE.p, { replace: true });
@@ -329,7 +390,6 @@ export default function App() {
   const settingsGroup = matchSettingsGroup(location.pathname);
   const { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters } = useToolbarFilters();
   const {
-    setExpandedId,
     openNewGame,
     setFormModalOpen,
     saveDraft,
@@ -612,7 +672,68 @@ export default function App() {
   // P2: `getFilteredList` ya está memoizado sobre data/filters/sort; basta con depender de la propia función
   // (cambia cuando cambian esos inputs) y de la pestaña, en vez de re-listar sus internals.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const list = useMemo(() => vm.getFilteredList(currentTab, filters), [vm.getFilteredList, currentTab, filters]);
+  const filteredList = useMemo(() => vm.getFilteredList(currentTab, filters), [vm.getFilteredList, currentTab, filters]);
+  /* EL PRECIO EN EL ORDEN Y EN LOS FILTROS DE DESEADOS (segunda pasada de la P3): los precios no están en `GameItem`,
+     así que «En oferta» y el orden por precio o descuento se aplican aquí (`arrange`, que llega con los precios), sobre
+     lo que ya filtró y ordenó el view-model. Sin precios (apagados, o en otra lista), el filtro no se aplica y un orden
+     por precio que quedara puesto —también en Próximos, de cuando los tuvo— se aplica como el de siempre de la lista
+     (`sortGames` no sabe de precios). */
+  const pricesShown = priceTab && wishlistPrices !== null;
+  const tabSort = vm.sort[currentTab];
+  const list = useMemo(() => {
+    if (pricesShown) return wishlistPrices.arrange(filteredList, filters.sale, tabSort);
+    // Las columnas de `PRICE_SORTS`: `isPriceSortColumn` viaja con los precios y no en el arranque.
+    return tabSort.col === 'price' || tabSort.col === 'discount' ? sortGames(filteredList, DEFAULT_SORT[currentTab], currentTab) : filteredList;
+  }, [pricesShown, currentTab, filteredList, wishlistPrices, filters.sale, tabSort]);
+
+  /* LA FICHA ABIERTA, que vive en `?juego=` (ver `useGameSheetParam`). Aquí solo se mira si hay algo que abrir: la
+     ficha se monta dentro del chunk perezoso del panel, que es donde viajan `buildGameSheet` y la saga. */
+  const { slug: gameSheetSlugParam, friendId: gameSheetFriendId, openSheet, closeSheet } = useGameSheetParam();
+  const gameSheetTab = useMemo(() => ownGameSheetTab(vm.data, gameSheetSlugParam), [vm.data, gameSheetSlugParam]);
+  const openGameSheet = useCallback((game: GameItem) => openSheet(game.name), [openSheet]);
+  /* EL DOBLE CLIC QUE AÚN LLEGA A LA FILA. La fila abre la ficha al primer clic y el segundo cae en su velo, que lo
+     convierte en editar (ver `GameSheetPanel`). Pero si llega antes de que la ficha se abra —un doble clic muy rápido,
+     un equipo lento—, el formulario se abriría primero y la ficha le quedaría encima, tapándolo. Así que, si la ficha de
+     ese juego aún no está en la URL, el formulario espera a que llegue, que es justo después: la abrió su primer clic. */
+  const { openEditGame } = vm;
+  const edicionTrasLaFicha = useRef<{ slug: string; tab: TabId; id: number } | null>(null);
+  const editGameFromTable = useCallback((tab: TabId, id: number) => {
+    const slug = gameSheetSlug(vm.data[tab].find((item) => item.id === id)?.name ?? '');
+    if (slug === gameSheetSlugParam) openEditGame(tab, id);
+    else edicionTrasLaFicha.current = { slug, tab, id };
+  }, [vm.data, gameSheetSlugParam, openEditGame]);
+  useEffect(() => {
+    const pendiente = edicionTrasLaFicha.current;
+    if (pendiente?.slug !== gameSheetSlugParam) return;
+    edicionTrasLaFicha.current = null;
+    openEditGame(pendiente.tab, pendiente.id);
+  }, [gameSheetSlugParam, openEditGame]);
+  const gameSheetReviewTarget = useCallback((tab: TabId, game: GameItem) => ({
+    to: statsReviewPath(game.id, game.name),
+    // Al volver de la reseña, a la lista CON la ficha abierta: es de donde se fue.
+    state: { backTo: `${TAB_ROUTE[tab]}${gameSheetSearch(game.name)}` },
+  }), []);
+  /* La ficha se cierra también en la URL —si no, «atrás» volvería a una entrada con un `?juego=` que ya no toca—
+     cuando el juego que enseña:
+     - deja de existir (se ha borrado desde ella, o se ha renombrado);
+     - cambia de lista. Es lo que hacía el detalle, que se iba con su fila, y deja a la vista lo que trae el cambio:
+       la cápsula de un logro quedaría debajo del panel, sin poder tocarse. Si se cancela el formulario de «Pasar a»,
+       el juego no se mueve y la ficha sigue.
+     Solo cuando HUBO ficha con esa clave: al recargar con la URL puesta, la biblioteca aún no ha llegado y no hay que
+     cerrar nada. */
+  const fichaVista = useRef<{ slug: string; tab: TabId } | null>(null);
+  useEffect(() => {
+    const vista = fichaVista.current;
+    const mismaFicha = Boolean(gameSheetSlugParam) && vista?.slug === gameSheetSlugParam;
+    if (gameSheetTab && !(mismaFicha && vista.tab !== gameSheetTab)) {
+      fichaVista.current = { slug: gameSheetSlugParam, tab: gameSheetTab };
+      return;
+    }
+    if (mismaFicha) {
+      fichaVista.current = null;
+      closeSheet();
+    }
+  }, [gameSheetTab, gameSheetSlugParam, closeSheet]);
   const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
 
   const exportData = useCallback(() => {
@@ -716,7 +837,6 @@ export default function App() {
         navigate(TAB_ROUTE[tab]);
       });
     };
-    setExpandedId(null);
     if (desde === hasta || !coversPreference.get()) {
       navegar();
       return;
@@ -724,7 +844,7 @@ export default function App() {
     const forma = listShapePreference.get();
     const urls = caratulasDeArriba(getFilteredList(tab, filters), forma, forma === 'grid' ? 12 : 6, window.devicePixelRatio || 1);
     void precargarCaratulas(urls, PLAZO_PRECARGA_MS).then(navegar);
-  }, [currentTab, navigate, setExpandedId, getFilteredList, filters]);
+  }, [currentTab, navigate, getFilteredList, filters]);
 
   // Ruleta de listados: el juego elegido pasa a "En curso" y la ruleta deja paso a esa lista, que es donde el
   // usuario quiere acabar. El aviso del propio movimiento lo da el viewmodel.
@@ -756,7 +876,6 @@ export default function App() {
   }, [activeSection, currentTab]);
 
   const handleSectionChange = useCallback((section: AppSection) => {
-    setExpandedId(null);
     /* VOLVER A PULSAR LA PESTAÑA EN LA QUE ESTÁS SUBE AL PRINCIPIO, que es lo que hace cualquier barra inferior
        de móvil. Antes no hacía nada (o, en Listados, te cambiaba de lista). La tabla puede tener su propio scroll
        en algunos anchos, así que se sube también ella. */
@@ -791,7 +910,7 @@ export default function App() {
     }
 
     navigate('/ajustes');
-  }, [navigate, setExpandedId, activeSection]);
+  }, [navigate, activeSection]);
   // «¿A qué juego ahora?» vuelve a los listados igual que la barra inferior.
   const handlePickBack = useCallback(() => handleSectionChange('lists'), [handleSectionChange]);
 
@@ -838,7 +957,11 @@ export default function App() {
      un cambio de pantalla: al pulsar un filtro la pantalla entera se iba y volvía a entrar. React decide la
      animación con las props del render que se confirma, así que basta con comparar con el último camino pintado. */
   const caminoPintado = useRef(location.pathname);
-  const cambiaDeCamino = caminoPintado.current !== location.pathname;
+  /* NI SI SE LLEGA CON LA FICHA ABIERTA (el buscador te lleva a la lista del juego; desde la ficha, el perfil de una
+     amistad). La ficha se abre DESPUÉS de que el navegador capture la pantalla nueva, así que la transición la
+     dejaba debajo de la captura del `<main>`, que tiene nombre: la lista le pasaba por encima mientras duraba. Aquí
+     lo que se anima es la ficha, y la pantalla de debajo cambia tapada por su velo. */
+  const cambiaDeCamino = caminoPintado.current !== location.pathname && !gameSheetSlugParam;
   useEffect(() => {
     caminoPintado.current = location.pathname;
   }, [location.pathname]);
@@ -967,6 +1090,16 @@ export default function App() {
   const formModalMounted = useMountedOnceOpen(vm.formModalOpen);
   const confirmModalMounted = useMountedOnceOpen(!!vm.confirmState);
   const rouletteMounted = useMountedOnceOpen(rouletteOpen);
+  /* LA FICHA SE MONTA CON CUALQUIER `?juego=`, no solo con los tuyos (F5): el feed, una reseña, el buscador o el perfil
+     de una amistad abren también juegos que no tienes. Qué hay que enseñar lo decide el panel, que es quien sabe lo de
+     tus amistades; `gameSheetTab` (si es tuyo, en qué lista) sigue mandando en cerrarla cuando lo borras o lo cambias
+     de lista. */
+  const gameSheetMounted = useMountedOnceOpen(Boolean(gameSheetSlugParam));
+  const { addGameToWishlist, addGameToProximos } = vm;
+  const addGameFromSheet = useCallback((game: Partial<GameItem>, tab: 'p' | 'd') => {
+    if (tab === 'd') addGameToWishlist(game);
+    else addGameToProximos(game);
+  }, [addGameToWishlist, addGameToProximos]);
 
   // Precarga en idle, ya pintada la pantalla: cuando el usuario abra un modal su módulo estará en caché y no
   // habrá que esperar a la red (el `fallback` de Suspense es `null`, así que una espera se vería como un clic
@@ -977,6 +1110,7 @@ export default function App() {
     void importFormModal();
     void importConfirmModal();
     void importRouletteModal();
+    void importGameSheetPanel();
     setSpriteRestoListo(true);
   }), []);
 
@@ -1134,26 +1268,31 @@ export default function App() {
           onClearFilter={handleClearFilter}
           onClearAll={handleClearAllFilters}
           showSteamButton={showSteamButton}
+          showSaleFilter={pricesShown}
         />
         <GameTable
           games={list}
           currentTab={currentTab}
-          expandedId={vm.expandedId}
-          onExpandedChange={setExpandedId}
-          onEdit={vm.openEditGame}
-          onDelete={vm.deleteGame}
-          onMigrate={vm.migrateGame}
+          onOpenGame={openGameSheet}
+          onEdit={editGameFromTable}
           onAddGame={handleAddGame}
-          listCap={currentTab === 'd' ? { total: vm.data.d.length, max: WISHLIST_MAX_GAMES } : undefined}
+          // Sin tope (mithril), el recuento no se dice contra ningún número.
+          listCap={currentTab === 'd' && Number.isFinite(wishlistMax) ? { total: vm.data.d.length, max: wishlistMax } : undefined}
+          renderPrice={priceTab ? renderPrice : undefined}
           onImportLibrary={handleImportLibraryExporter}
           inboxCount={inboxCount}
           onOpenInbox={openInbox}
-          tabActions={vm.tabActions[currentTab]}
           sort={vm.sort[currentTab]}
           onSort={vm.sortBy}
+          extraSorts={pricesShown ? PRICE_SORTS : undefined}
           recentlyChangedId={recentlyChangedId}
           removingId={removingId}
         />
+        {pricesShown ? (
+          <Suspense fallback={null}>
+            <PricesCredit />
+          </Suspense>
+        ) : null}
       </>
     ),
     pick: (
@@ -1481,6 +1620,26 @@ export default function App() {
             title={vm.confirmState?.title || ''}
             onCancel={handleConfirmCancel}
             onConfirm={handleConfirmDelete}
+          />
+        ) : null}
+
+        {gameSheetMounted ? (
+          <GameSheetPanel
+            open={Boolean(gameSheetSlugParam)}
+            data={vm.data}
+            slug={gameSheetSlugParam}
+            friendId={gameSheetFriendId}
+            onAddGame={addGameFromSheet}
+            onClose={closeSheet}
+            onOpenGame={openSheet}
+            tabActions={vm.tabActions}
+            onEdit={vm.openEditGame}
+            onDelete={vm.deleteGame}
+            onMigrate={vm.migrateGame}
+            reviewTarget={gameSheetReviewTarget}
+            priceTtlMs={priceTtlMs}
+            pricesOn={pricesOn}
+            foreignPricesOn={foreignPricesOn}
           />
         ) : null}
 

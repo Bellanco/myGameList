@@ -1,8 +1,8 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
-import { categoryToneStyle, categoryToneVar } from '../../core/constants/categoryTone';
+import { categoryToneVar } from '../../core/constants/categoryTone';
 import { TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
 import { statsReviewPath } from '../../core/utils/reviewPath';
 import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
@@ -11,9 +11,9 @@ import { GameCover } from './GameCover';
 import { coverDeCaja, coverDeRenglon, type PedidoDePortada } from '../../core/utils/coverDelListado';
 import { refEntradaDeFondo } from '../../core/utils/entradaDeImagen';
 import { UNPLAYED_TAB_IDS, type GameItem, type TabId, type TabSort } from '../../model/types/game';
-import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { hueFromGrade, resolveGrade } from '../../core/utils/scoreScale';
 import { Icon } from './Icon';
+import { renderBooleanBadge, renderTags, yearsDesc } from './gameTags';
 import { ScoreDisplay } from './ScoreDisplay';
 import { useScoreScale } from '../hooks/useScoreScale';
 import { useListShape } from '../hooks/useListShape';
@@ -24,14 +24,28 @@ import { useCovers } from '../hooks/useCovers';
 interface GameTableProps {
   games: GameItem[];
   currentTab: TabId;
-  expandedId: number | null;
-  onExpandedChange: (id: number | null) => void;
+  /**
+   * Abrir la FICHA del juego (el panel lateral, `view/components/gameSheet`): tocar una fila o una caja la abre. Es lo
+   * que sustituyó al detalle que se desplegaba bajo la fila (F2 y F5 del plan de la ficha), también en el perfil de
+   * una amistad, donde la ficha lleva su bloque arriba.
+   */
+  onOpenGame: (game: GameItem) => void;
+  /** El doble clic edita el juego (no en solo lectura). */
   onEdit: (tab: TabId, id: number) => void;
-  onDelete: (tab: TabId, id: number) => void;
-  onMigrate: (tab: TabId, id: number, target: TabId) => void;
   onAddGame?: () => void;
   /** Lista con tope (la de deseos): cuántos juegos tiene ENTERA y cuántos caben. El recuento se dice contra él. */
   listCap?: { total: number; max: number };
+  /**
+   * EL PRECIO DE CADA JUEGO (P3 del plan de la ficha y los precios): solo en Deseados y con el interruptor de
+   * IsThereAnyDeal encendido. Lo pinta quien lo pasa, desde el chunk perezoso de los precios, para que la tabla —que
+   * va en el arranque— no cargue con nada de ellos. Sin él, ni la ranura.
+   */
+  renderPrice?: (game: GameItem) => ReactNode;
+  /**
+   * Chips de orden de más, que no son columnas de la lista: el precio y el descuento de Deseados (P3). Los ordena
+   * quien los pasa —los precios no están en `GameItem`—; aquí solo se pintan y se pulsan como los demás.
+   */
+  extraSorts?: ReadonlyArray<{ header: string; key: string }>;
   /**
    * Cuántos juegos hay DE VERDAD cuando `games` es solo un lote: la ficha de un perfil pinta de 15 en 15, y el
    * recuento decía 15 aunque la lista tuviera 200. Sin él, se cuentan los que llegan.
@@ -42,7 +56,6 @@ interface GameTableProps {
   /** Nº de juegos esperando en la bandeja; con 0 no se ofrece el acceso. */
   inboxCount?: number;
   onOpenInbox?: () => void;
-  tabActions: TabAction[];
   readOnly?: boolean;
   /**
    * CÓMO SE PIDEN LAS CARÁTULAS EN ESTA LISTA. Va en un objeto y no en dos banderas sueltas por lo mismo que
@@ -92,8 +105,7 @@ interface GameTableProps {
     showYears?: boolean;
     showReplayable?: boolean;
     showRetry?: boolean;
-    showHours?: boolean;
-    /** Muestra el enlace al "Análisis" (reseña) en la fila expandida. */
+    /** Muestra el acceso al «Análisis» (reseña) en la caja del mosaico. */
     showReview?: boolean;
   };
   /**
@@ -105,8 +117,8 @@ interface GameTableProps {
 }
 
 interface VirtualRow {
-  /** `main` y `detail` son las de la forma de lista; `grid` es UNA FILA ENTERA del mosaico (varias cajas). */
-  type: 'main' | 'detail' | 'grid';
+  /** `main` es la de la forma de lista; `grid` es UNA FILA ENTERA del mosaico (varias cajas). */
+  type: 'main' | 'grid';
   gameId: number;
   index: number;
   /** Solo en `grid`: los juegos que van en esa fila de la rejilla, en orden. */
@@ -122,10 +134,6 @@ interface VirtualRow {
    error del 20 % son 19.000 px de barra de desplazamiento que aparecen de la nada mientras el usuario baja. */
 const MAIN_ROW_ESTIMATE_PX = 150;
 const COMPACT_ROW_ESTIMATE_PX = 130;
-/* El detalle desplegado. Eran 320 px de cuando volcaba el análisis entero; desde que ese texto es un enlace a
-   su pantalla, el detalle mide 245 px (278 los que reparten sus datos en tres líneas). MEDIDO sobre el build
-   con la biblioteca real, como los de arriba. */
-const DETAIL_ROW_ESTIMATE_PX = 250;
 /* Mosaico: alto de una FILA de cajas (no de una caja) y ancho mínimo de caja, que es lo que decide cuántas
    caben. El reparto en columnas lo hace SOLO esta cuenta: `.game-grid` recibe el resultado en `--grid-cols` y
    se limita a partir el ancho en tantas columnas iguales (`minmax(0, 1fr)`), así que no hay ningún número que
@@ -322,46 +330,6 @@ function soltarNombreCortado(event: { currentTarget: HTMLElement }): void {
   if (hueco) hueco.style.height = '';
 }
 
-function renderTags(values: string[], className: string, maxVisible?: number, tone = false) {
-  /* EL HUECO CUANDO NO HAY DATO. Antes era un guion suelto, y en una rejilla de cajas eso se lee como un fallo;
-     con clase propia el hueco se puede dejar TENUE y ocupando su sitio, que es lo que mantiene alineadas unas
-     cajas con otras y unos renglones con otros aunque a un juego le falte la plataforma o el género. */
-  if (!values.length) return <span className="chip-none" aria-hidden="true">—</span>;
-  const overflow = maxVisible && values.length > maxVisible ? values.length - maxVisible : 0;
-  const visible = overflow ? values.slice(0, maxVisible) : values;
-  /* EL «+N» VA FUERA DEL GRUPO, no dentro. Es lo que permite que el desvanecido del final de la ranura —una
-     máscara— se aplique SOLO a los chips: metido dentro, la máscara lo apagaba a él también, y el apaño de
-     abrirle una ventana opaca al final resultó peor que la enfermedad, porque esa ventana atravesaba el chip
-     que pasara por ahí y lo partía en seco. Fuera, la máscara no lo toca y no hay ventana que abrir. */
-  return (
-    <>
-      <div className="chips">
-        {visible.map((value) => (
-          // `data-text`: el texto otra vez, para los temas que pintan una copia encima (el glitch de «Sin futuro»
-          // la enciende y apaga en el compositor en vez de animar `text-shadow`; ver `cyberpunk.scss`).
-          <span key={value} className={`chip ${className}`} style={tone ? categoryToneStyle(value) : undefined} data-text={value}>
-            {/* El texto va en su propio span para que los puntos suspensivos recorten SOLO el texto: con el
-                `overflow` en el chip se cortaba también lo que el tema le pinta por fuera (el papel y el lacre
-                de Witcher, las sombras duras de las pegatinas). */}
-            <span className="chip-text">{value}</span>
-          </span>
-        ))}
-      </div>
-      {overflow ? (
-        <span className="chip chip-more" title={values.slice(maxVisible).join(', ')}>
-          {UI_MESSAGES.table.moreCount(overflow)}
-        </span>
-      ) : null}
-    </>
-  );
-}
-
-/* Años del juego para pintar: siempre del más reciente al más antiguo, para que al quedarse con el primero
-   —que es lo que hacen el renglón y la caja— salga el último completado y no el más viejo. */
-function yearsDesc(years?: number[]) {
-  return [...(years || [])].sort((a, b) => b - a).map(String);
-}
-
 const IMPORT_UI = UI_MESSAGES.import.integrations;
 
 type TableColumn = keyof typeof UI_MESSAGES.table.columns;
@@ -378,29 +346,6 @@ const SORT_COLUMN: Partial<Record<TableColumn, string>> = {
   score: 'score',
   interest: 'score',
 };
-
-// `role="img"` NO es decorativo aquí, es lo que hace que la insignia se anuncie. Un `<span>` sin rol es
-// `generic`, y ARIA PROHÍBE ponerle nombre: el `aria-label` se descartaba y estas celdas —la única
-// presentación de "rejugar" y "otra oportunidad"— quedaban mudas para un lector de pantalla, con el icono
-// `aria-hidden` dentro y nada más. Lo destapó la auditoría con axe sobre el render (`tests/e2e/a11y.test.ts`);
-// el linter no puede verlo porque depende del rol que resulta al pintar, no del JSX.
-function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
-  if (type === 'replayable') {
-    const label = UI_MESSAGES.table.replayBadge(value);
-    return (
-      <span className={value ? 'badge-rejugar-activo' : 'badge-rejugar-inactivo'} role="img" aria-label={label} title={label}>
-        <Icon name={value ? COMMON_ICONS.starOliveBranches : COMMON_ICONS.lock} />
-      </span>
-    );
-  }
-
-  const label = UI_MESSAGES.table.retryBadge(value);
-  return (
-    <span className={value ? 'badge-opp-activo' : 'badge-opp-inactivo'} role="img" aria-label={label} title={label}>
-      <Icon name={value ? COMMON_ICONS.refresh : COMMON_ICONS.lock} />
-    </span>
-  );
-}
 
 /* Cuántas filas nuevas como mucho se animan a la vez. Una o dos son "acabo de añadir un juego"; treinta son una
    importación o un cambio de filtro, y treinta filas deslizándose a la vez no es una confirmación, es un mareo. */
@@ -452,18 +397,16 @@ function useEnteringRows(games: GameItem[], currentTab: TabId): ReadonlySet<numb
 export const GameTable = memo(function GameTable({
   games,
   currentTab,
-  expandedId,
-  onExpandedChange,
+  onOpenGame,
   onEdit,
-  onDelete,
-  onMigrate,
   onAddGame,
   listCap,
+  renderPrice,
+  extraSorts,
   totalCount,
   onImportLibrary,
   inboxCount = 0,
   onOpenInbox,
-  tabActions,
   readOnly = false,
   coverPolicy,
   sort,
@@ -476,10 +419,21 @@ export const GameTable = memo(function GameTable({
   /** Los juegos que se cuentan: los de verdad si `games` es un lote, y si no, los que llegan. */
   const shownCount = totalCount ?? games.length;
   const enteringIds = useEnteringRows(games, currentTab);
+
+  /* TOCAR ABRE LA FICHA AL MOMENTO; EL DOBLE CLIC SIGUE EDITANDO (17-10-2026). Antes, con el ratón, la ficha esperaba
+     lo que dura un doble clic (250 ms) y se notaba como un clic que no hace nada. Ahora el segundo clic cae ya en el
+     velo del panel, y es el panel quien lo convierte en editar (ver «El doble clic» en `GameSheetPanel`). Si aún llega
+     a la fila (la ficha no se ha abierto todavía), no vuelve a abrirla —apilaría otra entrada en el historial— y su
+     `onDoubleClick` edita. */
+  const pulsarJuego = (event: React.MouseEvent, game: GameItem) => {
+    if (event.detail < 2) onOpenGame(game);
+  };
+  const editarConDobleClic = (game: GameItem) => {
+    if (!readOnly) onEdit(currentTab, game.id);
+  };
   const showYears = visibility?.showYears ?? true;
   const showReplayable = visibility?.showReplayable ?? true;
   const showRetry = visibility?.showRetry ?? true;
-  const showHours = visibility?.showHours ?? true;
   const showReview = visibility?.showReview ?? true;
 
   // ¿Tiene este juego una nota que mostrar? En la vergüenza la puntuación es OPT-IN (el check del formulario), y
@@ -618,29 +572,22 @@ export const GameTable = memo(function GameTable({
      importar ni la bandeja, solo añadir. */
   const importHere = onImportLibrary && currentTab !== 'd' ? onImportLibrary : undefined;
 
-  // Create virtual rows (main + optionally detail rows)
+  // Las filas virtuales: una por juego en la lista y una por cada fila de cajas en el mosaico.
   const virtualRows = useMemo(() => {
     const rows: VirtualRow[] = [];
     if (shape === 'grid') {
-      /* MOSAICO: los juegos se reparten en filas de `gridColumns` cajas y cada fila es UNA fila virtual. El
-         detalle abierto se cuela justo detrás de la fila que contiene su caja —no detrás de la caja—, que es
-         donde el ojo lo espera: se despliega a lo ancho, debajo del renglón de cajas que se ha pulsado. */
+      // MOSAICO: los juegos se reparten en filas de `gridColumns` cajas y cada fila es UNA fila virtual.
       for (let i = 0; i < games.length; i += gridColumns) {
         const bloque = games.slice(i, i + gridColumns);
         rows.push({ type: 'grid', gameId: bloque[0].id, index: i, ids: bloque.map((g) => g.id) });
-        const abierto = bloque.find((g) => g.id === expandedId);
-        if (abierto) rows.push({ type: 'detail', gameId: abierto.id, index: i });
       }
       return rows;
     }
     games.forEach((game, index) => {
       rows.push({ type: 'main', gameId: game.id, index });
-      if (expandedId === game.id) {
-        rows.push({ type: 'detail', gameId: game.id, index });
-      }
     });
     return rows;
-  }, [games, expandedId, shape, gridColumns]);
+  }, [games, shape, gridColumns]);
 
   const parentRef = useRef<HTMLDivElement>(null);
   /* La letra y el relleno del chip en el tema activo, leídos del DOM UNA VEZ por render de la lista (no por
@@ -725,13 +672,11 @@ export const GameTable = memo(function GameTable({
   // fila es una tarjeta de unos 74 px: el total salía un 14 % corto. Por eso ahora depende de `compactRows`.
   const estimateSize = useCallback(
     (index: number) =>
-      virtualRows[index]?.type === 'detail'
-        ? DETAIL_ROW_ESTIMATE_PX
-        : virtualRows[index]?.type === 'grid'
-          ? (covers ? GRID_ROW_ESTIMATE_PX[gridSize] : GRID_ROW_FLAT_ESTIMATE_PX)
-          : narrowScreen
-            ? COMPACT_ROW_ESTIMATE_PX
-            : MAIN_ROW_ESTIMATE_PX,
+      virtualRows[index]?.type === 'grid'
+        ? (covers ? GRID_ROW_ESTIMATE_PX[gridSize] : GRID_ROW_FLAT_ESTIMATE_PX)
+        : narrowScreen
+          ? COMPACT_ROW_ESTIMATE_PX
+          : MAIN_ROW_ESTIMATE_PX,
     [virtualRows, narrowScreen, covers, gridSize],
   );
   const measureElement = useCallback((element: Element) => element.getBoundingClientRect().height, []);
@@ -833,7 +778,8 @@ export const GameTable = memo(function GameTable({
      sentido. Se pinta solo si esta lista se puede ordenar (el listado del hub social llega sin `onSort`). */
   const sortableColumns = tableHeaders
     .map((column): { header: string; key: string | undefined } => ({ header: UI_MESSAGES.table.columns[column], key: SORT_COLUMN[column] }))
-    .filter((c): c is { header: string; key: string } => Boolean(c.key));
+    .filter((c): c is { header: string; key: string } => Boolean(c.key))
+    .concat(extraSorts ?? []);
   /**
    * EL ORDEN, SIN CARRIL QUE ARRASTRAR. Las columnas no cabían en un teléfono y hasta ahora sobraba
    * desplazándolas de lado: en la práctica eso esconde opciones —nadie arrastra una fila que no parece
@@ -1145,7 +1091,6 @@ export const GameTable = memo(function GameTable({
                           style={{ '--grid-cols': gridColumns } as CSSProperties}
                         >
                           {bloque.map((game) => {
-                            const expanded = expandedId === game.id;
                             /* Cuántos chips enseña ESTE juego: lo decide lo que ocupa su texto en el ancho de
                                la caja, no un número igual para todos (ver `chipsQueCaben`). */
                             const capsPlat = chipsQueCaben(game.platforms, anchoRanuraCaja, metricasChip);
@@ -1155,8 +1100,8 @@ export const GameTable = memo(function GameTable({
                             ) : null;
                             /* EL ACCESO A LA RESEÑA, en la esquina que quedaba libre: debajo de la nota y
                                al otro canto que la insignia. Solo con carátula —en la caja plana el análisis
-                               se abre desde el detalle desplegado— y es un ENLACE por lo mismo que el del
-                               detalle: abrir en otra pestaña, copiar la dirección, volver con atrás. */
+                               se abre desde la ficha— y es un ENLACE: abrir en otra pestaña, copiar la
+                               dirección, volver con atrás. */
                             const resena = covers && showReview && supportsReview(currentTab) && game.review ? (
                               <Link
                                 className="game-card-review"
@@ -1176,7 +1121,7 @@ export const GameTable = memo(function GameTable({
                             return (
                               <article
                                 key={game.id}
-                                className={`game-card${covers ? '' : ' is-flat'}${expanded ? ' is-open' : ''}${game.id === recentlyChangedId ? ' just-changed' : ''}${game.id === removingId ? ' is-leaving' : ''}`}
+                                className={`game-card${covers ? '' : ' is-flat'}${game.id === recentlyChangedId ? ' just-changed' : ''}${game.id === removingId ? ' is-leaving' : ''}`}
                                 // El tono del PRIMER género, para el tema que quiera teñir la caja con él (hoy Forja,
                                 // en el rescoldo del pie).
                                 style={game.genres?.[0] ? ({ '--card-tone': categoryToneVar(game.genres[0]) } as CSSProperties) : undefined}
@@ -1189,15 +1134,14 @@ export const GameTable = memo(function GameTable({
                                 onMouseLeave={soltarNombreCortado}
                                 onBlur={soltarNombreCortado}
                               >
-                                {/* Toda la caja abre el detalle; el botón cubre su superficie y se queda con el
+                                {/* Toda la caja abre la ficha; el botón cubre su superficie y se queda con el
                                     foco y el nombre accesible, igual que en el bloque de reseñas del hub. */}
                                 <button
                                   type="button"
                                   className="game-card-open"
-                                  aria-expanded={expanded}
-                                  aria-controls={`game-detail-${game.id}`}
-                                  onClick={() => onExpandedChange(expanded ? null : game.id)}
-                                  onDoubleClick={() => { if (!readOnly) onEdit(currentTab, game.id); }}
+                                  aria-haspopup="dialog"
+                                  onClick={(event) => pulsarJuego(event, game)}
+                                  onDoubleClick={() => editarConDobleClic(game)}
                                 >
                                   <span className="sr-only">{game.name}</span>
                                 </button>
@@ -1229,8 +1173,14 @@ export const GameTable = memo(function GameTable({
                                   {/* Sin carátula sobre la que flotar, la nota y la insignia encabezan la caja
                                       en la MISMA línea: siguen siendo las dos señales que se buscan y siguen
                                       estando en el mismo punto de todas las cajas, que es lo que importaba. */}
-                                  {!covers && (nota || insignia) ? (
-                                    <div className="game-card-head">{nota}{insignia}</div>
+                                  {/* El precio (P3), sin carátula, en esa misma línea y contra el canto: la caja plana
+                                      tiene el alto fijo y una línea más se salía por abajo con un título de dos. */}
+                                  {!covers && (nota || insignia || renderPrice) ? (
+                                    <div className="game-card-head">
+                                      {nota}
+                                      {insignia}
+                                      {renderPrice ? <span className="game-card-price">{renderPrice(game)}</span> : null}
+                                    </div>
                                   ) : null}
                                   {/* EL NOMBRE ENTERO, AL PASAR POR ENCIMA. Va a dos líneas y corte; si no cabe, al
                                       llegar con el ratón o el teclado se despliega EL MISMO título por encima de
@@ -1256,6 +1206,7 @@ export const GameTable = memo(function GameTable({
                                       {renderTags(game.genres, 'chip-genre', capsGenero.n, true)}
                                     </div>
                                   </div>
+                                  {covers && renderPrice ? <div className="game-card-price">{renderPrice(game)}</div> : null}
                                 </div>
                                 {/* EL MEDIDOR DEL PIE. La misma nota que el aro, dicha como una barra que cruza
                                     la caja de lado a lado: de un vistazo, y sin leer ni una cifra, la fila de
@@ -1281,8 +1232,6 @@ export const GameTable = memo(function GameTable({
                 }
 
                 if (row.type === 'main') {
-                  const expanded = expandedId === game.id;
-                  const detailId = `game-detail-${game.id}`;
                   /* LA CARÁTULA, DE FONDO. En el renglón la imagen no es un dato que leer sino el ambiente de la
                      pieza: va detrás, a tamaño de portada, y encima cae un velo de la superficie del tema con
                      desenfoque para que el texto siga contrastando en las seis paletas. Va como fondo de CSS y
@@ -1304,22 +1253,17 @@ export const GameTable = memo(function GameTable({
                       ref={virtualize ? virtualizer.measureElement : undefined}
                       style={rowCover ? ({ '--row-cover': `url("${rowCover}")` } as CSSProperties) : undefined}
                       className={`main-row ${rowCover ? 'has-cover' : ''} ${row.index % 2 === 0 ? 'striped' : ''} ${game.id === recentlyChangedId ? 'just-changed' : ''} ${enteringIds.has(game.id) ? 'is-entering' : ''} ${game.id === removingId ? 'is-leaving' : ''}`.replace(/\s+/g, ' ').trim()}
-                      // A11y-2: el disparador accesible es el botón de la 1ª celda (anunciado como botón + aria-controls).
+                      // A11y-2: el disparador accesible es el botón de la 1ª celda (un botón que abre un diálogo).
                       // La fila conserva click/doble-click como atajos de RATÓN, pero ya no es un control focusable.
-                      onClick={() => onExpandedChange(expanded ? null : game.id)}
-                      onDoubleClick={() => {
-                        if (!readOnly) {
-                          onEdit(currentTab, game.id);
-                        }
-                      }}
+                      onClick={(event) => pulsarJuego(event, game)}
+                      onDoubleClick={() => editarConDobleClic(game)}
                     >
                       {/* La carátula de fondo es el `::before` de esta celda: aquí se marca su entrada con fundido. */}
                       <td ref={refEntradaDeFondo(rowCover)}>
                         <button
                           type="button"
                           className="row-toggle"
-                          aria-expanded={expanded}
-                          aria-controls={detailId}
+                          aria-haspopup="dialog"
                           // A11y-4: SIN `aria-label`. El nombre accesible sale del CONTENIDO del botón, y eso
                           // importa por lo que pasa en móvil: ahí todas las celdas de datos son `display:none`
                           // (así que no están en el árbol de accesibilidad) y el meta compacto de abajo es la
@@ -1328,10 +1272,10 @@ export const GameTable = memo(function GameTable({
                           // del juego: el resto de la fila era invisible para él. Sin etiqueta explícita, el
                           // nombre accesible sigue a lo que se ve en cada breakpoint (en escritorio, solo el
                           // nombre, porque ahí el meta es el que está oculto y los datos están en sus columnas).
-                          // El estado plegado/desplegado ya lo anuncia `aria-expanded`, que es para lo que existe.
+                          // Que abre la ficha lo anuncia `aria-haspopup="dialog"`.
                           onClick={(event) => {
                             event.stopPropagation();
-                            onExpandedChange(expanded ? null : game.id);
+                            pulsarJuego(event, game);
                           }}
                         >
                           <span className="row-chevron" aria-hidden="true" />
@@ -1342,6 +1286,8 @@ export const GameTable = memo(function GameTable({
                                 línea de chips cuya longitud cambia en cada fila. */}
                             <span className="row-head">
                               <strong className="row-name">{game.name}</strong>
+                              {/* El precio (P3), a la izquierda de la nota: así el aro sigue en el canto. */}
+                              {renderPrice ? <span className="row-price">{renderPrice(game)}</span> : null}
                               <span className="row-actions">
                                 {/* La ranura de la nota se reserva aunque ESTE juego no la tenga (`meta-score`
                                     dice si la lista la usa): si no, la insignia de al lado se correría de sitio
@@ -1408,155 +1354,7 @@ export const GameTable = memo(function GameTable({
                   );
                 }
 
-                return (
-                  <tr key={`detail-${game.id}`} id={`game-detail-${game.id}`} data-index={rowIndex} ref={virtualize ? virtualizer.measureElement : undefined} className={`detail-row open ${game.id === removingId ? 'is-leaving' : ''}`.trim()}>
-                    <td>
-                      <div className="detail-content">
-                        <div className="detail-box">
-                          <span className="detail-label">{UI_MESSAGES.detail.platforms}</span>
-                          <div className="chips">
-                            {renderTags(game.platforms, 'chip-plat')}
-                            {game.steamDeck && (
-                              <span className="chip chip-deck">
-                                <Icon name={COMMON_ICONS.steamDeck} />
-                                <span>{UI_MESSAGES.detail.steamDeck}</span>
-                              </span>
-                            )}
-                          </div>
-                          {game.platforms.length === 0 && !game.steamDeck && <span>—</span>}
-                        </div>
-                        <div className="detail-box">
-                          <span className="detail-label">{UI_MESSAGES.detail.genres}</span>
-                          <div>{renderTags(game.genres, 'chip-genre', undefined, true)}</div>
-                        </div>
-                        {currentTab === 'c' && showYears && game.years && game.years.length > 0 && (
-                          <div className="detail-box">
-                            <span className="detail-label">{UI_MESSAGES.detail.yearsCompleted}</span>
-                            <div>{renderTags(yearsDesc(game.years), 'chip-generic')}</div>
-                          </div>
-                        )}
-                        {/* 0 horas es un hueco, no un dato: se oculta igual que cuando no hay horas anotadas (mismo
-                            criterio que `hoursOf` en core/achievements/metrics.ts). */}
-                        {(currentTab === 'c' || currentTab === 'v') && showHours && (game.hours ?? 0) > 0 && (
-                          <div className="detail-box">
-                            <span className="detail-label">{UI_MESSAGES.detail.playtime}</span>
-                            <div>{UI_MESSAGES.detail.hoursSuffix(String(game.hours).replace('.', ','))}</div>
-                          </div>
-                        )}
-                        {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') && game.strengths && game.strengths.length > 0 && (
-                          <div className="detail-box detail-strong">
-                            <span className="detail-label">{UI_MESSAGES.detail.strengths}</span>
-                            <div>{renderTags(game.strengths, 'chip-pf')}</div>
-                          </div>
-                        )}
-                        {(currentTab === 'c' || currentTab === 'e') && game.weaknesses && game.weaknesses.length > 0 && (
-                          <div className="detail-box detail-weak">
-                            <span className="detail-label">{UI_MESSAGES.detail.weaknesses}</span>
-                            <div>{renderTags(game.weaknesses, 'chip-pd')}</div>
-                          </div>
-                        )}
-                        {currentTab === 'v' && game.reasons && game.reasons.length > 0 && (
-                          <div className="detail-box detail-weak">
-                            <span className="detail-label">{UI_MESSAGES.detail.weaknesses}</span>
-                            <div>{renderTags(game.reasons, 'chip-pd')}</div>
-                          </div>
-                        )}
-                        {(currentTab === 'c' || UNPLAYED_TAB_IDS.includes(currentTab) || (currentTab === 'v' && game.scored)) && game.score !== null && (
-                          <div className="detail-box">
-                            <span className="detail-label">{UNPLAYED_TAB_IDS.includes(currentTab) ? UI_MESSAGES.detail.interest : UI_MESSAGES.detail.score}</span>
-                            <div>
-                              <ScoreDisplay game={game} />
-                            </div>
-                          </div>
-                        )}
-                        {currentTab === 'c' && showReplayable && (
-                          <div className="detail-box">
-                            <span className="detail-label">{UI_MESSAGES.detail.replayability}</span>
-                            <div>{renderBooleanBadge('replayable', Boolean(game.replayable))}</div>
-                          </div>
-                        )}
-                        {currentTab === 'v' && showRetry && (
-                          <div className="detail-box">
-                            <span className="detail-label">{UI_MESSAGES.detail.retry}</span>
-                            <div>{renderBooleanBadge('retry', Boolean(game.retry))}</div>
-                          </div>
-                        )}
-                        {/* EL ANÁLISIS NO SE VUELCA AQUÍ: se va a leer a su pantalla. Volcado ocupaba el detalle
-                            entero —hay reseñas de veinte mil caracteres— y empujaba fuera de la vista todo lo
-                            demás, que es lo que se abre el detalle para ver. El enlace lleva a
-                            `/stats/resenas/:id-huella` (o a donde diga `reviewLink`), donde ya se lee con su ancho de
-                            lectura y su medallón.
-                            Es un ENLACE y no un botón porque es navegación: así se puede abrir en otra pestaña,
-                            copiar la dirección o volver con el botón de atrás. Y ocupa una celda de la rejilla
-                            del detalle, no la fila entera (`is-wide`), que es de donde sale el sitio. */}
-                        {showReview && supportsReview(currentTab) && game.review ? (
-                          <div className="detail-box">
-                            <span className="detail-label">{UI_MESSAGES.detail.review}</span>
-                            <div>
-                              <Link
-                                className="btn btn-open"
-                                /* Con su `backTo` (ver `reviewTarget`): el panel ya usaba este mismo estado
-                                   para distinguir sus dos orígenes; esta es la tercera puerta. */
-                                {...reviewTarget(game)}
-                                aria-label={UI_MESSAGES.detail.reviewLinkAria(game.name)}
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                <Icon name={COMMON_ICONS.arrowsToEye} />
-                                <span>{UI_MESSAGES.detail.reviewLink}</span>
-                              </Link>
-                            </div>
-                          </div>
-                        ) : null}
-                        {!readOnly ? (
-                          <div className="detail-actions">
-                            {tabActions.map((action) => (
-                              <button
-                                key={`${game.id}-${action.target}`}
-                                className={`btn ${action.btnCls}`}
-                                type="button"
-                                title={UI_MESSAGES.table.actionAria(action.label, game.name)}
-                                aria-label={UI_MESSAGES.table.actionAria(action.label, game.name)}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  onMigrate(currentTab, game.id, action.target);
-                                }}
-                              >
-                                <Icon name={action.icon} />
-                                <span>{action.label}</span>
-                              </button>
-                            ))}
-                            <button
-                              className="btn btn-secondary"
-                              type="button"
-                              title={UI_MESSAGES.table.editAria(game.name)}
-                              aria-label={UI_MESSAGES.table.editAria(game.name)}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                onEdit(currentTab, game.id);
-                              }}
-                            >
-                              <Icon name={COMMON_ICONS.edit} />
-                              <span>{UI_MESSAGES.table.edit}</span>
-                            </button>
-                            <button
-                              className="btn btn-danger"
-                              type="button"
-                              title={UI_MESSAGES.table.deleteAria(game.name)}
-                              aria-label={UI_MESSAGES.table.deleteAria(game.name)}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                onDelete(currentTab, game.id);
-                              }}
-                            >
-                              <Icon name={COMMON_ICONS.trash} />
-                              <span>{UI_MESSAGES.table.delete}</span>
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
+                return null;
               })}
               {bottomSpacerHeight > 0 && !fallbackToFullRender ? (
                 <tr aria-hidden="true">

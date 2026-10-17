@@ -20,7 +20,7 @@ vi.mock('../../src/model/repository/firebaseGateway', async (importOriginal) => 
 
 const { useGameListViewModel } = await import('../../src/viewmodel/useGameListViewModel');
 const { flushLocalState } = await import('../../src/model/repository/localRepository');
-const { WISHLIST_MAX_GAMES } = await import('../../src/core/constants/uiConfig');
+const { WISHLIST_MAX_GAMES, WISHLIST_MAX_GAMES_ADMIN } = await import('../../src/core/constants/uiConfig');
 const { UI_MESSAGES } = await import('../../src/core/constants/labels');
 
 const draft = (name: string, id?: number) => ({
@@ -91,5 +91,20 @@ describe('tope de la lista de deseos', () => {
     await act(async () => { saved = result.current.saveDraft('d', draft('Deseo 1 (edición)', first.id)); });
     expect(saved).not.toBeNull();
     expect(result.current.data.d.find((game) => game.id === first.id)?.name).toBe('Deseo 1 (edición)');
+  });
+
+  it('con el tope de administrador cabe más allá de 100, hasta 400', async () => {
+    expect(WISHLIST_MAX_GAMES_ADMIN).toBe(400);
+    const { result } = renderHook(() => useGameListViewModel(WISHLIST_MAX_GAMES_ADMIN));
+    await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 0); }); });
+    for (let index = 1; index <= WISHLIST_MAX_GAMES_ADMIN; index += 1) {
+      await act(async () => { result.current.addGameToWishlist({ name: `Deseo ${index}`, genres: ['Aventura'], platforms: ['PC'] }); });
+    }
+    expect(result.current.data.d).toHaveLength(WISHLIST_MAX_GAMES_ADMIN);
+
+    let outcome: string | undefined;
+    await act(async () => { outcome = result.current.addGameToWishlist({ name: 'Outer Wilds', genres: ['Aventura'], platforms: ['PC'] }); });
+    expect(outcome).toBe('full');
+    expect(result.current.data.d).toHaveLength(WISHLIST_MAX_GAMES_ADMIN);
   });
 });

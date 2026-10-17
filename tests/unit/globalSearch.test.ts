@@ -30,6 +30,14 @@ describe('normalizeSearchText', () => {
     expect(matchesSearch('Spiderman', 'spider man')).toBe(true);
     expect(matchesSearch('Zelda', 'mario')).toBe(false);
   });
+
+  it('sin espacios, solo desde el principio de una palabra', () => {
+    expect(matchesSearch('The Witcher 3', 'ewi')).toBe(false);
+    expect(matchesSearch('The Witcher 3', 'witcher3')).toBe(true);
+    expect(matchesSearch('The Witcher 3', 'itch')).toBe(true);
+    expect(searchRank('The Witcher', 'ewi')).toBe(-1);
+    expect(runSearch({ ...EMPTY, games: [src('g1', 'The Witcher')] }, 'ewi')).toEqual([]);
+  });
 });
 
 describe('searchRank', () => {

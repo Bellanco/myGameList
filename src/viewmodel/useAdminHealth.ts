@@ -46,7 +46,7 @@ export function useAdminHealth(enabled: boolean) {
     [health],
   );
 
-  return { meters, fetchedAt: health?.fetchedAt || 0, loading, unreachable, refresh };
+  return { meters, itad: health?.itad ?? null, fetchedAt: health?.fetchedAt || 0, loading, unreachable, refresh };
 }
 
 export type AdminHealthState = ReturnType<typeof useAdminHealth>;

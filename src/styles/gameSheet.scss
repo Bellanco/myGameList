@@ -1,0 +1,395 @@
+// LA FICHA DE UN JUEGO (ver `docs/plan-ficha-de-juego-y-precios.md` y `view/components/gameSheet/GameSheetPanel`).
+// Viaja en el chunk del panel, no en el arranque. Solo tokens: el carácter de cada tema lo ponen `.modal`, los
+// botones, los chips e insignias del detalle (`detail-box`, `detail-label`) y los renglones del hub, que los skins
+// ya visten, así que aquí no hay nada por tema.
+
+// ─── El panel ────────────────────────────────────────────────────────────────────────────────────────────────
+// Entra por la derecha y SIEMPRE a todo el alto (F0.11). Por dentro es el `<dialog>` modal de siempre: velo, Esc,
+// pulsar fuera y el foco de vuelta a la fila. El velo es más ligero que el de un modal: lo que se quiere es seguir
+// viendo la lista de la que se viene.
+dialog.modal-dialog.gs-dialog::backdrop { background: rgba(0, 0, 0, .4); backdrop-filter: none; }
+
+// `overflow: clip` Y NO EL `auto` QUE LE DA EL NAVEGADOR (17-10-2026). Mientras entra, el panel desplazado por la
+// animación desborda el `<dialog>` por la derecha, y `showModal()` enfoca la X, que está ahí fuera: el navegador
+// desplazaba el diálogo para enseñarla (`scrollLeft` = el ancho del panel). Ese scroll anulaba el `translateX` y se
+// iba reajustando conforme el panel entraba; en Firefox, desfasado: el panel iba de un lado a otro. Recortado no es
+// contenedor de scroll y no hay nada que desplazar; el scroll de la ficha es el suyo, el de `.gs-scroll`.
+dialog.modal-dialog.gs-dialog[open] { padding: 0; justify-content: flex-end; align-items: stretch; overflow: clip; }
+
+// ENCIMA TAMBIÉN DURANTE UN CAMBIO DE PANTALLA (17-10-2026). En una View Transition, lo que tiene nombre se pinta en
+// una capa por encima de la captura de la página, y el `<main>` lo tiene (`pantalla`, ver `_motion.scss`). La ficha,
+// sin nombre, iba en esa captura: al irse de ella a otra pantalla (tu reseña), la lista le pasaba por encima mientras
+// duraba la transición. Con nombre propio se pinta después de la pantalla, como en la página, y sin animación de
+// grupo: su salida es la suya, que sigue viva debajo. Al LLEGAR con la ficha abierta no basta, porque se abre después
+// de la captura: entonces la pantalla no se anima (`cambiaDeCamino` en `App`).
+// Su captura vieja no se ve si la ficha sigue en la pantalla nueva (saliendo): taparía, quieta, la salida viva. Si ya
+// no está, se funde como la pantalla que se va.
+dialog.modal-dialog.gs-dialog[open] { view-transition-name: ficha; }
+::view-transition-group(ficha),
+::view-transition-new(ficha) { animation: none; }
+::view-transition-old(ficha) { display: none; }
+::view-transition-old(ficha):only-child { display: block; animation: vt-salida .12s ease-in both; }
+
+dialog.modal-dialog.gs-dialog[open] .gs-panel {
+  position: relative;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  animation: gsEntra .5s cubic-bezier(.32, .72, 0, 1) both;
+  will-change: transform, opacity;
+}
+
+// ENTRAR Y SALIR (16-10-2026). La salida se anima: `.is-saliendo` lo pone el panel mientras dura (ver «La salida se
+// anima» en `GameSheetPanel`); antes desaparecía de golpe, velo incluido.
+//  · EN EL MÓVIL, COMO UN CAJÓN: entra desde el borde frenando poco a poco (la curva de las hojas de iOS) y sale
+//    acelerando hacia la derecha. Es lo que pide el gesto de cerrarla deslizándola con el dedo.
+//  · EN ANCHO, ASOMA Y SE FUNDE (17-10-2026, decisión del usuario: en Firefox el cajón seguía viéndose «muy bestia»).
+//    El cajón cruzaba hasta 1.240 px en medio segundo, justo mientras llegan las amistades, el precio y las carátulas
+//    y el ancho se vuelve a medir: cada fotograma que el navegador no llega a pintar era un salto de decenas de
+//    píxeles. Ahora recorre 2,5rem mientras aparece, y un fotograma perdido no se ve.
+dialog.modal-dialog.gs-dialog[open]::backdrop { animation: gsVeloEntra .36s ease-out both; }
+dialog.modal-dialog.gs-dialog.is-saliendo::backdrop { animation: gsVeloSale .32s ease-in both; }
+dialog.modal-dialog.gs-dialog.is-saliendo .gs-panel { animation: gsSale .32s cubic-bezier(.4, 0, .2, 1) both; pointer-events: none; }
+
+@media (min-width: 601px) {
+  dialog.modal-dialog.gs-dialog[open] .gs-panel { animation: gsEntraSuave .32s cubic-bezier(.2, .8, .2, 1) both; }
+  dialog.modal-dialog.gs-dialog[open]::backdrop { animation-duration: .3s; }
+  dialog.modal-dialog.gs-dialog.is-saliendo .gs-panel { animation: gsSaleSuave .22s cubic-bezier(.4, 0, 1, 1) both; }
+  dialog.modal-dialog.gs-dialog.is-saliendo::backdrop { animation-duration: .22s; }
+}
+
+// EL ANCHO SE MIDE (`useGameSheetWidth`): el más estrecho de los tres en el que todo cabe sin scroll. Los dos anchos
+// de dos columnas dejan siempre unos 80 px de la lista a la vista, por donde se pulsa para cerrar.
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92vw); }
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-medio { width: min(880px, calc(100vw - 5rem)); }
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-ancho { width: min(1240px, calc(100vw - 5rem)); }
+
+@keyframes gsEntra { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes gsSale { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes gsEntraSuave { from { opacity: 0; transform: translateX(2.5rem); } to { opacity: 1; transform: translateX(0); } }
+@keyframes gsSaleSuave { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(1.5rem); } }
+@keyframes gsVeloEntra { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gsVeloSale { from { opacity: 1; } to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.modal-dialog.gs-dialog[open] .gs-panel,
+  dialog.modal-dialog.gs-dialog[open]::backdrop { animation: none; }
+}
+
+// En el móvil, casi toda la pantalla, dejando una franja de la lista a la izquierda (F0.17): se lee como algo que
+// está ENCIMA y no como una pantalla nueva, y tocar la franja cierra.
+@media (max-width: 600px) {
+  dialog.modal-dialog.gs-dialog[open] .gs-panel:is(.is-estrecho, .is-medio, .is-ancho) {
+    width: calc(100% - 1.25rem);
+  }
+}
+
+// ─── Deslizar hacia la derecha para cerrar (`useSwipeToClose`) ──────────────────────────────────────────────
+// El scroll vertical se lo queda el navegador; el horizontal llega al panel como eventos de puntero.
+.gs-panel,
+.gs-scroll { touch-action: pan-y; }
+
+// Mientras dura el gesto, fuera la animación de entrada: con `both` pisaría el `transform` que pone el dedo. Al
+// soltar, una transición corta para cerrarse o volver a su sitio.
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-gesto { animation: none; transition: transform .22s cubic-bezier(.2, .9, .3, 1); }
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-arrastrando { transition: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.modal-dialog.gs-dialog[open] .gs-panel.is-gesto { transition: none; }
+}
+
+// El asa lateral, en el borde izquierdo y a media altura: solo en pantallas táctiles, que es donde está el gesto.
+.gs-asa-lateral { display: none; }
+
+@media (pointer: coarse) {
+  .gs-asa-lateral {
+    position: absolute;
+    top: 50%;
+    left: .35rem;
+    z-index: 2;
+    display: block;
+    width: .3rem;
+    height: 2.5rem;
+    margin-top: -1.25rem;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--text) 30%, transparent);
+    pointer-events: none;
+  }
+}
+
+// ─── El cuerpo, que es lo que hace scroll ────────────────────────────────────────────────────────────────────
+// Reserva abajo el alto de los botones (`--gs-botones`, que mide el panel) y lo que pasa por detrás de ellos se
+// desvanece con una máscara: vale igual en todos los temas, cuando un degradado de color tendría que adivinar el
+// fondo de cada skin.
+.gs-panel { --gs-botones: 3.6rem; }
+
+.gs-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.1rem 1.6rem var(--gs-botones);
+  container-type: inline-size;
+  scrollbar-width: thin;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--gs-botones) - .5rem), transparent calc(100% - .75rem));
+}
+
+@media (max-width: 600px) {
+  .gs-scroll { padding-top: 1rem; padding-inline: 1rem; }
+}
+
+// La X, en la esquina del panel: fuera del scroll, siempre a mano. No hay cabecera de modal (F0.11).
+.gs-close { position: absolute; top: .5rem; right: .5rem; z-index: 2; }
+
+// ─── Cabecera: carátula, nombre, tu lista y las cifras ───────────────────────────────────────────────────────
+// EL REALCE (`useGameSheetWidth`, 17-10-2026): con sitio de sobra, la carátula crece escalón a escalón, lo que cabe sin
+// scroll, y el título con ella. Con tope donde la columna de al lado se quedaría sin sitio: en el móvil (la del
+// título) y con la saga en la cabecera (la tercera columna).
+.gs-panel { --gs-escala: 1; }
+.gs-panel.is-realce-1 { --gs-escala: 1.3; }
+.gs-panel.is-realce-2 { --gs-escala: 1.55; }
+.gs-panel.is-realce-3 { --gs-escala: 1.85; }
+.gs-panel.is-realce-4 { --gs-escala: 2.15; }
+
+// En el móvil, junto a la carátula solo van el título y tu lista; las cifras y el lado, debajo a todo el ancho.
+.gs-head {
+  display: grid;
+  grid-template-columns: calc(6.5rem * min(var(--gs-escala), 1.5)) minmax(0, 1fr);
+  gap: .7rem 1rem;
+  align-items: start;
+}
+
+.gs-head > .gs-cover { grid-column: 1; grid-row: 1; }
+.gs-head > .gs-head-text { grid-column: 2; grid-row: 1; }
+.gs-head > .gs-head-numbers { grid-column: 1 / -1; }
+
+.gs-cover { border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--e2); }
+
+// Sitio para la X, que va encima.
+.gs-head-text { display: flex; flex-direction: column; gap: .4rem; min-width: 0; padding-right: 2.4rem; }
+
+.gs-title {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: var(--fs-xl);
+  line-height: 1.15;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.gs-linea { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; }
+.gs-desde { font-size: var(--fs-xs); color: var(--text-muted); }
+.gs-resumen { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
+
+// Tu lista, con el color del canto de esa lista (el mismo de los avisos del feed).
+.gs-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .6rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text);
+  background: color-mix(in srgb, var(--pill-c, var(--move-p)) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pill-c, var(--move-p)) 45%, transparent);
+
+  .ui-icon { width: var(--ico-sm, 1rem); height: var(--ico-sm, 1rem); color: var(--pill-c, var(--move-p)); }
+  &.is-c { --pill-c: var(--move-c); }
+  &.is-v { --pill-c: var(--move-v); }
+  &.is-e { --pill-c: var(--move-e); }
+  &:is(.is-p, .is-d) { --pill-c: var(--move-p); }
+}
+
+// Las cifras: tu nota o tu interés, la media de tus amistades y cuántas lo tienen.
+.gs-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem 1.4rem;
+  margin: .1rem 0 0;
+
+  div { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+  dt { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+  dd { margin: 0; font-size: var(--fs-lg); font-weight: 700; color: var(--text); line-height: 1.15; }
+  dd small { font-size: var(--fs-xs); font-weight: 400; color: var(--text-muted); }
+}
+
+.gs-numbers .gs-media { display: flex; align-items: center; gap: .35rem; }
+.gs-numbers .gs-media .stars { font-size: var(--fs-md); }
+
+// El lado de la cabecera (el precio de un deseo o, si no, la saga): debajo en estrecho, a la derecha con ancho.
+.gs-head-lado { grid-column: 1 / -1; min-width: 0; }
+
+// ─── El cuerpo, en columnas que se equilibran solas ──────────────────────────────────────────────────────────
+// Ninguna sección se parte entre dos columnas. El margen de cada sección va ABAJO: en columnas, el de arriba se
+// pierde al saltar de columna y las dos no empezarían a la misma altura.
+.gs-cuerpo { margin-top: .9rem; }
+.gs-cuerpo > * { break-inside: avoid; margin-top: 0; margin-bottom: .9rem; }
+
+// Tus datos (16-10-2026): sin rótulos ni filetes, un RECUADRO por clase de dato, como los fuertes y débiles del renglón
+// de la tabla (`.row-note`): plataformas, géneros y años en una fila; fuertes (filo verde) y débiles (rojo) en otra. Solo
+// con el color, en algunos temas todo parecía de la misma categoría. El análisis, debajo, en la misma sección.
+// SIN RELLENO, solo el cerco: hundido como el de la tabla, en los temas claros el chip del año (translúcido) bajaba de
+// 4,5:1 de contraste (axe, `tests/e2e/a11y.test.ts`).
+.gs-detail.detail-content { display: grid; gap: .5rem; padding: 0; grid-template-columns: minmax(0, 1fr); }
+.gs-grupos { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .5rem; }
+.gs-grupo, .gs-grupo > .chips { display: flex; flex-wrap: wrap; gap: .35rem; min-width: 0; }
+.gs-grupo {
+  padding: .3rem .45rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hair);
+}
+.gs-grupo.is-bueno { border-color: color-mix(in srgb, var(--success) 45%, transparent); }
+.gs-grupo.is-malo { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.gs-sec-datos .gs-friends { margin-top: .8rem; }
+// Rejugar o reintentar, junto a la lista: la insignia de siempre (su tamaño de la tabla), a la altura de la píldora.
+.gs-insignia { display: inline-flex; }
+
+// ─── Tus amistades y quienes lo quieren ──────────────────────────────────────────────────────────────────────
+// El renglón de persona del hub (`personRow.scss`), más bajo: aquí van varios seguidos y la ficha no es un listado. Con
+// las dos clases del renglón, para ganarle a su regla (0,2,0) sin depender de qué hoja carga antes: van en chunks
+// distintos.
+.gs-friends { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.gs-friends .hub-user-card.hub-person-row { padding-block: .4rem; min-height: 0; }
+
+// Lo que llega después (el índice de sus bibliotecas, tras el canal social) entra con un fundido, no de golpe.
+.gs-sec-amistades li,
+.gs-sec-quieren li { animation: gsFundido .3s ease-out both; }
+@keyframes gsFundido { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .gs-sec-amistades li,
+  .gs-sec-quieren li { animation: none; }
+}
+
+// Alguna biblioteca no se pudo leer: una línea discreta bajo la lista, sin aspecto de error (F0.10).
+.gs-faltan { margin: .5rem 0 0; font-size: var(--fs-xs); color: var(--text-muted); }
+
+// El adelanto de su reseña, en un renglón: entera, en su perfil.
+.gs-snippet {
+  display: block;
+  margin-top: .1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+// El de tu análisis, en tres renglones: es el tuyo y se lee más. Entero, en su pantalla.
+.gs-snippet.is-propio {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  white-space: normal;
+}
+
+// «Lo quieren»: solo avatar y nombre, seguidos, porque es relleno.
+.gs-wanters { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: 0; padding: 0; list-style: none; }
+
+.gs-wanter {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: var(--fs-sm);
+  color: var(--text);
+
+  .hub-avatar { width: 1.75rem; height: 1.75rem; }
+}
+
+// ─── Saga: una tira de carátulas que se desplaza en horizontal ───────────────────────────────────────────────
+.gs-saga {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 5.5rem;
+  gap: .7rem;
+  margin: 0;
+  padding: 0 0 .3rem;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.gs-saga-item {
+  display: grid;
+  gap: .3rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  .game-cover { border-radius: var(--radius-sm); }
+  &:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+}
+
+.gs-saga-name { font-size: var(--fs-xs); font-weight: 600; line-height: 1.25; }
+.gs-saga-who { font-size: var(--fs-2xs); color: var(--text-muted); line-height: 1.3; }
+.gs-saga-item[aria-current="true"] .gs-saga-name { color: var(--fg-link); }
+
+// Con ancho, la saga sube al lado de la cabecera (sin precio, ese hueco quedaba vacío); en estrecho, al final del
+// cuerpo. Se pinta en los dos sitios y cada uno se esconde donde no toca.
+.gs-sec-saga.is-cabecera { display: none; }
+.gs-head-lado:has(> .gs-sec-saga.is-cabecera) { display: none; }
+
+// ─── Los botones, anclados abajo y sin barra ─────────────────────────────────────────────────────────────────
+.gs-bar {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: 0 1.6rem calc(.6rem + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+
+.gs-bar .btn { pointer-events: auto; }
+
+// Borrar, separado de los demás y a la derecha: lejos de la mano que va a mover o editar.
+.gs-bar .btn-danger { margin-inline-start: auto; }
+
+// En el panel estrecho y en el móvil, con texto solo el primero (mover de lista); los demás, icono con su nombre en
+// `aria-label`. Rotulados, no cabían en una fila.
+.gs-panel.is-estrecho .gs-bar { flex-wrap: nowrap; }
+.gs-panel.is-estrecho .gs-bar .btn:not(:first-child) .gs-bar-label { display: none; }
+
+@media (max-width: 600px) {
+  .gs-bar { padding-inline: 1rem; flex-wrap: nowrap; }
+  .gs-bar .btn { justify-content: center; }
+  .gs-bar .btn:first-child { flex: 1 1 auto; min-width: 0; }
+  .gs-bar .btn:not(:first-child) { flex: 0 0 auto; }
+  .gs-bar .btn:not(:first-child) .gs-bar-label { display: none; }
+  .gs-bar .btn:first-child .gs-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gs-bar .btn-danger { margin-inline-start: 0; }
+}
+
+// ─── Con sitio ───────────────────────────────────────────────────────────────────────────────────────────────
+// Desde 32 rem (el panel estrecho), todo vuelve junto a la carátula.
+@container (min-width: 32rem) {
+  .gs-head { grid-template-columns: calc(8rem * var(--gs-escala)) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 1rem 1.3rem; }
+  .gs-panel[class*="is-realce-"] .gs-title { font-size: var(--fs-2xl); }
+  .gs-head > .gs-cover { grid-row: 1 / span 2; }
+  .gs-head > .gs-head-numbers { grid-column: 2; align-self: start; margin-top: .5rem; }
+  .gs-head > .gs-head-lado { margin-top: .45rem; }
+}
+
+// Desde 46 rem: la cabecera en tres columnas (carátula, información y lado, que se reparten a partes iguales lo que
+// deja la carátula) y el cuerpo en dos columnas equilibradas.
+@container (min-width: 46rem) {
+  .gs-head { grid-template-columns: calc(10rem * var(--gs-escala)) minmax(0, 1fr); gap: 1rem 1.6rem; padding-right: 2.6rem; }
+  .gs-head:has(> .gs-head-lado) { grid-template-columns: calc(10rem * min(var(--gs-escala), 1.55)) minmax(14rem, 1fr) minmax(16rem, 1fr); }
+  .gs-head > .gs-head-lado { grid-column: 3; grid-row: 1 / span 2; align-self: stretch; margin-top: 0; display: flex; flex-direction: column; }
+  .gs-head-lado:has(> .gs-sec-saga.is-cabecera) { display: block; }
+  .gs-sec-saga.is-cabecera { display: block; margin: 0; padding-top: 0; border-top: 0; }
+  .gs-sec-saga.is-solo-estrecho { display: none; }
+  .gs-head-text { padding-right: 0; }
+  .gs-title { font-size: var(--fs-2xl); }
+  .gs-panel[class*="is-realce-"] .gs-title { font-size: var(--fs-3xl); }
+  .gs-cuerpo { columns: 2; column-gap: 2rem; }
+  .gs-saga { grid-auto-columns: 6rem; }
+}

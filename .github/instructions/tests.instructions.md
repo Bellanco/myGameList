@@ -24,6 +24,36 @@ paths:
 - Cover edge cases: empty/legacy data shapes, conflicting `_ts`, tombstones in `deleted[]`, ETag `304` paths.
 - Keep tests deterministic — no real timers/dates/network. Match existing test style.
 
+## La salida de la suite, limpia
+
+Desde el 15-10-2026 la suite no imprime ningún aviso de `act` ni de `@firebase`. Un aviso nuevo es un test mal
+cerrado, no ruido: arréglalo en el test, no lo silencies (nada de filtrar `console.error` en `tests/setup.ts`).
+
+**«An update to X inside a test was not wrapped in act(...)»** — un cambio de estado de React ocurrió fuera de
+`act`. Las causas que se han encontrado, con su remedio:
+
+- **Llamar a una función del hook a pelo** (`await result.current.refresh()`) → `await act(() => result.current.refresh())`.
+- **Disparar desde fuera un callback que cambia estado**: emisiones de sesión simuladas (`emitAuth`, `auth.cb`),
+  `markDirty()`, `window.dispatchEvent(...)`, `el.focus()`, el `navigate` de un arnés, `.click()` nativo del DOM →
+  dentro de `act`, o `fireEvent`/`userEvent`, que ya lo llevan. Si el mock lo emite siempre, envuélvelo en el
+  propio mock (`emitAuth = (u) => act(() => cb(u))`, `AdminHub.test.tsx`).
+- **Una promesa que se resuelve con el test ya acabado**: la lectura que el componente lanza al montar o al abrir
+  (historial, fuentes del buscador, «me gusta» propios). Espérala antes de terminar: `findBy*`, `waitFor` sobre su
+  efecto, o abrir dentro de `await act(async …)`. Una espera de tiempo a pelo (`setTimeout`) va dentro de `act`.
+- **Un `afterEach` del fichero que cambia algo que la pantalla escucha** (`resetScoreScale()`, una preferencia):
+  corre ANTES del `cleanup()` de `tests/setup.ts` —los `afterEach` van en pila— con la pantalla aún montada → `act`.
+- **Opciones nuevas en cada render en `renderHook`** (`useSocialSession({ navigate: () => {} })`): si el hook
+  las tiene de dependencias de un efecto, se relanza tras cada cambio de estado. Pásalas fijas, como la app
+  (`useCallback`, `useNavigate`). Síntoma: con `await act(async …)` el test se cuelga en vez de avisar.
+
+**Ningún test sale a la red.** `tests/setup.ts` sustituye `fetch`: una llamada a un host externo lanza y, además,
+**suspende el test** en su `afterEach` (o el fichero en `afterAll`), aunque la app se trague el error en un `catch`
+best-effort. El respaldo de `firebaseClient` apunta al proyecto de PRODUCCIÓN, así que un repositorio sin mockear
+habla con él. La huella típica es `@firebase/auth: INTERNAL ASSERTION FAILED: Expected a class definition` (el
+Firebase real arrancando en jsdom) o `RPC_ERROR HTTP error has no status`. Remedio: `vi.mock` del repositorio
+que hace la llamada (`premios/premiosBallotRepository`, `firebaseGateway`, `achievementsConfigRepository`…). Un
+intento que llega con el test ya acabado se le cuenta al siguiente test del fichero: busca la promesa sin esperar.
+
 ## Qué NO puede probar jsdom
 
 No hay layout: `window.scrollY` vale siempre 0, no hay alturas, no hay `scrollIntoView`, no hay service worker ni

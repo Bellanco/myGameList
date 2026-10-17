@@ -1,5 +1,7 @@
 import React from 'react';
 import { HubAvatar } from './HubAvatar';
+// Sus estilos van con el componente y no en `social.scss`: lo pinta también la ficha de un juego (ver la hoja).
+import '../../../styles/personRow.scss';
 import { PROFILE_TIER_LABELS, normalizeTier } from '../../../core/constants/tiers';
 import type { ProfileTier } from '../../../core/constants/tiers';
 

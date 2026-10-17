@@ -7,6 +7,9 @@ const SCROLL_HIDE_THRESHOLD = 24;
 /** El hueco donde `GlobalSearch` pone su lupa (docs/plan-notificaciones-y-buscador.md). */
 export const SEARCH_LAUNCHER_SLOT_ID = 'search-launcher-slot';
 
+/** El grupo entero: `TabBar` lo mide para saber si la pastilla de las listas cabe en su misma fila. */
+export const FLOATING_CONTROLS_ID = 'floating-controls';
+
 interface FloatingControlsProps {
   /** Solo para volver a mirar el scroll al cambiar de pantalla; ver la nota del efecto. */
   activeSection: AppSection;
@@ -69,7 +72,7 @@ export const FloatingControls = memo(function FloatingControls({ activeSection }
   }, []);
 
   return (
-    <div className={`floating-controls ${hidden ? 'is-hidden' : ''}`.trim()}>
+    <div id={FLOATING_CONTROLS_ID} className={`floating-controls ${hidden ? 'is-hidden' : ''}`.trim()}>
       {/* El hueco de la LUPA del buscador general, a la izquierda del tema. La pinta `GlobalSearch` con un portal
           cuando llega (en ocioso, ver `App`): así el botón no viaja en el arranque, y se esconde con el scroll junto a
           su vecino, porque vive dentro del mismo grupo. Abrir el buscador no lleva a ninguna pantalla, así que puede

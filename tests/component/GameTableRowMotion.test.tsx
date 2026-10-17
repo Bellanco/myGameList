@@ -12,12 +12,8 @@ function renderTable(games: GameItem[], currentTab: TabId = 'c', removingId: num
     <GameTable
       games={games}
       currentTab={currentTab}
-      expandedId={null}
-      onExpandedChange={vi.fn()}
+      onOpenGame={vi.fn()}
       onEdit={vi.fn()}
-      onDelete={vi.fn()}
-      onMigrate={vi.fn()}
-      tabActions={[]}
       removingId={removingId}
     />,
   );
@@ -41,12 +37,8 @@ describe('GameTable — la fila que llega y la que se va', () => {
         <GameTable
           games={[makeGame(1), makeGame(2), makeGame(3, 'El nuevo')]}
           currentTab="c"
-          expandedId={null}
-          onExpandedChange={vi.fn()}
+          onOpenGame={vi.fn()}
           onEdit={vi.fn()}
-          onDelete={vi.fn()}
-          onMigrate={vi.fn()}
-          tabActions={[]}
         />,
       );
     });
@@ -64,12 +56,8 @@ describe('GameTable — la fila que llega y la que se va', () => {
         <GameTable
           games={[makeGame(7, 'De otra lista')]}
           currentTab="e"
-          expandedId={null}
-          onExpandedChange={vi.fn()}
+          onOpenGame={vi.fn()}
           onEdit={vi.fn()}
-          onDelete={vi.fn()}
-          onMigrate={vi.fn()}
-          tabActions={[]}
         />,
       );
     });
@@ -87,12 +75,8 @@ describe('GameTable — la fila que llega y la que se va', () => {
         <GameTable
           games={[...iniciales, ...Array.from({ length: 12 }, (_unused, i) => makeGame(100 + i))]}
           currentTab="c"
-          expandedId={null}
-          onExpandedChange={vi.fn()}
+          onOpenGame={vi.fn()}
           onEdit={vi.fn()}
-          onDelete={vi.fn()}
-          onMigrate={vi.fn()}
-          tabActions={[]}
         />,
       );
     });

@@ -174,7 +174,9 @@ describe('edición concurrente con un ciclo de sync en vuelo', () => {
       ...emptyTabData(),
       c: [makeGame({ id: 1, _ts: 4_000, score: 5, hours: 42, weaknesses: ['final flojo'], strengths: ['combate'] })],
     };
-    markDirty();
+    // La marca avisa al hook montado (`subscribeSyncDirtyState`), que repinta: dentro de `act`. Es síncrono y no
+    // suelta ninguna de las promesas de la carrera.
+    act(() => markDirty());
 
     // Libera la lectura en vuelo (→ 304 → pushDirtyWithMerge) y espera a que termine el ciclo.
     await act(async () => {

@@ -177,9 +177,6 @@ export const ShareReviewButton = memo(function ShareReviewButton({
       <ShareReviewModal
         open={open}
         gameName={String(game.name || '')}
-        quota={vm.quota}
-        nick={vm.nick}
-        nickIsAccountName={vm.nickIsAccountName}
         publishing={vm.loading}
         error={vm.error}
         errorHint={quotaHint}

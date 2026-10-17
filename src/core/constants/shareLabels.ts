@@ -7,9 +7,9 @@
  * Compartir una reseña con enlace público (ver docs/plan-compartir-resenas.md).
  *
  * El tono importa aquí más que en otras pantallas: se está sacando a internet un texto que hasta ahora vivía en
- * los Gists del usuario. Los textos dicen con todas las letras qué se publica, qué no, cuánto dura y que se
- * puede retirar — y "Dejar de compartir" nunca se llama "Borrar", porque retirar un enlace no recoge las copias
- * que ya circulen.
+ * los Gists del usuario. Qué se publica, qué no y cuánto dura lo cuentan las condiciones, no el diálogo (ver
+ * `ShareReviewModal`), y "Dejar de compartir" nunca se llama "Borrar", porque retirar un enlace no recoge las
+ * copias que ya circulen.
  */
 export const SHARE_UI = {
   action: 'Compartir',
@@ -20,23 +20,6 @@ export const SHARE_UI = {
   /** La marca de novedad junto al botón, una vez, para quien ya tenía lo social (ver `ShareReviewButton`). */
   newBadge: 'Nuevo',
   dialogTitle: 'Compartir esta reseña',
-  consentTitle: 'Vas a publicar esta reseña en internet',
-  consentPublished: 'Se publica: el juego, tu nota, el texto completo de la reseña, sus plataformas, géneros y puntos fuertes y débiles, tu nick y la fecha.',
-  consentPrivate: 'No se publica: tu correo, tu identificador, tus Gists, tus horas de juego, tu foto ni el resto de tu biblioteca.',
-  // Los números salen del rango del perfil, pero al usuario se le dicen sin nombrarlo: lo que necesita saber es
-  // cuántos enlaces puede tener y cuánto duran, no de dónde salen esas cifras.
-  consentDuration: (days: number, maxActive: number) => {
-    const duracion = `${days} ${days === 1 ? 'día' : 'días'}`;
-    return maxActive === 1
-      ? `Puedes tener 1 enlace activo a la vez, y dura ${duracion}.`
-      : `Puedes tener ${maxActive} enlaces activos a la vez, y cada uno dura ${duracion}.`;
-  },
-  consentRevocable: 'Puedes retirarlo cuando quieras desde Ajustes. Eso lo deja inaccesible, pero no recoge las copias que ya se hayan compartido.',
-  consentAccept: 'He leído lo anterior y quiero publicarla',
-  signedAs: (nick: string) => `Se publicará firmada como «${nick}».`,
-  // Se enseña cuando el nombre con el que se firmaría no lo eligió su dueño (ver `nickIsAccountName`). El texto
-  // NO nombra de dónde sale ese nombre: lo que importa es que se revise y se pueda cambiar antes de publicar.
-  signedAsAccountName: 'Si prefieres otro, cambia tu nombre en tu perfil social antes de publicar.',
   confirm: 'Publicar enlace',
   cancel: 'Cancelar',
   publishing: 'Publicando…',

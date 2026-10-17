@@ -39,3 +39,6 @@ IGDB_CLIENT_SECRET=
 # busque pósters de series y películas y fotos de actores. Las imágenes ya elegidas las sirve `/poster`, que no
 # lo necesita. Se saca de https://www.themoviedb.org/settings/api y se regenera desde ahí mismo.
 TMDB_READ_TOKEN=
+
+# ITAD_API_KEY=
+# ITAD_CLIENT_SECRET=
