@@ -5,6 +5,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+
+- **Esconder el cuadro para publicar.** Si tu rango te deja publicar, Ajustes › Diseño tiene una opción nueva,
+  «Publicaciones», con Mostrar u Ocultar. Ocultar quita de la actividad social el cuadro de publicar y su botón, pero
+  no tu permiso para publicar. Como el resto de opciones de Diseño, se guarda con tu cuenta.
+
+### Changed
+
+- **Menos hueco arriba en Actividad social.** «Ver perfiles» queda justo debajo del título y tu avatar a su lado, a
+  la altura de los dos. Antes, entre el título y los botones quedaba el hueco de un subtítulo que la pantalla no tiene.
+
 ## [1.8.0] - 2026-10-17
 
 ### Added

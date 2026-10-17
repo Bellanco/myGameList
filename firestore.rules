@@ -361,7 +361,10 @@ service cloud.firestore {
       //
       // `itad` (la integración con IsThereAnyDeal, 16-10-2026, P0.4 del plan de la ficha y los precios), igual:
       // estas reglas se despliegan ANTES que la versión que la escribe.
-      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs", "listShape", "covers", "gridSize", "showWishlist", "gameScenes", "itad"])
+      //
+      // `showPostComposer` (el cuadro para publicar de la actividad social, 17-10-2026), igual: desplegar estas
+      // reglas ANTES que la versión que la escribe.
+      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs", "listShape", "covers", "gridSize", "showWishlist", "gameScenes", "itad", "showPostComposer"])
         && (!("scoreScale" in request.resource.data)
             || request.resource.data.scoreScale in ["stars", "grade"])
         && (!("theme" in request.resource.data)
@@ -388,6 +391,8 @@ service cloud.firestore {
             || request.resource.data.gameScenes is bool)
         && (!("itad" in request.resource.data)
             || request.resource.data.itad is bool)
+        && (!("showPostComposer" in request.resource.data)
+            || request.resource.data.showPostComposer is bool)
         // F4 — listas de las que su dueño ve los mensajes de actividad: letras de lista ('cvepd'), nunca más de
         // cinco. Cinco y no cuatro desde la lista de deseos: o van las cinco letras, o cuatro y la marca '~' de
         // «deseos apagada a propósito» (ver `core/social/moveTabsFilter`). Se acota el tamaño como en `palette`: es

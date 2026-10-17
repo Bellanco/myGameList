@@ -270,6 +270,9 @@ export const wishlistPreference = createPreferenceStore<boolean>({
  */
 export { feedMoveTabsPreference } from '../../model/repository/feedMovePreference';
 
+/** El cuadro para publicar del feed: re-exportada aquí para registrarla en el arranque, igual que la de arriba. */
+export { postComposerPreference } from '../../model/repository/postComposerPreference';
+
 function toggleRootFlag(attribute: string, on: boolean): void {
   const root = document.documentElement;
   if (on) {

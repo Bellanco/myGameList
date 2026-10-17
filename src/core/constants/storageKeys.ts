@@ -224,6 +224,11 @@ export const ANNOUNCEMENT_SEEN_KEY = 'mis-listas-announcement-seen';
 // se replica a la nube.
 export const SOCIAL_CAN_POST_KEY = 'mis-listas-social-can-post';
 
+// ¿Enseña la actividad social el cuadro para publicar? Preferencia de Ajustes › Diseño («Publicaciones»), solo para
+// quien puede publicar. Valores: 'on' | 'off'; ausente = a la vista. Se replica a `publicConfig.showPostComposer`.
+// La lee también el esqueleto de la actividad, para no reservar el hueco de un cuadro que no va a llegar.
+export const POST_COMPOSER_KEY = 'mis-listas-show-post-composer';
+
 // PRIMEROS PASOS — por dónde va la guía de bienvenida en ESTE dispositivo: si está ofrecida, en curso, plegada o
 // terminada, en qué misión y paso, y qué misiones se dieron por hechas o se saltaron. JSON con la forma de
 // `TourState` (ver `core/onboarding/tourState.ts`), con versión dentro para poder cambiar la forma sin arrastrar

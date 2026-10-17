@@ -199,6 +199,10 @@ export const APPEARANCE_UI = {
   wishlistAria: 'Visibilidad de la pestaña de la lista de deseos',
   wishlistShow: 'Mostrar',
   wishlistHide: 'Ocultar',
+  postComposerLabel: 'Publicaciones',
+  postComposerAria: 'Cuadro para publicar en la actividad social',
+  postComposerShow: 'Mostrar',
+  postComposerHide: 'Ocultar',
 } as const;
 
 /**

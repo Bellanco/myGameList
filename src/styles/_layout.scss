@@ -2019,13 +2019,19 @@ html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
   animation: hubSpin .7s linear infinite;
 }
 
-/* Header del feed: texto a la izquierda, avatar (clica → mi perfil) a la derecha. */
+/* Header del feed: título y, debajo, la fila de botones a la izquierda; el avatar (clica → mi perfil) a la derecha,
+   a lo alto de las dos filas. Rejilla y no fila: así la altura del avatar no separa el título de los botones
+   (ver la nota en `FeedShell`). El hueco entre filas es el de un título sin subtítulo, no el de la tarjeta. */
 .hub-feed-header {
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: .55rem 1rem;
 }
+
+.hub-feed-header > .hub-feed-header-text { grid-column: 1; grid-row: 1; }
+.hub-feed-header > .hub-feed-owner-avatar { grid-column: 2; grid-row: 1 / span 2; }
+.hub-feed-header > .hub-screen-actions { grid-column: 1; grid-row: 2; }
 
 .hub-feed-header-text {
   display: flex;
