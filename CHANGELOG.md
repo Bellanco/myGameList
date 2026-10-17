@@ -53,6 +53,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   casilla que marcar ni explicaciones. Qué se publica, cuánto dura el enlace y cómo retirarlo lo cuentan las
   condiciones.
 
+- **Cuentas nombra a cada persona como en el social.** En el panel de administración, la fila lleva el nombre de su
+  perfil social si lo tiene; el de su cuenta de Google sale al desplegarla, junto al correo.
+
 ### Fixed
 
 - **Los chips de años, puntos fuertes y puntos débiles se leen mejor en modo claro.** En «No puedes pasar»,

@@ -1155,6 +1155,8 @@ export const ADMIN_SHELL_UI = {
     noDate: 'sin fechas',
     noName: 'Sin nombre',
     you: 'tú',
+    /** El de su cuenta de Google: la fila lleva el del perfil social si lo tiene. */
+    realName: 'Nombre',
     email: 'Correo',
     noEmail: 'sin correo',
     uid: 'Identificador',

@@ -229,15 +229,18 @@ const MEDIDORES: HealthMeterView[] = [
 
 type Vm = ReturnType<typeof useAdminViewModel>;
 
+/** El nombre de su cuenta de Google, que no tiene por qué coincidir con el del perfil social. */
+const APELLIDOS = ['García', 'López', 'Martín', 'Sánchez', 'Romero', 'Navarro', 'Torres'];
+
 /**
  * Las cuentas de Firebase Auth: las de los perfiles inventados (con su último uso) y unas pocas que solo entraron
  * con Google, para que salgan los cuatro estados — caducada, a punto, activa y protegida.
  */
 const CUENTAS: AdminAccount[] = (() => {
-  const conPerfil = USUARIOS.map((user): AdminAccount => ({
+  const conPerfil = USUARIOS.map((user, i): AdminAccount => ({
     uid: user.uid,
     email: `${user.displayName.toLowerCase().replace(/[^a-z]/g, '')}@ejemplo.com`,
-    displayName: user.displayName,
+    displayName: `${user.displayName.replace(/ \p{Lu}\.$/u, '')} ${APELLIDOS[i % APELLIDOS.length]}`,
     photoURL: '',
     createdAt: user.createdAt,
     authLastUsedAt: user.updatedAt,
