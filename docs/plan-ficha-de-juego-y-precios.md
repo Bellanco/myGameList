@@ -119,7 +119,9 @@ aciertan siempre con su precio porque llegan con su id.
      Las de tus amistades, solo con social y según su visibilidad: con el índice de bibliotecas (F4, desde plata)
      todas; sin él (bronce), solo las que han reseñado o movido de lista en los últimos 30 días. Nadie ve tu saga:
      tus amistades ven tus juegos en sus fichas, con tu visibilidad.
-5. **Precio** (Parte 2, Fase P5): solo si no lo tienes en c/v/e/p y los precios están activados.
+5. **Precio** (Parte 2, Fase P5): solo si no lo tienes en c/v/e/p y los precios están activados. De un juego que no
+   tienes (el que se abre desde el social), solo para mithril (17-10-2026, decisión del usuario,
+   `PROFILE_TIER_PRICE_FOREIGN_GAMES`); en tus deseos, para todos.
 
 Sin sesión social se pintan 1, 2, 4 (solo con tu biblioteca) y 5. Sin entrada tuya ni de nadie, un estado vacío
 con «Añadir a deseados».

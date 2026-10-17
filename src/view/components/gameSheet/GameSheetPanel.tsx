@@ -67,6 +67,8 @@ export interface GameSheetPanelProps {
    */
   pricesOn?: boolean;
   priceTtlMs?: number | null;
+  /** Y en la ficha de un juego que no tienes (P5): solo mithril (`PROFILE_TIER_PRICE_FOREIGN_GAMES`). */
+  foreignPricesOn?: boolean;
 }
 
 /** Lo que dura la salida del panel, la más larga de las dos (`gsSale`, en el móvil, en `styles/gameSheet.scss`). */
@@ -458,22 +460,29 @@ const BarraDeAcciones = forwardRef<HTMLElement, {
  * (`useSwipeToClose`). Los botones flotan abajo y el cuerpo les reserva justo su alto (`--gs-botones`).
  */
 export function GameSheetPanel(props: GameSheetPanelProps) {
-  const { open, friendId = '', slug, data, pricesOn = false, priceTtlMs = null } = props;
+  const { open, friendId = '', slug, data, pricesOn = false, priceTtlMs = null, foreignPricesOn = false } = props;
   const { signals, missing } = useGameSheetFriendSignals(open);
   const deAmistad = useGameSheetFriendEntry(open, friendId, slug);
-  const titulo = open && pricesOn ? priceTitle(data, slug, signals, deAmistad) : null;
+  const titulo = open && pricesOn ? priceTitle(data, slug, signals, deAmistad, foreignPricesOn) : null;
   const price = useGamePrice(titulo, priceTtlMs);
   return <GameSheetPanelView {...props} signals={signals} missing={missing} friendEntry={deAmistad} price={titulo ? price : undefined} />;
 }
 
 /**
  * DE QUÉ JUEGO SE PIDE EL PRECIO: de uno de tus deseos (P3), con tu nombre, y de uno que no tienes (P5), con el de la
- * primera amistad que lo nombra, como lo enseña la ficha. De uno que ya tienes en otra lista, próximos incluidos, no
- * se pide nada (17-10-2026, decisión del usuario).
+ * primera amistad que lo nombra, como lo enseña la ficha; este, solo para mithril (`ajenos`). De uno que ya tienes en
+ * otra lista, próximos incluidos, no se pide nada (17-10-2026, decisiones del usuario).
  */
-function priceTitle(data: TabData, slug: string, signals: readonly GameSheetSignal[], deAmistad: FriendGameEntry | null): string | null {
+function priceTitle(
+  data: TabData,
+  slug: string,
+  signals: readonly GameSheetSignal[],
+  deAmistad: FriendGameEntry | null,
+  ajenos: boolean,
+): string | null {
   const own = findOwnEntry(data, slug);
   if (own) return own.tab === 'd' ? own.item.name : null;
+  if (!ajenos) return null;
   const deSuBloque = deAmistad?.item && matchesGameSheet(slug, deAmistad.item.name) ? deAmistad.item.name : null;
   return signalGameName(slug, signals) ?? deSuBloque;
 }

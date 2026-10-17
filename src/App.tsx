@@ -4,7 +4,7 @@ import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ORDER, TAB_ROUTE, TAB_TI
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
 import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS, WISHLIST_MAX_GAMES, WISHLIST_MAX_GAMES_ADMIN } from './core/constants/uiConfig';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from './model/types/game';
-import { PROFILE_TIER_PRICE_TTL_MS, hasUnlimitedWishlist } from './core/constants/tiers';
+import { PROFILE_TIER_PRICE_FOREIGN_GAMES, PROFILE_TIER_PRICE_TTL_MS, hasUnlimitedWishlist } from './core/constants/tiers';
 import { DEFAULT_SORT, sortGames } from './core/utils/sortGames';
 import { useOwnTier } from './viewmodel/useOwnTier';
 import { useWishlistPrices } from './viewmodel/prices/useWishlistPrices';
@@ -335,6 +335,8 @@ export default function App() {
   const { itad } = useItad();
   const pricesOn = itad && hasSocialProfile;
   const priceTtlMs = pricesOn && ownTier ? PROFILE_TIER_PRICE_TTL_MS[ownTier] : null;
+  // En la ficha de un juego que no tienes, solo mithril; mientras no se sabe el rango, nada.
+  const foreignPricesOn = pricesOn && Boolean(ownTier && PROFILE_TIER_PRICE_FOREIGN_GAMES[ownTier]);
   const priceTab = currentTab === 'd' && showWishlist;
   const wishlistTitles = useMemo(
     () => (pricesOn && activeSection === 'lists' && priceTab ? vm.data.d.map((game) => game.name) : null),
@@ -1637,6 +1639,7 @@ export default function App() {
             reviewTarget={gameSheetReviewTarget}
             priceTtlMs={priceTtlMs}
             pricesOn={pricesOn}
+            foreignPricesOn={foreignPricesOn}
           />
         ) : null}
 

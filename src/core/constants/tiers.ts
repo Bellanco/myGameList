@@ -146,6 +146,19 @@ export const PROFILE_TIER_PRICE_EDITION_SEARCH: Record<ProfileTier, boolean> = {
 };
 
 /**
+ * El precio en la ficha de un juego que NO TIENES (P5 del plan de la ficha y los precios: el que se abre desde el social,
+ * el perfil de una amistad o el buscador): solo mithril. En tus deseos lo ven todos los rangos.
+ *
+ * Decisión del usuario (17-10-2026).
+ */
+export const PROFILE_TIER_PRICE_FOREIGN_GAMES: Record<ProfileTier, boolean> = {
+  bronze: false,
+  silver: false,
+  gold: false,
+  mithril: true,
+};
+
+/**
  * Lo mismo para la CLASIFICACIÓN DE PREMIOS, que pide hasta 60 perfiles solo para enlazar cada fila con el suyo
  * (`usePremiosProfiles`). Antes lo hacía en CADA visita, porque la única caché era la de 30 s en memoria. Aquí
  * lo único que se retrasa es el enlace de alguien que acabe de crear su perfil, así que la copia dura más.
