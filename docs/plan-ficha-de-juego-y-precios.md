@@ -143,6 +143,11 @@ social ya tiene la ficha real con el recuadro del precio (F0.15). Lo que decidi�
 
   **Los anchos dejan siempre unos 80 px de la lista a la vista** (`calc(100vw - 5rem)`), por donde se pulsa para
   cerrar. Solo se pasa del paso 0 si el cuerpo tiene más de una sección que repartir.
+- **El realce** (17-10-2026, decisión del usuario): a todo el alto, una ficha con poco que contar (un deseo sin precio
+  ni saga) dejaba media pantalla en blanco. Con el ancho y el relleno ya elegidos, la carátula crece por escalones
+  (×1,3, ×1,55, ×1,85 y ×2,15, `is-realce-1…4`) y el título sube un tamaño; se queda el mayor que cabe sin scroll. Con
+  tope donde la columna de al lado se quedaría sin sitio: ×1,5 en el móvil y ×1,55 con la saga en la cabecera. Al
+  ensanchar el panel se vuelve a probar desde cero, y si el contenido crece después, es lo primero que se va.
 - **Cómo se mide:** después de `showModal`, sobre el cuerpo (`scrollHeight` frente a `clientHeight`).
   - Se repite cada vez que el contenido cambia de tamaño (`ResizeObserver`): la letra que llega tarde, una carátula,
     las amistades que llegan después. Ese caso **solo ensancha**, así que no puede entrar en bucle.
@@ -559,6 +564,12 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
   (`lowest.timestamp`, `urls.game`) y trae además los packs, así que el aviso de pack de la P4 (aparcada) saldría sin una llamada
   más. Cada petición cuesta como mucho la búsqueda de lo que falte (y su segunda pasada) más dos llamadas por cada
   200 juegos, y solo por lo que no esté en caché.
+- **La tercera pasada, solo para mithril** (17-10-2026, decisión del usuario; `PROFILE_TIER_PRICE_EDITION_SEARCH`).
+  *Marvel's Spider-Man* y *Dark Souls* aciertan por el título, pero con la entrada de consola, que ninguna tienda
+  vende. Lo que se queda sin id o sin tiendas se busca (`/games/search/v1`, una llamada por título, hasta 10 por
+  petición) y vale el primer juego que sea tu título más una coletilla de edición (`esEdicionDe`: *Remastered*,
+  *Definitive Edition*, *GOTY*, *Director's Cut*…; *Remake* no, suele ser otro juego). Se guarda en la caché del borde
+  aparte (`edicion/…`), para que los demás rangos no la reciban de rebote. El gemelo de desarrollo la tiene siempre.
 - **El título de ITAD** no lo da ninguna de las tres llamadas: `/lookup/id/title/v1` solo devuelve el id. Como el
   emparejamiento es exacto, el título que se enseña («Precio de: …», P3) es la variante que acertó: el tuyo o el de
   la segunda pasada (*Hades 2* → *Hades II*).
