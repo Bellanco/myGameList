@@ -54,6 +54,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Al pasar un juego a completados, el año actual ya está puesto.** Entra también si el juego ya tenía otros años,
   como al terminar una partida nueva de uno que ya habías completado. Puedes quitarlo antes de guardar.
 
+- **Los campos obligatorios llevan un asterisco.** Al añadir o editar un juego, el nombre, la nota o el interés, las
+  plataformas, los géneros y, en completados, los años llevan un * al final del rótulo.
+
 - **Compartir una reseña es pulsar y publicar.** El diálogo enseña solo el juego y el botón «Publicar enlace», sin
   casilla que marcar ni explicaciones. Qué se publica, cuánto dura el enlace y cómo retirarlo lo cuentan las
   condiciones.

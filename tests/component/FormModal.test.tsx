@@ -485,3 +485,36 @@ describe('FormModal — el 0 en horas es el hueco', () => {
     expect(hoursInput.value).toBe('');
   });
 });
+
+describe('FormModal — campos obligatorios', () => {
+  function renderFor(currentTab: 'c' | 'e' | 'p') {
+    render(
+      <FormModal
+        open
+        draft={makeDraft()}
+        currentTab={currentTab}
+        lookups={NO_LOOKUPS}
+        findDuplicate={() => null}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+  }
+
+  /** Rótulos con asterisco, por su texto (el asterisco lo pinta el CSS, así que no entra en él). */
+  const requiredLabels = () => [...document.querySelectorAll('.flabel.is-required')].map((label) => label.textContent);
+
+  it('en completados marca nombre, nota, plataformas, géneros y años, y nada de lo opcional', () => {
+    renderFor('c');
+    expect(requiredLabels()).toEqual(['Nombre', 'Puntuación', 'Plataformas', 'Géneros', 'Años completado']);
+    for (const label of ['Nombre', 'Plataformas', 'Géneros', 'Años completado']) {
+      expect(screen.getByLabelText(label)).toHaveAttribute('aria-required', 'true');
+    }
+    expect(screen.getByLabelText('Puntos fuertes')).not.toHaveAttribute('aria-required');
+  });
+
+  it('sin años en la lista, no hay asterisco de años; en próximos la nota es el interés', () => {
+    renderFor('p');
+    expect(requiredLabels()).toEqual(['Nombre', 'Interés', 'Plataformas', 'Géneros']);
+  });
+});
