@@ -5,17 +5,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
-### Added
-
-- **Esconder el cuadro para publicar.** Si tu rango te deja publicar, Ajustes › Diseño tiene una opción nueva,
-  «Publicaciones», con Mostrar u Ocultar. Ocultar quita de la actividad social el cuadro de publicar y su botón, pero
-  no tu permiso para publicar. Como el resto de opciones de Diseño, se guarda con tu cuenta.
-
-### Changed
-
-- **Menos hueco arriba en Actividad social.** «Ver perfiles» queda justo debajo del título y tu avatar a su lado, a
-  la altura de los dos. Antes, entre el título y los botones quedaba el hueco de un subtítulo que la pantalla no tiene.
-
 ## [1.8.0] - 2026-10-17
 
 ### Added
@@ -28,6 +17,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   descuento y filtrar por lo que está en oferta. Si IsThereAnyDeal acierta con otro título, la ficha lo dice
   («Precio de: …»). Vienen desactivados. Al activarlos, nuestro servidor envía a IsThereAnyDeal los nombres de los
   juegos de tu lista de deseos, nunca tu IP ni nada de tu cuenta. Sin red, el precio no sale y no verás ningún error.
+
+- **Esconder el cuadro para publicar.** Si tu rango te deja publicar, Ajustes › Diseño tiene una opción nueva,
+  «Publicaciones», con Mostrar u Ocultar. Ocultar quita de la actividad social el cuadro de publicar y su botón, pero
+  no tu permiso para publicar. Como el resto de opciones de Diseño, se guarda con tu cuenta.
 
 ### Changed
 
@@ -82,6 +75,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   ahora una pastilla como la barra de abajo, vestida igual que ella en cada tema, con la lista activa resaltada y el
   número de juegos en su ficha. En una pantalla ancha sube a la fila de la lupa y el tema, y desaparece el hueco que
   quedaba encima. En el móvil va debajo de esos botones, a todo el ancho.
+
+- **Menos hueco arriba en Actividad social.** «Ver perfiles» queda justo debajo del título y tu avatar a su lado, a
+  la altura de los dos. Antes, entre el título y los botones quedaba el hueco de un subtítulo que la pantalla no tiene.
 
 ### Fixed
 
