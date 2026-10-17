@@ -10,8 +10,8 @@ interface FeedMoveCardProps {
   openProfileDetail: (id: string) => void;
   openMoveReview: (actorProfileId: string, gameId: number) => void;
   /**
-   * Abrir la ficha de un juego sin reseña (F5 del plan de la ficha), con el bloque de quien lo movió arriba. Sin ella
-   * —la maqueta, una pantalla sin ficha—, el nombre se queda en texto, como antes.
+   * Abrir la ficha del juego (F5 del plan de la ficha), con el bloque de quien lo movió arriba. Sin ella —la maqueta,
+   * una pantalla sin ficha—, el nombre lleva a la reseña si la hay y, si no, se queda en texto.
    */
   openGameSheet?: (gameName: string, profileId: string) => void;
 }
@@ -25,8 +25,9 @@ export const MOVE_GROUP_VISIBLE = 5;
 
 /**
  * F4 — MOVIMIENTO DE LISTA. Una línea y se acaba: quién, qué hizo y con qué juego. La tarjeta NO es
- * pulsable —no hay pantalla de «movimiento» que abrir— y de ella solo llevan a algún sitio el autor (su perfil) y,
- * cuando de verdad existe, el nombre del juego (el análisis de ese autor sobre él).
+ * pulsable —no hay pantalla de «movimiento» que abrir— y de ella solo llevan a algún sitio el autor (su perfil) y el
+ * nombre del juego: su ficha, también cuando tiene reseña (17-10-2026, decisión del usuario). A la reseña se va
+ * pulsándola: su tarjeta en el feed o su bloque en la ficha.
  *
  * AGRUPADA COMO LOS LOGROS: los movimientos de una persona a una lista en un día son un solo renglón. La frase
  * nombra el más reciente y dice cuántos más hay («Ada añadió Hades y 3 más…»); la cifra despliega el resto
@@ -70,7 +71,17 @@ export function FeedMoveCard({ entry, SOCIAL_UI, ownershipClass, openProfileDeta
   }, [expanded]);
 
   const gameName = (game: SocialMoveGroupGame) =>
-    game.reviewActorId ? (
+    openGameSheet ? (
+      // El nombre abre la ficha del juego: dónde lo tienes tú, dónde tus amistades y, arriba, lo de quien lo movió.
+      <button
+        className="hub-feed-move-game"
+        type="button"
+        aria-label={GAME_SHEET_UI.openSheetAria(game.gameName)}
+        onClick={() => openGameSheet(game.gameName, entry.profileId)}
+      >
+        {game.gameName}
+      </button>
+    ) : game.reviewActorId ? (
       <button
         className="hub-feed-move-game"
         type="button"
@@ -78,16 +89,6 @@ export function FeedMoveCard({ entry, SOCIAL_UI, ownershipClass, openProfileDeta
         // El actor de la RESEÑA, no el id de la entrada del directorio: el detalle resuelve por `actorProfileId` y
         // con el otro id no encontraba nada.
         onClick={() => openMoveReview(game.reviewActorId as string, game.gameId)}
-      >
-        {game.gameName}
-      </button>
-    ) : openGameSheet ? (
-      // Sin reseña que leer, el nombre abre la ficha del juego: dónde lo tienes tú y dónde tus amistades.
-      <button
-        className="hub-feed-move-game"
-        type="button"
-        aria-label={GAME_SHEET_UI.openSheetAria(game.gameName)}
-        onClick={() => openGameSheet(game.gameName, entry.profileId)}
       >
         {game.gameName}
       </button>

@@ -451,7 +451,7 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
 | Fila o caja de tus listas (`GameTable`) | Abre la ficha (F0.6, en F2). El detalle desplegable ya no existe |
 | Fila de las listas de una amistad (`SocialProfileDetailScreen`) | Abre la ficha con `&de=<perfil>`: su bloque arriba (F0.7). En tu propio perfil, la ficha de siempre |
 | Chip del juego en una reseña (`ReviewDetailHead`) | Es un botón que abre la ficha, solo en el hub. La página pública y la ficha de la ruleta no lo ofrecen |
-| Aviso de lista del feed (`FeedMoveCard`) | El nombre de un juego sin reseña abre la ficha con el bloque de quien lo movió. Con reseña, sigue abriendo la reseña. Las tarjetas de reseña no cambian |
+| Aviso de lista del feed (`FeedMoveCard`) | El nombre de un juego abre la ficha con el bloque de quien lo movió, también con reseña (17-10-2026, decisión del usuario: a la reseña se va pulsándola, en su tarjeta o en ese bloque). Las tarjetas de reseña no cambian |
 | Buscador ⌘K (`searchSources`, `GlobalSearch`) | Un juego tuyo abre su ficha encima de donde estás, sin perder la pantalla ni sus filtros (F0.3). La dirección de respaldo es su lista con la ficha abierta |
 | Saga, dentro de la ficha | Cada entrega, a su ficha (*replace*, F0.9), conservando el `de=` |
 | Una amistad, dentro de la ficha | Su perfil **con el juego abierto** y su bloque arriba (F0.7) |
