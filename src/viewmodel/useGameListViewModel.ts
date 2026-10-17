@@ -422,7 +422,10 @@ export function useGameListViewModel(wishlistMax: number = WISHLIST_MAX_GAMES) {
       migrated.sourceTab = sourceTab;
 
       if (targetTab === 'c') {
-        migrated.years = migrated.years.length ? migrated.years : [new Date().getFullYear()];
+        // Terminarlo AHORA es terminarlo este año: el año en curso entra siempre, también en un juego que ya traía
+        // otros (una rejugada que vuelve a cerrarse). Llega propuesto en el formulario y se puede quitar.
+        const thisYear = new Date().getFullYear();
+        migrated.years = [...new Set([...migrated.years, thisYear])].sort((a, b) => a - b);
         // Sin nota previa → por defecto 5★/100; con nota → conserva la fina y sincroniza el espejo.
         if (!migrated.score) {
           migrated.score = 5;

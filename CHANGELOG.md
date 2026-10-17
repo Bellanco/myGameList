@@ -51,6 +51,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   no llega, debajo del campo se ve cuántos faltan. Dejarlo vacío sigue valiendo, y los análisis más cortos que ya
   tenías se conservan aunque edites el juego: el mínimo solo se pide si cambias su texto.
 
+- **Al pasar un juego a completados, el año actual ya está puesto.** Entra también si el juego ya tenía otros años,
+  como al terminar una partida nueva de uno que ya habías completado. Puedes quitarlo antes de guardar.
+
 - **Compartir una reseña es pulsar y publicar.** El diálogo enseña solo el juego y el botón «Publicar enlace», sin
   casilla que marcar ni explicaciones. Qué se publica, cuánto dura el enlace y cómo retirarlo lo cuentan las
   condiciones.
