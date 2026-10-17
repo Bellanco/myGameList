@@ -105,12 +105,23 @@ describe('GameSheetPanel — el precio de un deseo', () => {
     expect(repo.readCachedPrices).not.toHaveBeenCalled();
   });
 
-  it('de un juego que no tienes, lo pide con el nombre que le da tu amistad y lo enseña junto a «Añadir a deseados»', async () => {
+  it('de un juego que no tienes, con mithril, lo pide con el nombre que le da tu amistad y lo enseña junto a «Añadir a deseados»', async () => {
     senales.actuales = [{ kind: 'review', friend: { id: 'marta', name: 'Marta' }, gameName: 'Outer Wilds', grade: 96, snippet: 'Único.', at: 1 }];
     repo.loadGamePrice.mockResolvedValue({ ...precio, titulo: 'Outer Wilds', minimos: { ...precio.minimos, historico: null } });
-    pintar({ slug: 'outer-wilds', pricesOn: true, priceTtlMs: 1000 });
+    pintar({ slug: 'outer-wilds', pricesOn: true, foreignPricesOn: true, priceTtlMs: 1000 });
     expect(await screen.findByRole('region', { name: PRICES_UI.boxAria })).toBeInTheDocument();
     expect(repo.loadGamePrice).toHaveBeenCalledWith('Outer Wilds', 1000);
+    expect(screen.getByRole('button', { name: /deseados/i })).toBeInTheDocument();
+  });
+
+  // Del que no tienes, solo mithril (`PROFILE_TIER_PRICE_FOREIGN_GAMES`, 17-10-2026); en tus deseos, todos.
+  it('de un juego que no tienes, sin mithril, ni se pide', async () => {
+    senales.actuales = [{ kind: 'review', friend: { id: 'marta', name: 'Marta' }, gameName: 'Outer Wilds', grade: 96, snippet: 'Único.', at: 1 }];
+    pintar({ slug: 'outer-wilds', pricesOn: true, priceTtlMs: 1000 });
+    await screen.findByRole('heading', { name: 'Outer Wilds' });
+    expect(repo.readCachedPrices).not.toHaveBeenCalled();
+    expect(repo.loadGamePrice).not.toHaveBeenCalled();
+    expect(screen.queryByRole('region', { name: PRICES_UI.boxAria })).toBeNull();
     expect(screen.getByRole('button', { name: /deseados/i })).toBeInTheDocument();
   });
 

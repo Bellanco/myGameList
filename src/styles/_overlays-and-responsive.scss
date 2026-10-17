@@ -44,6 +44,10 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 .fg    { display: flex; flex-direction: column; gap: .42rem; min-width: 0; }
 .frow  { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 1rem; }
 .flabel { font-size: var(--fs-2xs); font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+/* Campo obligatorio: asterisco al final del rótulo. Va en CSS y con texto alternativo vacío para que no entre en el
+   nombre accesible («Nombre», no «Nombre asterisco»): eso lo dice el `aria-required` del campo. La primera línea es
+   para los navegadores que aún no entienden la barra. */
+.flabel.is-required::after { content: " *"; content: " *" / ""; }
 /* Los campos del formulario, hundidos como los de la barra (ver `.input-base`): la sombra va hacia dentro. */
 .finput, .ftextarea {
   background: var(--bg); border: 1px solid var(--border); color: var(--text);

@@ -82,9 +82,8 @@ export function TagInput({
 
   return (
     <div className="fg">
-      <label className="flabel" htmlFor={fieldId}>
+      <label className={`flabel ${required ? 'is-required' : ''}`.trim()} htmlFor={fieldId}>
         {label}
-        {required ? ' *' : ''}
       </label>
       <div className={`tag-inp-wrap ${invalid || errorMessage ? 'has-error' : ''} ${warning ? 'has-warning' : ''}`.trim()}>
         {values.map((value) => (
@@ -114,6 +113,7 @@ export function TagInput({
           enterKeyHint="done"
           inputMode={digitsOnly ? 'numeric' : undefined}
           autoComplete="off"
+          aria-required={required || undefined}
           aria-invalid={errorMessage ? true : undefined}
           aria-describedby={errorMessage || hint ? messageId : undefined}
           onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {

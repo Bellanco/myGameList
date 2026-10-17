@@ -60,6 +60,11 @@ export interface StatsPanelProps {
   /** Abre la reseña de un juego desde el podio o el top; null = las fichas no son pulsables. */
   onOpenReview: ((gameId: number) => void) | null;
   /**
+   * Abre la ficha de un juego sin navegar: desde el top, el listado de un año y el «ya tienes» de los deseos. En el
+   * top manda sobre `onOpenReview`.
+   */
+  onOpenGame?: (name: string) => void;
+  /**
    * El apartado de LOGROS, que va justo debajo de «Lo mejor de tu biblioteca».
    *
    * Llega como nodo y no como datos a propósito: así este componente —que lo comparten tu panel y el de una
@@ -105,6 +110,7 @@ export const StatsPanel = memo(function StatsPanel({
   backlog,
   onOpenReviews,
   onOpenReview,
+  onOpenGame,
   achievements,
   notes,
   wishKin = null,
@@ -151,7 +157,7 @@ export const StatsPanel = memo(function StatsPanel({
     }
 
     if (yearSummary) {
-      return <YearPanel summary={yearSummary} scale={scale} full={full} />;
+      return <YearPanel summary={yearSummary} scale={scale} full={full} onOpenGame={onOpenGame} />;
     }
 
     const { counts } = stats;
@@ -272,6 +278,7 @@ export const StatsPanel = memo(function StatsPanel({
               scale={scale}
               average={stats.scored.avgGrade}
               onOpenReview={onOpenReview ?? undefined}
+              onOpenGame={onOpenGame}
             />
           </div>
         ) : null}
@@ -397,7 +404,7 @@ export const StatsPanel = memo(function StatsPanel({
           <div className="stats-card stats-card-kin">
             <h2>{L.kin.title}</h2>
             <p className="stats-card-sub">{L.kin.subtitle}</p>
-            <WishKinCard kin={wishKin} />
+            <WishKinCard kin={wishKin} onOpenGame={onOpenGame} />
           </div>
         ) : null}
       </>

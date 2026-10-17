@@ -4,6 +4,8 @@
 // apliquen por rango. Ninguna llamada sale a la red: `fetch` va sustituido por un ITAD de mentira.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  esEdicionDe,
+  MAX_BUSQUEDAS_EDICION,
   normalizarPrecio,
   normalizarTitulo,
   packsPorJuego,
@@ -11,7 +13,12 @@ import {
   varianteNumerica,
   type CacheItad,
 } from '../../functions/_lib/itad';
-import { PROFILE_TIER_PRICE_REQUESTS_PER_HOUR, PROFILE_TIER_PRICE_TTL_MS, type ProfileTier } from '../../src/core/constants/tiers';
+import {
+  PROFILE_TIER_PRICE_EDITION_SEARCH,
+  PROFILE_TIER_PRICE_REQUESTS_PER_HOUR,
+  PROFILE_TIER_PRICE_TTL_MS,
+  type ProfileTier,
+} from '../../src/core/constants/tiers';
 
 const requireUserMock = vi.fn();
 const rangoMock = vi.fn<() => ProfileTier>(() => 'bronze');
@@ -23,12 +30,27 @@ vi.mock('../../functions/_lib/quota', () => ({
 }));
 
 const { onRequestPost, leerTitulos, reiniciarTopesParaTests, MAX_TITULOS } = await import('../../functions/api/precios');
+const { itadLlamadasKey, itadSinCupoKey, ITAD_LOTE_LLAMADAS, reiniciarUsoItadParaTests } = await import('../../functions/_lib/itadUso');
 
 const HORA = 60 * 60 * 1000;
 
 // ─── Un ITAD de mentira ──────────────────────────────────────────────────────────────────────────────────────────
 
-const IDS: Record<string, string> = { 'Hollow Knight: Silksong': 'id-silk', 'Hades II': 'id-hades', Celeste: 'id-celeste' };
+const IDS: Record<string, string> = { 'Hollow Knight: Silksong': 'id-silk', 'Hades II': 'id-hades', Celeste: 'id-celeste', 'Dark Souls': 'id-ds' };
+/** Juegos que ITAD conoce pero que no vende ninguna tienda (la entrada de consola). */
+const SIN_TIENDAS = new Set(['id-ds']);
+/** Lo que devuelve `/games/search/v1` para cada título: la PC de *Spider-Man* es la remasterizada. */
+const BUSQUEDAS: Record<string, Array<{ id: string; title: string; type: string | null }>> = {
+  "Marvel's Spider-Man": [
+    { id: 'id-dlc', title: "Marvel's Spider-Man Remastered - Pack", type: 'dlc' },
+    { id: 'id-sm2', title: "Marvel's Spider-Man 2", type: 'game' },
+    { id: 'id-smr', title: "Marvel's Spider-Man Remastered", type: 'game' },
+  ],
+  'Dark Souls': [
+    { id: 'id-ds3', title: 'DARK SOULS III', type: 'game' },
+    { id: 'id-dsr', title: 'Dark Souls Remastered', type: 'game' },
+  ],
+};
 
 function itadFalso(opciones: { estado?: number; retryAfter?: string } = {}) {
   const llamadas: string[] = [];
@@ -38,6 +60,9 @@ function itadFalso(opciones: { estado?: number; retryAfter?: string } = {}) {
     if (opciones.estado) {
       return new Response('{}', { status: opciones.estado, headers: opciones.retryAfter ? { 'Retry-After': opciones.retryAfter } : {} });
     }
+    if (url.pathname === '/games/search/v1') {
+      return Response.json(BUSQUEDAS[url.searchParams.get('title') ?? ''] ?? []);
+    }
     const cuerpo = JSON.parse(String(init?.body)) as string[];
     if (url.pathname === '/lookup/id/title/v1') {
       return Response.json(Object.fromEntries(cuerpo.map((titulo) => [titulo, IDS[titulo] ?? null])));
@@ -46,7 +71,7 @@ function itadFalso(opciones: { estado?: number; retryAfter?: string } = {}) {
       return Response.json(cuerpo.map((id) => ({
         id,
         historyLow: { all: { amount: 5 }, y1: { amount: 7 }, m3: { amount: 9 } },
-        deals: [
+        deals: SIN_TIENDAS.has(id) ? [] : [
           { shop: { name: 'Steam' }, price: { amount: 19.5 }, regular: { amount: 19.5 }, cut: 0, url: `https://itad.link/steam/${id}` },
           { shop: { name: 'PlayerLand' }, price: { amount: 14.99 }, regular: { amount: 19.99 }, cut: 25, expiry: '2026-10-20T10:00:00+02:00', url: `https://itad.link/pl/${id}` },
           { shop: { name: 'GOG' }, price: { amount: 19.5 }, regular: { amount: 19.5 }, cut: 0, url: `https://itad.link/gog/${id}` },
@@ -101,6 +126,22 @@ describe('varianteNumerica y normalizarTitulo', () => {
 
   it('la clave de caché no distingue mayúsculas ni espacios de más', () => {
     expect(normalizarTitulo('  Hollow  Knight ')).toBe(normalizarTitulo('hollow knight'));
+  });
+});
+
+describe('esEdicionDe', () => {
+  it('acepta tu título con una coletilla de edición detrás', () => {
+    expect(esEdicionDe("Marvel's Spider-Man", "Marvel's Spider-Man Remastered")).toBe(true);
+    expect(esEdicionDe('Marvel’s Spider-Man', "Marvel's Spider-Man™: Game of the Year Edition")).toBe(true);
+    expect(esEdicionDe('Death Stranding', "DEATH STRANDING DIRECTOR'S CUT")).toBe(true);
+  });
+
+  it('no acepta otra entrega, otro juego ni el mismo título', () => {
+    expect(esEdicionDe("Marvel's Spider-Man", "Marvel's Spider-Man 2")).toBe(false);
+    expect(esEdicionDe("Marvel's Spider-Man", "Marvel's Spider-Man: Miles Morales")).toBe(false);
+    expect(esEdicionDe('Resident Evil 2', 'Resident Evil 2 Remake')).toBe(false);
+    expect(esEdicionDe('Hades', 'Hades')).toBe(false);
+    expect(esEdicionDe('Spider-Man', "Marvel's Spider-Man Remastered")).toBe(false);
   });
 });
 
@@ -196,6 +237,43 @@ describe('resolverPrecios', () => {
     expect(juegos.Celeste?.bundles).toEqual([{ titulo: 'Pack indie', url: 'https://itad.link/bundle', expira: null }]);
   });
 
+  it('la tercera pasada (mithril) encuentra la edición, la guarda aparte y no se la da a los demás rangos', async () => {
+    const llamadas = itadFalso();
+    const cache = cacheEnMemoria();
+    const conEdiciones = await resolverPrecios(["Marvel's Spider-Man"], { clave: 'k', plazoMs: HORA, cache, presupuesto: sinTope, ahora, conEdiciones: true });
+    expect(llamadas).toEqual(['/lookup/id/title/v1', '/games/search/v1', '/games/prices/v3', '/games/overview/v2']);
+    expect(conEdiciones.juegos["Marvel's Spider-Man"]?.itadId).toBe('id-smr');
+    expect(conEdiciones.juegos["Marvel's Spider-Man"]?.titulo).toBe("Marvel's Spider-Man Remastered");
+
+    llamadas.length = 0;
+    const otraVez = await resolverPrecios(["Marvel's Spider-Man"], { clave: 'k', plazoMs: HORA, cache, presupuesto: sinTope, ahora, conEdiciones: true });
+    expect(llamadas).toEqual([]);
+    expect(otraVez.juegos["Marvel's Spider-Man"]?.itadId).toBe('id-smr');
+    const sinEdiciones = await resolverPrecios(["Marvel's Spider-Man"], { clave: 'k', plazoMs: HORA, cache, presupuesto: sinTope, ahora });
+    expect(llamadas).toEqual([]);
+    expect(sinEdiciones.juegos["Marvel's Spider-Man"]).toBeNull();
+  });
+
+  it('la tercera pasada también entra si ITAD acierta pero ninguna tienda lo vende', async () => {
+    const llamadas = itadFalso();
+    const cache = cacheEnMemoria();
+    const sinEdiciones = await resolverPrecios(['Dark Souls', 'Celeste'], { clave: 'k', plazoMs: HORA, cache, presupuesto: sinTope, ahora });
+    expect(sinEdiciones.juegos['Dark Souls']?.mejor).toBeNull();
+    llamadas.length = 0;
+    const conEdiciones = await resolverPrecios(['Dark Souls', 'Celeste'], { clave: 'k', plazoMs: HORA, cache, presupuesto: sinTope, ahora, conEdiciones: true });
+    // Celeste tiene tiendas: solo se busca Dark Souls, y solo se piden los precios de su edición.
+    expect(llamadas).toEqual(['/games/search/v1', '/games/prices/v3', '/games/overview/v2']);
+    expect(conEdiciones.juegos['Dark Souls']?.titulo).toBe('Dark Souls Remastered');
+    expect(conEdiciones.juegos['Dark Souls']?.mejor?.tienda).toBe('PlayerLand');
+  });
+
+  it('la tercera pasada tiene tope por petición y no busca lo que ya tiene id', async () => {
+    const llamadas = itadFalso();
+    const titulos = ['Celeste', ...Array.from({ length: MAX_BUSQUEDAS_EDICION + 5 }, (_v, i) => `Desconocido ${i}`)];
+    await resolverPrecios(titulos, { clave: 'k', plazoMs: HORA, cache: cacheEnMemoria(), presupuesto: sinTope, ahora, conEdiciones: true });
+    expect(llamadas.filter((ruta) => ruta === '/games/search/v1')).toHaveLength(MAX_BUSQUEDAS_EDICION);
+  });
+
   it('sin presupuesto por minuto no llama a ITAD y lo dice como falta de cupo', async () => {
     const llamadas = itadFalso();
     const sinCupo = await resolverPrecios(['Celeste'], { clave: 'k', plazoMs: HORA, cache: cacheEnMemoria(), presupuesto: { tomar: () => false }, ahora });
@@ -230,6 +308,7 @@ function pedir(cuerpo: unknown, entorno: Record<string, unknown> = { ITAD_API_KE
 describe('POST /api/precios', () => {
   beforeEach(() => {
     reiniciarTopesParaTests();
+    reiniciarUsoItadParaTests();
     requireUserMock.mockResolvedValue({ user: { uid: 'u1', idToken: 't' }, appCheckToken: null, projectId: 'p', isAdmin: false });
     rangoMock.mockReturnValue('bronze');
   });
@@ -275,6 +354,37 @@ describe('POST /api/precios', () => {
     rangoMock.mockReturnValue('mithril');
     requireUserMock.mockResolvedValue({ user: { uid: 'u2', idToken: 't' }, appCheckToken: null, projectId: 'p', isAdmin: true });
     expect((await pedir({ titulos: ['Celeste'] })).status).toBe(200);
+  });
+
+  it('la tercera pasada, solo para mithril', async () => {
+    expect(Object.entries(PROFILE_TIER_PRICE_EDITION_SEARCH).filter(([, si]) => si).map(([rango]) => rango)).toEqual(['mithril']);
+    const llamadas = itadFalso();
+    cachesDelBorde();
+    const bronce = (await (await pedir({ titulos: ["Marvel's Spider-Man"] })).json()) as { juegos: Record<string, unknown> };
+    expect(bronce.juegos["Marvel's Spider-Man"]).toBeNull();
+    expect(llamadas).not.toContain('/games/search/v1');
+    rangoMock.mockReturnValue('mithril');
+    const mithril = (await (await pedir({ titulos: ["Marvel's Spider-Man"] })).json()) as { juegos: Record<string, { itadId: string } | null> };
+    expect(mithril.juegos["Marvel's Spider-Man"]?.itadId).toBe('id-smr');
+  });
+
+  it('apunta para Capacidad las llamadas que salen a ITAD, no las que contesta la caché, y las peticiones sin cupo', async () => {
+    const llamadas = itadFalso();
+    cachesDelBorde();
+    const datos = new Map<string, string>();
+    const SHARES = { get: async (clave: string) => datos.get(clave) ?? null, put: async (clave: string, valor: string) => void datos.set(clave, valor) };
+    const azar = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      await pedir({ titulos: ['Celeste'] }, { ITAD_API_KEY: 'clave', SHARES });
+      await pedir({ titulos: ['Celeste'] }, { ITAD_API_KEY: 'clave', SHARES });
+      const hoy = itadLlamadasKey(Date.now());
+      expect(Number(datos.get(hoy))).toBe(llamadas.length * ITAD_LOTE_LLAMADAS);
+      itadFalso({ estado: 429, retryAfter: '120' });
+      expect((await pedir({ titulos: ['Hades II'] }, { ITAD_API_KEY: 'clave', SHARES })).status).toBe(429);
+      expect(datos.get(itadSinCupoKey(Date.now()))).toBe('1');
+    } finally {
+      azar.mockRestore();
+    }
   });
 
   it('ITAD sin cupo y nada guardado: 429 con su Retry-After; caído: 503 de no disponible', async () => {

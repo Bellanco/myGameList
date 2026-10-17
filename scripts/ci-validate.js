@@ -130,7 +130,23 @@ const root = path.join(__dirname, '..');
 //
 // EL TOTAL, DE 240 A 245 (17-10-2026), POR DECISIÓN DEL USUARIO: estaba en 239,98 kB (20 bytes de margen) y abrir la
 // ficha sin esperar al doble clic lo dejó en 240,04. El crítico no cambió (194,4).
-const BOOT_CRITICAL_BUDGET_KB = 195;
+//
+// EL CRÍTICO, DE 195 A 200 (17-10-2026, sobre `7632f287`), POR DECISIÓN DEL USUARIO y ESTA VEZ CON LAS MEDICIONES
+// HECHAS. Estaba en 195,00/195: la pastilla de las listas (`TabBar` mide si cabe en la fila de los controles) sumó
+// 0,46 kB sobre 194,54, y el siguiente cambio de la 1.8.0 ya no cabía. Lo que salió, con los sourcemaps del build:
+//   · `IconSprite`: 39 símbolos en el arranque y CERO sin uso desde un módulo del arranque.
+//   · `labels.ts`: de 15 constantes, UNA la usan solo pantallas perezosas (`BACK_LABEL`, la palabra «Volver»).
+//   · Hojas de área: las 23 sin `_` viajan en su chunk perezoso; ninguna se ha colado en `index.scss`.
+//   · Las palancas, sin cambios: la (1) compra margen y no velocidad (ver «OJO CON LA (1)») a cambio de iconos que
+//     llegan después del primer pintado, y la (2) no toca este número (las fuentes no cuentan en el crítico).
+//   · Reparto de `index-*.js` (sin comprimir): App 22,1 kB · IconSprite 20,3 · GameTable 15,3 · useSyncViewModel
+//     11,7 · labels 10,4 · useGameListViewModel 8,8 · indexedDbRepository 7,6. React es 65,9 kB comprimidos desde la
+//     19.3. Lo único con pinta de diferible son piezas que no pintan el primer fotograma —`core/import/staging`
+//     (2,1), el aviso del administrador (`announcement` + `useAnnouncement`, 4,0) y `useAchievementNotice` (2,6)—,
+//     ~9 kB sin comprimir y quizá 3 comprimidos; no se difirieron: el aviso y el logro se montan al arrancar y la
+//     importación se usa sin red (ver la trampa del `import()` fallido en Chromium). Son lo primero que mirar
+//     cuando estos 5 kB se acaben.
+const BOOT_CRITICAL_BUDGET_KB = 200;
 const BOOT_TOTAL_BUDGET_KB = 245;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [

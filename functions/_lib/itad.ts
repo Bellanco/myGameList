@@ -6,6 +6,9 @@
 // QUÉ SE PIDE A ITAD, con la clave de la app (una para todos: 1.000 peticiones cada 5 minutos):
 //  · `/lookup/id/title/v1`: título → id, en bloque. No es una búsqueda difusa: si no acierta, una segunda pasada con
 //    los números romanos pasados a arábigos y al revés (medido en P0: recupera *Hades 2*, *The Witcher III*…);
+//  · `/games/search/v1`: SOLO PARA MITHRIL, la tercera pasada (`buscarEdiciones`): lo que siga sin id o sin ninguna
+//    tienda se busca y se acepta tu título con una coletilla de edición (*Marvel's Spider-Man* → *… Remastered*).
+//    Una llamada por título, con tope;
 //  · `/games/prices/v3`: las ofertas de ahora y los mínimos de 1 año y de 3 meses;
 //  · `/games/overview/v2`: el mínimo histórico CON SU FECHA, el enlace a la página del juego en ITAD y los packs
 //    (bundles) que lo contienen. Hace falta para el recuadro de la ficha (F0.15), así que va siempre; los packs
@@ -26,6 +29,8 @@ export const PAIS_ITAD = 'ES';
 /** Ids por llamada: el máximo que admiten `prices` y `overview`. */
 export const LOTE_ITAD = 200;
 const TIMEOUT_MS = 5_000;
+/** Títulos por petición en la tercera pasada: cada uno es una llamada a `/games/search/v1`. */
+export const MAX_BUSQUEDAS_EDICION = 10;
 /** Lo más que se espera un `Retry-After` antes del único reintento: la Function no puede quedarse colgada. */
 const ESPERA_MAXIMA_MS = 3_000;
 
@@ -48,6 +53,41 @@ export function varianteNumerica(titulo: string): string | null {
   if (conArabigos !== titulo) return conArabigos;
   const conRomanos = titulo.replace(/\b([2-9]|1[0-9]|20)\b/g, (n) => ROMANOS[Number(n)]);
   return conRomanos !== titulo ? conRomanos : null;
+}
+
+/** Las palabras de un título para compararlo con otro: sin marcas (™), acentos, mayúsculas, apóstrofes ni signos. */
+function palabrasDelTitulo(titulo: string): string[] {
+  return titulo
+    .replace(/[™®©]/g, '')
+    .normalize('NFKD')
+    .replace(/\p{M}+/gu, '')
+    .toLowerCase()
+    .replace(/['‘’ʼ`´]/g, '')
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+}
+
+/** Lo que puede ir detrás de un título sin que deje de ser el mismo juego. «Remake» no: suele ser otro juego. */
+const PALABRAS_DE_EDICION = new Set([
+  'remastered', 'remaster', 'definitive', 'enhanced', 'complete', 'deluxe', 'ultimate', 'gold', 'special', 'anniversary',
+  'extended', 'premium', 'hd', 'edition', 'goty', 'game', 'of', 'the', 'year', 'directors', 'cut',
+]);
+
+/**
+ * ¿Es `candidato` el mismo juego que `original` con una coletilla de edición detrás? «Marvel's Spider-Man Remastered»
+ * lo es de «Marvel's Spider-Man»; «Marvel's Spider-Man 2» y «… Miles Morales», no.
+ */
+export function esEdicionDe(original: string, candidato: string): boolean {
+  const base = palabrasDelTitulo(original);
+  const otro = palabrasDelTitulo(candidato);
+  if (!base.length || otro.length <= base.length || !base.every((palabra, i) => otro[i] === palabra)) return false;
+  return otro.slice(base.length).every((palabra) => PALABRAS_DE_EDICION.has(palabra));
+}
+
+interface BusquedaCruda {
+  id?: string;
+  title?: string;
+  type?: string | null;
 }
 
 interface PrecioCrudo {
@@ -177,8 +217,8 @@ function segundosDeRetryAfter(respuesta: Response): number {
 }
 
 /**
- * Un `POST` a ITAD con su clave: timeout de 5 s y UN reintento ante `429` o `5xx`, respetando `Retry-After` hasta 3 s.
- * Cada intento gasta del presupuesto por minuto.
+ * Una llamada a ITAD con su clave: `POST` con `cuerpo`, o `GET` sin él. Timeout de 5 s y UN reintento ante `429` o
+ * `5xx`, respetando `Retry-After` hasta 3 s. Cada intento gasta del presupuesto por minuto.
  */
 async function llamar<T>(ruta: string, consulta: Record<string, string>, cuerpo: unknown, clave: string, presupuesto: PresupuestoItad): Promise<T> {
   const url = new URL(ruta, API);
@@ -187,12 +227,14 @@ async function llamar<T>(ruta: string, consulta: Record<string, string>, cuerpo:
     if (!presupuesto.tomar()) throw new ItadSinCupo(60);
     let respuesta: Response;
     try {
-      respuesta = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(cuerpo),
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
+      respuesta = await fetch(url, cuerpo === undefined
+        ? { method: 'GET', headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT_MS) }
+        : {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(cuerpo),
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+        });
     } catch {
       if (intento === 0) continue;
       throw new ItadNoDisponible();
@@ -245,6 +287,25 @@ export async function buscarIds(
       if (id) resultado.set(variantes.get(variante) as string, { id, titulo: variante });
     }
   }
+  return resultado;
+}
+
+/**
+ * LA TERCERA PASADA, solo para mithril: cada título se busca en ITAD (`/games/search/v1`, una llamada por título, hasta
+ * `MAX_BUSQUEDAS_EDICION`) y vale el primer juego que sea ese título con una coletilla de edición (`esEdicionDe`).
+ * Devuelve, por cada título, el id y el título de ITAD, o `null`.
+ */
+export async function buscarEdiciones(
+  titulos: readonly string[],
+  clave: string,
+  presupuesto: PresupuestoItad,
+): Promise<Map<string, { id: string; titulo: string } | null>> {
+  const resultado = new Map<string, { id: string; titulo: string } | null>();
+  await Promise.all(titulos.slice(0, MAX_BUSQUEDAS_EDICION).map(async (titulo) => {
+    const candidatos = await llamar<BusquedaCruda[]>('/games/search/v1', { title: titulo, results: '10' }, undefined, clave, presupuesto);
+    const edicion = (candidatos ?? []).find((candidato) => candidato.id && candidato.title && candidato.type === 'game' && esEdicionDe(titulo, candidato.title));
+    resultado.set(titulo, edicion ? { id: edicion.id as string, titulo: edicion.title as string } : null);
+  }));
   return resultado;
 }
 
@@ -327,6 +388,8 @@ export function cacheDelBorde(origen: string): CacheItad {
 }
 
 export const claveId = (titulo: string) => `id/${encodeURIComponent(normalizarTitulo(titulo))}`;
+/** La tercera pasada se guarda aparte: lo que encuentra para mithril no se lo da la caché a los demás rangos. */
+export const claveEdicion = (titulo: string) => `edicion/${encodeURIComponent(normalizarTitulo(titulo))}`;
 export const clavePrecio = (id: string) => `precio/${encodeURIComponent(id)}`;
 
 // ─── Todo junto ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -338,6 +401,8 @@ export interface ResolverPreciosOpciones {
   cache: CacheItad;
   presupuesto: PresupuestoItad;
   ahora: number;
+  /** La tercera pasada (`buscarEdiciones`): solo para mithril (`PROFILE_TIER_PRICE_EDITION_SEARCH`). */
+  conEdiciones?: boolean;
 }
 
 export interface PreciosResueltos {
@@ -352,12 +417,13 @@ export interface PreciosResueltos {
  * LOS PRECIOS DE UNA LISTA DE TÍTULOS, con la caché por delante:
  *  1. título → id: de la caché; lo que falte, a ITAD en bloque (con la segunda pasada) y a la caché;
  *  2. id → precio: de la caché si es más reciente que el plazo de quien pide; lo demás, a ITAD de 200 en 200 y a la
- *     caché con la hora;
+ *     caché con la hora. Con `conEdiciones`, lo que se quede sin id o sin tiendas pasa por la tercera pasada (con su
+ *     propia caché);
  *  3. si ITAD falla, lo guardado vale aunque sea viejo, y lo que no haya sale `null`.
  * Dos personas que desean el mismo juego comparten la consulta (si entran por el mismo centro de datos).
  */
 export async function resolverPrecios(titulos: readonly string[], opciones: ResolverPreciosOpciones): Promise<PreciosResueltos> {
-  const { clave, plazoMs, cache, presupuesto, ahora } = opciones;
+  const { clave, plazoMs, cache, presupuesto, ahora, conEdiciones = false } = opciones;
   let preguntoAItad = false;
   let fallo: PreciosResueltos['fallo'] = null;
   const anotarFallo = (error: unknown) => {
@@ -389,21 +455,21 @@ export async function resolverPrecios(titulos: readonly string[], opciones: Reso
       anotarFallo(error);
     }
   }
-
   // 2 · Id → precio.
   const precios = new Map<string, PrecioItad>();
   const viejos = new Map<string, PrecioItad>();
-  const porPedir = new Map<string, { id: string; titulo: string }>();
-  for (const encontrado of ids.values()) {
-    if (!encontrado || precios.has(encontrado.id) || porPedir.has(encontrado.id)) continue;
-    const guardado = await cache.leer<PrecioItad>(clavePrecio(encontrado.id));
-    if (guardado && ahora - guardado.guardadoEn < plazoMs) precios.set(encontrado.id, guardado.valor);
-    else {
-      if (guardado) viejos.set(encontrado.id, guardado.valor);
-      porPedir.set(encontrado.id, encontrado);
+  const ponerPrecios = async (entradas: Iterable<{ id: string; titulo: string } | null>) => {
+    const porPedir = new Map<string, { id: string; titulo: string }>();
+    for (const encontrado of entradas) {
+      if (!encontrado || precios.has(encontrado.id) || porPedir.has(encontrado.id)) continue;
+      const guardado = await cache.leer<PrecioItad>(clavePrecio(encontrado.id));
+      if (guardado && ahora - guardado.guardadoEn < plazoMs) precios.set(encontrado.id, guardado.valor);
+      else {
+        if (guardado) viejos.set(encontrado.id, guardado.valor);
+        porPedir.set(encontrado.id, encontrado);
+      }
     }
-  }
-  if (porPedir.size && !fallo) {
+    if (!porPedir.size || fallo) return;
     try {
       preguntoAItad = true;
       const nuevos = await leerPrecios([...porPedir.values()], clave, presupuesto);
@@ -414,6 +480,35 @@ export async function resolverPrecios(titulos: readonly string[], opciones: Reso
     } catch (error) {
       anotarFallo(error);
     }
+  };
+  await ponerPrecios(ids.values());
+
+  // 2b · La tercera pasada (mithril): lo que sigue sin id o sin ninguna tienda (*Marvel's Spider-Man* y *Dark Souls*
+  // aciertan, pero con la entrada de consola), por su edición. Si no la hay, se queda lo que había.
+  if (conEdiciones && !fallo) {
+    const sinBuscar: string[] = [];
+    const ediciones = new Map<string, { id: string; titulo: string }>();
+    for (const titulo of titulos) {
+      const encontrado = ids.get(titulo);
+      if (encontrado === undefined || (encontrado && precios.get(encontrado.id)?.mejor)) continue;
+      const guardado = await cache.leer<{ id: string; titulo: string } | null>(claveEdicion(titulo));
+      if (!guardado) sinBuscar.push(titulo);
+      else if (guardado.valor) ediciones.set(titulo, guardado.valor);
+    }
+    if (sinBuscar.length) {
+      try {
+        preguntoAItad = true;
+        const encontradas = await buscarEdiciones(sinBuscar, clave, presupuesto);
+        for (const [titulo, edicion] of encontradas) {
+          if (edicion) ediciones.set(titulo, edicion);
+          await cache.guardar(claveEdicion(titulo), edicion, edicion ? CACHE_ID_S : CACHE_ID_NULO_S, ahora);
+        }
+      } catch (error) {
+        anotarFallo(error);
+      }
+    }
+    for (const [titulo, edicion] of ediciones) ids.set(titulo, edicion);
+    await ponerPrecios(ediciones.values());
   }
   // 3 · Si ITAD no ha contestado, lo guardado vale aunque sea viejo.
   for (const [id, precio] of viejos) if (!precios.has(id)) precios.set(id, precio);

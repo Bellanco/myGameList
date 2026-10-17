@@ -465,10 +465,10 @@
 :root[data-palette="persona"] .fab-roulette:hover { background: var(--steam-hover); border-color: #0a0a0a; filter: none; }
 
 /* ── §13 · Barra de navegación inferior: sticker de cómic (contorno grueso + sombra roja), como los paneles (§3). ── */
-:root[data-palette="persona"] .bottom-nav-inner { border: 3px solid var(--pop-line); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .4), 4px 4px 0 rgba(255, 78, 100, .45); }
+:root[data-palette="persona"] :is(.bottom-nav-inner, .tabs-inner) { border: 3px solid var(--pop-line); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .4), 4px 4px 0 rgba(255, 78, 100, .45); }
 /* El fondo del HOVER (`.bottom-nav-btn`) lleva el mismo canto que el indicador del activo: con la pastilla de la
    casa, al pasar por encima aparecía una cápsula dentro de una barra de esquinas vivas. */
-:root[data-palette="persona"] :is(.bottom-nav-ind, .bottom-nav-btn) { border-radius: 3px; }
+:root[data-palette="persona"] :is(.bottom-nav-ind, .bottom-nav-btn, .tab-ind, .tab-btn) { border-radius: 3px; }
 :root[data-palette="persona"][data-theme="light"] .fab,
 :root[data-palette="persona"][data-theme="light"] .fab-roulette { color: #fff; box-shadow: 2px 2px 0 #151011; }
 
@@ -824,21 +824,15 @@
   --stats-num: var(--font-display);
 }
 
-/* ── §16 · LAS PESTAÑAS DE ESCRITORIO ──────────────────────────────────────────────────────────────────
-   La barra de abajo era un sticker de cómic y la de arriba seguía siendo la de la casa: el mismo papel
-   dicho en dos idiomas. El rótulo activo se enciende en rojo y el subrayado deslizante se engorda con su
-   sombra de tinta, que es como este tema subraya.
+/* ── §16 · LAS PESTAÑAS DE LAS LISTAS ──────────────────────────────────────────────────────────────────
+   La pastilla es el mismo sticker de cómic que la barra de abajo (§13). El rótulo activo se enciende en rojo
+   y su indicador lleva debajo el trazo grueso de tinta, que es como este tema subraya.
    EL CONTADOR NO SE INSCRIBE EN NINGUNA CAJA: dos recuadros seguidos —el de la cifra dentro del de la
    pestaña— era una pieza de más. Cambia de color y de letra, y con eso se lee. ── */
-:root[data-palette="persona"] .tabs { border-bottom: 2px solid var(--pop-line); }
 :root[data-palette="persona"] .tab-btn.active { color: var(--steam); }
-:root[data-palette="persona"] .tab-underline {
-  height: 4px;
-  border-radius: 0;
-  background: var(--steam);
-  box-shadow: 0 2px 0 var(--pop-line);
-}
+:root[data-palette="persona"] .tab-ind { box-shadow: inset 0 0 0 1px rgba(var(--steam-rgb),.25), inset 0 -4px 0 var(--steam); }
 :root[data-palette="persona"] .count-badge {
+  --tab-count-bg: transparent;
   font-family: var(--font-display);
   font-style: italic;
   color: var(--steam);

@@ -230,5 +230,17 @@ describe('lo que el panel guarda para sí', () => {
       ],
     });
     expect(health?.meters.map((meter) => [meter.id, meter.used])).toEqual([['kv-writes', 412], ['kv-reads', null]]);
+    // Un despliegue anterior no manda lo de IsThereAnyDeal: no se pinta, en vez de pintar ceros.
+    expect(health?.itad).toBeNull();
+  });
+
+  it('lo de IsThereAnyDeal llega aparte, y lo que no se pudo leer sigue siendo «no se sabe»', () => {
+    const health = sanitizeHealth({
+      fetchedAt: 1,
+      meters: [],
+      itad: { status: 'ok', calls: 340, callsYesterday: null, denied: 0, deniedYesterday: 'dos', resetsAt: 9 },
+    });
+    expect(health?.itad).toEqual({ status: 'ok', calls: 340, callsYesterday: null, denied: 0, deniedYesterday: null, resetsAt: 9 });
+    expect(sanitizeHealth({ meters: [], itad: { status: 'inventado' } })?.itad?.status).toBe('error');
   });
 });

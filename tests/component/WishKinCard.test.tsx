@@ -58,9 +58,10 @@ describe('«Ya lo tienes en casa» en tu panel', () => {
       'Silksong: ya tienes Ori and the Will of the Wisps, por Metroidvania',
     );
 
-    // El juego lleva a él en Próximos, y el chip de género a tus Próximos de ese género.
-    expect(within(pareja).getByRole('link', { name: 'Ori and the Will of the Wisps' }))
-      .toHaveAttribute('href', '/proximos?q=Ori%20and%20the%20Will%20of%20the%20Wisps');
+    // En tu panel el juego abre su ficha encima (un botón, no un enlace), y el chip de género lleva a tus Próximos
+    // de ese género.
+    expect(within(pareja).getByRole('button', { name: 'Ori and the Will of the Wisps' })).toBeInTheDocument();
+    expect(within(pareja).queryByRole('link', { name: 'Ori and the Will of the Wisps' })).not.toBeInTheDocument();
     expect(within(pareja).getByRole('link', { name: 'Metroidvania' })).toHaveAttribute('href', '/proximos?genre=Metroidvania');
 
     // Carreras se desea y no hay nada esperando: es el hueco.

@@ -152,6 +152,31 @@ test.describe('la ficha de un juego · sin conexión', () => {
 test.describe('la ficha de un juego · en el móvil', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
+  /* El panel que entra desborda el `<dialog>`, y `showModal()` enfoca la X, que aún está fuera: con el `overflow` del
+     navegador, el diálogo se desplazaba el ancho del panel para enseñarla y la entrada iba de un lado a otro (Firefox).
+     Recortado (`overflow: clip`), no hay scroll que mover. */
+  test('al entrar, el diálogo no se desplaza para enseñar la X enfocada', async ({ page }) => {
+    await sembrarBiblioteca(page);
+    await page.goto('/completados');
+    await page.evaluate(() => {
+      const registro: number[] = [];
+      (window as unknown as { __scroll: number[] }).__scroll = registro;
+      const t0 = performance.now();
+      const tick = () => {
+        const dialogo = document.querySelector('dialog.gs-dialog[open]');
+        if (dialogo) registro.push(dialogo.scrollLeft);
+        if (performance.now() - t0 < 900) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await page.locator('button.row-toggle', { hasText: JUEGOS[0].name }).tap();
+    await expect(ficha(page)).toBeVisible();
+    await page.waitForTimeout(700);
+    const desplazamientos = await page.evaluate(() => (window as unknown as { __scroll: number[] }).__scroll);
+    expect(desplazamientos.length).toBeGreaterThan(5);
+    expect(Math.max(...desplazamientos)).toBe(0);
+  });
+
   test('deslizarla a la derecha la cierra y quita `?juego=`; el gesto vertical queda para el scroll', async ({ page }) => {
     await sembrarBiblioteca(page);
     await page.goto('/completados');

@@ -112,11 +112,16 @@ aciertan siempre con su precio porque llegan con su id.
    - **Lo que se le escapa, a conciencia:** sagas que solo se distinguen por subtítulo («Nier Automata» ~ «Nier
      Replicant») y las de nombre distinto («Dark Souls» ~ «Demon's Souls», «Thronebreaker» ~ «The Witcher»). Las
      arreglaría la franquicia de IGDB (idea C5 de la investigación), fuera de este plan.
+   - **Sin saga, Más de «<género>»** (17-10-2026, decisión del usuario), en el mismo sitio y con la misma tira: tus
+     juegos del género principal del de la ficha, solo de tu biblioteca. Son los candidatos de «¿A qué juego ahora?»
+     en su orden (`buildPickPool`: el peso de la ruleta sin el azar), hasta 8; sin ninguno, no sale.
    - **Quién la ve:** cada uno, en su ficha y solo sobre lo que puede ver. Tus entregas, siempre, también sin social.
      Las de tus amistades, solo con social y según su visibilidad: con el índice de bibliotecas (F4, desde plata)
      todas; sin él (bronce), solo las que han reseñado o movido de lista en los últimos 30 días. Nadie ve tu saga:
      tus amistades ven tus juegos en sus fichas, con tu visibilidad.
-5. **Precio** (Parte 2, Fase P5): solo si no lo tienes en c/v/e/p y los precios están activados.
+5. **Precio** (Parte 2, Fase P5): solo si no lo tienes en c/v/e/p y los precios están activados. De un juego que no
+   tienes (el que se abre desde el social), solo para mithril (17-10-2026, decisión del usuario,
+   `PROFILE_TIER_PRICE_FOREIGN_GAMES`); en tus deseos, para todos.
 
 Sin sesión social se pintan 1, 2, 4 (solo con tu biblioteca) y 5. Sin entrada tuya ni de nadie, un estado vacío
 con «Añadir a deseados».
@@ -143,6 +148,11 @@ social ya tiene la ficha real con el recuadro del precio (F0.15). Lo que decidi�
 
   **Los anchos dejan siempre unos 80 px de la lista a la vista** (`calc(100vw - 5rem)`), por donde se pulsa para
   cerrar. Solo se pasa del paso 0 si el cuerpo tiene más de una sección que repartir.
+- **El realce** (17-10-2026, decisión del usuario): a todo el alto, una ficha con poco que contar (un deseo sin precio
+  ni saga) dejaba media pantalla en blanco. Con el ancho y el relleno ya elegidos, la carátula crece por escalones
+  (×1,3, ×1,55, ×1,85 y ×2,15, `is-realce-1…4`) y el título sube un tamaño; se queda el mayor que cabe sin scroll. Con
+  tope donde la columna de al lado se quedaría sin sitio: ×1,5 en el móvil y ×1,55 con la saga en la cabecera. Al
+  ensanchar el panel se vuelve a probar desde cero, y si el contenido crece después, es lo primero que se va.
 - **Cómo se mide:** después de `showModal`, sobre el cuerpo (`scrollHeight` frente a `clientHeight`).
   - Se repite cada vez que el contenido cambia de tamaño (`ResizeObserver`): la letra que llega tarde, una carátula,
     las amistades que llegan después. Ese caso **solo ensancha**, así que no puede entrar en bucle.
@@ -443,7 +453,7 @@ Todos abren la misma ficha sobre la pantalla en la que estás, poniendo `?juego=
 | Fila o caja de tus listas (`GameTable`) | Abre la ficha (F0.6, en F2). El detalle desplegable ya no existe |
 | Fila de las listas de una amistad (`SocialProfileDetailScreen`) | Abre la ficha con `&de=<perfil>`: su bloque arriba (F0.7). En tu propio perfil, la ficha de siempre |
 | Chip del juego en una reseña (`ReviewDetailHead`) | Es un botón que abre la ficha, solo en el hub. La página pública y la ficha de la ruleta no lo ofrecen |
-| Aviso de lista del feed (`FeedMoveCard`) | El nombre de un juego sin reseña abre la ficha con el bloque de quien lo movió. Con reseña, sigue abriendo la reseña. Las tarjetas de reseña no cambian |
+| Aviso de lista del feed (`FeedMoveCard`) | El nombre de un juego abre la ficha con el bloque de quien lo movió, también con reseña (17-10-2026, decisión del usuario: a la reseña se va pulsándola, en su tarjeta o en ese bloque). Las tarjetas de reseña no cambian |
 | Buscador ⌘K (`searchSources`, `GlobalSearch`) | Un juego tuyo abre su ficha encima de donde estás, sin perder la pantalla ni sus filtros (F0.3). La dirección de respaldo es su lista con la ficha abierta |
 | Saga, dentro de la ficha | Cada entrega, a su ficha (*replace*, F0.9), conservando el `de=` |
 | Una amistad, dentro de la ficha | Su perfil **con el juego abierto** y su bloque arriba (F0.7) |
@@ -559,6 +569,12 @@ plazos y topes en `core/constants/tiers.ts`: `PROFILE_TIER_PRICE_TTL_MS` y `PROF
   (`lowest.timestamp`, `urls.game`) y trae además los packs, así que el aviso de pack de la P4 (aparcada) saldría sin una llamada
   más. Cada petición cuesta como mucho la búsqueda de lo que falte (y su segunda pasada) más dos llamadas por cada
   200 juegos, y solo por lo que no esté en caché.
+- **La tercera pasada, solo para mithril** (17-10-2026, decisión del usuario; `PROFILE_TIER_PRICE_EDITION_SEARCH`).
+  *Marvel's Spider-Man* y *Dark Souls* aciertan por el título, pero con la entrada de consola, que ninguna tienda
+  vende. Lo que se queda sin id o sin tiendas se busca (`/games/search/v1`, una llamada por título, hasta 10 por
+  petición) y vale el primer juego que sea tu título más una coletilla de edición (`esEdicionDe`: *Remastered*,
+  *Definitive Edition*, *GOTY*, *Director's Cut*…; *Remake* no, suele ser otro juego). Se guarda en la caché del borde
+  aparte (`edicion/…`), para que los demás rangos no la reciban de rebote. El gemelo de desarrollo la tiene siempre.
 - **El título de ITAD** no lo da ninguna de las tres llamadas: `/lookup/id/title/v1` solo devuelve el id. Como el
   emparejamiento es exacto, el título que se enseña («Precio de: …», P3) es la variante que acertó: el tuyo o el de
   la segunda pasada (*Hades 2* → *Hades II*).

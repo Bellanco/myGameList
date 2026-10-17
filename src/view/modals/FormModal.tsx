@@ -530,6 +530,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
     picksLabel: string,
     taken: ReadonlyArray<string> = draft[key],
     errorMessage?: string,
+    required = false,
   ) => {
     const query = pending[key].trim();
     // Todas las que casan (no solo las que caben): cuantas menos quedan, más se encienden.
@@ -550,6 +551,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
           chipClassName={chipClassName}
           hint={tagHint(full, GAME_LIMITS.tagCount[key], pending[key].length >= maxLength, maxLength)}
           errorMessage={errorMessage}
+          required={required}
           maxLength={maxLength}
           full={full}
         />
@@ -572,7 +574,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
 
   const scoreField = supportsScore(currentTab) ? (
     <div className="fg form-score">
-      <span className="flabel">{isUnplayed(currentTab) ? FORM_UI.interestLabel : FORM_UI.scoreLabel}</span>
+      <span className="flabel is-required">{isUnplayed(currentTab) ? FORM_UI.interestLabel : FORM_UI.scoreLabel}</span>
       <div className={`score-input-shell ${fieldErrors.score ? 'has-error' : ''}`.trim()}>
         {scoreScale === 'grade' ? (
           <GradeLine
@@ -651,13 +653,14 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
             <Icon name={COMMON_ICONS.close} />
           </button>
         </div>
-        {/* LO OBLIGATORIO ARRIBA, LO OPCIONAL EN LA BANDEJA. Sin asteriscos ni «opcional» escrito: la diferencia la
-            pone el diseño (campos rellenos arriba; abajo, una bandeja de fondo apenas distinto, rótulos apagados y
-            campos de contorno discontinuo). Ver `.form-extra` en `_overlays-and-responsive.scss`. */}
+        {/* LO OBLIGATORIO ARRIBA, LO OPCIONAL EN LA BANDEJA. Lo obligatorio lleva además un asterisco al final del
+            rótulo (`.flabel.is-required`), y lo opcional no se rotula: lo distingue el diseño (abajo, una bandeja de fondo
+            apenas distinto, rótulos apagados y campos de contorno discontinuo). Ver `.form-extra` en
+            `_overlays-and-responsive.scss`. */}
         <div className="modal-body">
           <div className={`form-head ${scoreField ? '' : 'is-solo'}`.trim()}>
             <div className="fg form-name">
-              <label htmlFor="draft-name" className="flabel">{FORM_UI.nameLabel}</label>
+              <label htmlFor="draft-name" className="flabel is-required">{FORM_UI.nameLabel}</label>
               <input
                 id="draft-name"
                 className={`finput ${fieldErrors.name || duplicate ? 'has-error' : ''}`.trim()}
@@ -665,6 +668,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                 placeholder={FORM_UI.namePlaceholder}
                 autoComplete="off"
                 maxLength={Math.max(GAME_LIMITS.name, draft.name.length)}
+                aria-required
                 aria-invalid={duplicate || fieldErrors.name ? true : undefined}
                 aria-describedby={duplicate || fieldErrors.name || nameAtMax ? 'draft-name-error' : undefined}
                 onChange={(event) => {
@@ -685,9 +689,9 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
 
           <div className={`form-row ${supportsYears(currentTab) ? 'is-three' : ''}`.trim()}>
             {tagField('platforms', FORM_UI.platformsLabel, FORM_UI.platformsPlaceholder, 'chip-plat', suggestions.ranked.platforms,
-              QUICK_PICKS.platforms, FORM_UI.quickPicks.platforms, draft.platforms, fieldErrors.platforms)}
+              QUICK_PICKS.platforms, FORM_UI.quickPicks.platforms, draft.platforms, fieldErrors.platforms, true)}
             {tagField('genres', FORM_UI.genresLabel, FORM_UI.genresPlaceholder, 'chip-genre', suggestions.ranked.genres,
-              QUICK_PICKS.genres, FORM_UI.quickPicks.genres, draft.genres, fieldErrors.genres)}
+              QUICK_PICKS.genres, FORM_UI.quickPicks.genres, draft.genres, fieldErrors.genres, true)}
             {supportsYears(currentTab) ? (
               <div className="form-field">
                 <TagInput
@@ -704,6 +708,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                   chipClassName="chip-generic"
                   hint={tagHint(yearsFull, GAME_LIMITS.tagCount.years)}
                   errorMessage={fieldErrors.years}
+                  required
                   full={yearsFull}
                   digitsOnly
                   maxLength={4}

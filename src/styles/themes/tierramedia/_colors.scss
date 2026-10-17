@@ -44,7 +44,6 @@
   --steam-rgb: 255,196,61;
   --tm-plata: #d9e5de;
   --tab-active: var(--tm-plata);
-  --tab-bar: linear-gradient(90deg, transparent, var(--tm-plata) 50%, transparent);
   --success: #5fe08a;
   --success-rgb: 95,224,138;
   --warn: #ffa04a;
@@ -89,7 +88,6 @@
   --steam-rgb: 113,76,8;
   --tm-plata: var(--steam);
   --tab-active: var(--steam-hover);
-  --tab-bar: linear-gradient(90deg, rgba(var(--steam-rgb),0), var(--steam) 50%, rgba(var(--steam-rgb),0));
   --success: #1d5e3e;
   --success-rgb: 29,94,62;
   --warn: #8a3a12;

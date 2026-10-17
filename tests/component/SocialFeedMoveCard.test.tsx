@@ -142,7 +142,17 @@ describe('renglón de movimiento de lista', () => {
     );
   });
 
-  it('con análisis detrás, el nombre del juego lo abre CON EL ACTOR DE LA RESEÑA', async () => {
+  it('con análisis detrás, el nombre del juego abre su ficha, no la reseña (17-10-2026)', async () => {
+    const openMoveReview = vi.fn();
+    const openGameSheet = vi.fn();
+    renderFeed([move({ tab: 'c', reviewActorId: 'pseudonimo-del-gist' })], { openMoveReview, openGameSheet });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir la ficha de Hollow Knight' }));
+    expect(openGameSheet).toHaveBeenCalledWith('Hollow Knight', { friendId: 'pid-2' });
+    expect(openMoveReview).not.toHaveBeenCalled();
+  });
+
+  it('sin ficha que abrir (la maqueta), con análisis el nombre lo abre CON EL ACTOR DE LA RESEÑA', async () => {
     const openMoveReview = vi.fn();
     const user = userEvent.setup();
     // Los dos identificadores son distintos a propósito: `profileId` es el de la entrada del directorio (para una
@@ -438,7 +448,24 @@ describe('renglón agrupado: varios juegos a la misma lista el mismo día', () =
     ]);
   });
 
-  it('dentro del grupo, cada juego con análisis sigue abriéndolo', async () => {
+  it('dentro del grupo, cada juego desplegado abre su ficha, también el que tiene análisis', async () => {
+    const openMoveReview = vi.fn();
+    const openGameSheet = vi.fn();
+    const user = userEvent.setup();
+    renderFeed([move({
+      tab: 'd',
+      games: [game(1, 'Wolverine'), game(2, 'Onimusha'), game(3, 'Hades', 'pseudonimo-del-gist')],
+    })], { openMoveReview, openGameSheet });
+
+    await user.click(screen.getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(2, false) }));
+    await user.click(screen.getByRole('button', { name: 'Abrir la ficha de Hades' }));
+    await user.click(screen.getByRole('button', { name: 'Abrir la ficha de Onimusha' }));
+
+    expect(openGameSheet.mock.calls).toEqual([['Hades', { friendId: 'pid-2' }], ['Onimusha', { friendId: 'pid-2' }]]);
+    expect(openMoveReview).not.toHaveBeenCalled();
+  });
+
+  it('sin ficha que abrir, dentro del grupo cada juego con análisis sigue abriéndolo', async () => {
     const openMoveReview = vi.fn();
     const user = userEvent.setup();
     renderFeed([move({

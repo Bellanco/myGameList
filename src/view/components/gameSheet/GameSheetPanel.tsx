@@ -67,6 +67,8 @@ export interface GameSheetPanelProps {
    */
   pricesOn?: boolean;
   priceTtlMs?: number | null;
+  /** Y en la ficha de un juego que no tienes (P5): solo mithril (`PROFILE_TIER_PRICE_FOREIGN_GAMES`). */
+  foreignPricesOn?: boolean;
 }
 
 /** Lo que dura la salida del panel, la más larga de las dos (`gsSale`, en el móvil, en `styles/gameSheet.scss`). */
@@ -100,8 +102,10 @@ function horasJugadas(tab: TabId, item: GameItem): number | null {
   return (tab === 'c' || tab === 'v') && (item.hours ?? 0) > 0 ? Number(item.hours) : null;
 }
 
-function Saga({ saga, onOpenGame, covers, className = '' }: {
+/** La tira de carátulas: la saga o, sin ella, Más de «<género>» (`title`). */
+function Saga({ saga, title, onOpenGame, covers, className = '' }: {
   saga: GameSheetSagaEntry[];
+  title: string;
   onOpenGame: (name: string) => void;
   covers: boolean;
   className?: string;
@@ -110,7 +114,7 @@ function Saga({ saga, onOpenGame, covers, className = '' }: {
   return (
     <div className={`hub-detail-metadata gs-sec-saga ${className}`.trim()}>
       <div className="hub-metadata-section">
-        <strong>{GAME_SHEET_UI.saga}</strong>
+        <strong>{title}</strong>
         <ul className="gs-saga">
           {saga.map((entry) => {
             const { src } = coverDeCaja(covers, juegoParaCaratula(entry.name, entry.platforms), entry.ownTab ? PEDIDO_PROPIO : PEDIDO_AJENO);
@@ -456,22 +460,29 @@ const BarraDeAcciones = forwardRef<HTMLElement, {
  * (`useSwipeToClose`). Los botones flotan abajo y el cuerpo les reserva justo su alto (`--gs-botones`).
  */
 export function GameSheetPanel(props: GameSheetPanelProps) {
-  const { open, friendId = '', slug, data, pricesOn = false, priceTtlMs = null } = props;
+  const { open, friendId = '', slug, data, pricesOn = false, priceTtlMs = null, foreignPricesOn = false } = props;
   const { signals, missing } = useGameSheetFriendSignals(open);
   const deAmistad = useGameSheetFriendEntry(open, friendId, slug);
-  const titulo = open && pricesOn ? priceTitle(data, slug, signals, deAmistad) : null;
+  const titulo = open && pricesOn ? priceTitle(data, slug, signals, deAmistad, foreignPricesOn) : null;
   const price = useGamePrice(titulo, priceTtlMs);
   return <GameSheetPanelView {...props} signals={signals} missing={missing} friendEntry={deAmistad} price={titulo ? price : undefined} />;
 }
 
 /**
  * DE QUÉ JUEGO SE PIDE EL PRECIO: de uno de tus deseos (P3), con tu nombre, y de uno que no tienes (P5), con el de la
- * primera amistad que lo nombra, como lo enseña la ficha. De uno que ya tienes en otra lista, próximos incluidos, no
- * se pide nada (17-10-2026, decisión del usuario).
+ * primera amistad que lo nombra, como lo enseña la ficha; este, solo para mithril (`ajenos`). De uno que ya tienes en
+ * otra lista, próximos incluidos, no se pide nada (17-10-2026, decisiones del usuario).
  */
-function priceTitle(data: TabData, slug: string, signals: readonly GameSheetSignal[], deAmistad: FriendGameEntry | null): string | null {
+function priceTitle(
+  data: TabData,
+  slug: string,
+  signals: readonly GameSheetSignal[],
+  deAmistad: FriendGameEntry | null,
+  ajenos: boolean,
+): string | null {
   const own = findOwnEntry(data, slug);
   if (own) return own.tab === 'd' ? own.item.name : null;
+  if (!ajenos) return null;
   const deSuBloque = deAmistad?.item && matchesGameSheet(slug, deAmistad.item.name) ? deAmistad.item.name : null;
   return signalGameName(slug, signals) ?? deSuBloque;
 }
@@ -548,7 +559,7 @@ export function GameSheetPanelView({
   const barRef = useRef<HTMLElement>(null);
   const { covers } = useCovers();
   const key = ficha?.slug ?? '';
-  const { width, showFiller } = useGameSheetWidth(visible, key, scrollRef, contentRef, Boolean(ficha?.wishers.length));
+  const { width, showFiller, boost } = useGameSheetWidth(visible, key, scrollRef, contentRef, Boolean(ficha?.wishers.length));
   const navigate = useNavigate();
   // Su perfil CON EL JUEGO ABIERTO y su bloque arriba (F0.7).
   const nombreAbierto = ficha?.name ?? '';
@@ -605,6 +616,10 @@ export function GameSheetPanelView({
   // cabecera se queda como sin precio.
   const conPrecio = Boolean((own === null || own.tab === 'd') && price?.mejor);
   const plataformas = ficha?.saga.find((entry) => entry.current)?.platforms ?? bloque?.item.platforms ?? [];
+  // La tira: la saga o, si no hay, los de su género principal.
+  const tira = ficha?.saga.length
+    ? { title: GAME_SHEET_UI.saga, entries: ficha.saga }
+    : ficha?.sameGenre ? { title: GAME_SHEET_UI.sameGenre(ficha.sameGenre.genre), entries: ficha.sameGenre.games } : null;
   return (
     <dialog
       ref={dialogRef}
@@ -621,7 +636,7 @@ export function GameSheetPanelView({
       {ficha && (visible || saliendo) ? (
         <div
           ref={panelRef}
-          className={`modal gs-panel ${width}`}
+          className={`modal gs-panel ${width} ${boost}`.trim()}
           {...swipe}
           onAnimationEnd={(event) => {
             if (saliendo && event.target === event.currentTarget && event.animationName.startsWith('gsSale')) terminarSalida();
@@ -633,12 +648,12 @@ export function GameSheetPanelView({
           </button>
           <div className="gs-scroll" key={ficha.slug} ref={scrollRef}>
             <div className="gs-contenido" ref={contentRef}>
-              {/* Con ancho, el lado de la cabecera es la saga (sin ella, ese hueco quedaba vacío); en estrecho, la saga
-                  va al final del cuerpo. Se pinta en los dos sitios y el CSS esconde la que no toca. */}
+              {/* Con ancho, el lado de la cabecera es la tira (sin ella, ese hueco quedaba vacío); en estrecho, va al
+                  final del cuerpo. Se pinta en los dos sitios y el CSS esconde la que no toca. */}
               <Cabecera
                 sheet={ficha}
                 covers={covers}
-                lado={ficha.saga.length ? <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
+                lado={tira ? <Saga saga={tira.entries} title={tira.title} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
               />
               <div className="gs-cuerpo">
                 {bloque ? <BloqueDeAmistad entrada={bloque} onOpenReview={openFriendReview} /> : null}
@@ -665,7 +680,7 @@ export function GameSheetPanelView({
                     />
                   </Suspense>
                 ) : null}
-                <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-solo-estrecho" />
+                {tira ? <Saga saga={tira.entries} title={tira.title} onOpenGame={onOpenGame} covers={covers} className="is-solo-estrecho" /> : null}
               </div>
             </div>
           </div>

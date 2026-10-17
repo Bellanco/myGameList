@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { adminUserPath } from '../../../core/admin/adminRoutes';
 import { ADMIN_PANEL_UI, ADMIN_SHELL_UI } from '../../../core/constants/adminLabels';
 import { createLocalDateFormat } from '../../../core/utils/dateTime';
+import type { AdminUserRow } from '../../../model/repository/admin/adminCensus';
 import type { AdminAccountView } from '../../../viewmodel/useAdminAccounts';
 import { Icon } from '../Icon';
 import { HubAvatar } from '../socialhub/HubAvatar';
@@ -22,7 +23,21 @@ function matches(account: AdminAccountView, filter: AccountFilter): boolean {
   return true;
 }
 
-function nameOf(account: AdminAccountView): string {
+/**
+ * El nombre que tiene en el social, por uid. Si quedan dos documentos de perfil del mismo uid (uno heredado), manda
+ * el canónico, el que se identifica por el uid.
+ */
+function socialNamesOf(users: readonly AdminUserRow[]): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const user of users) {
+    const name = user.displayName.trim() || user.knownAs.trim();
+    if (name && (user.idMatchesUid || !names.has(user.uid))) names.set(user.uid, name);
+  }
+  return names;
+}
+
+/** El de Google, el «real»: solo se enseña tal cual al desplegar la fila. */
+function realNameOf(account: AdminAccountView): string {
   return account.displayName.trim() || C.noName;
 }
 
@@ -40,7 +55,8 @@ function expiryOf(account: AdminAccountView): string {
  * (docs/plan-cuentas-inactivas.md). El censo de Usuarios sale de `profiles`, así que quien solo entró con Google no
  * aparecía en ningún sitio del panel. Las caducadas se borran desde aquí, con confirmación: no hay tarea programada.
  *
- * El correo no sale en la tabla: solo al desplegar la fila (decisión del usuario, 15-10-2026).
+ * El correo no sale en la tabla: solo al desplegar la fila (decisión del usuario, 15-10-2026). Con el nombre, igual:
+ * la fila lleva el de su perfil social si lo tiene, y el de Google sale al desplegarla (17-10-2026).
  */
 export const AdminAccountsScreen = memo(function AdminAccountsScreen() {
   const { accounts, vm, notify, confirm, copyUid } = useAdminPanel();
@@ -60,6 +76,7 @@ export const AdminAccountsScreen = memo(function AdminAccountsScreen() {
   );
   const social = useMemo(() => list.filter((account) => account.profile === 'social').length, [list]);
   const visible = useMemo(() => list.filter((account) => matches(account, filter)), [list, filter]);
+  const socialNames = useMemo(() => socialNamesOf(vm.census?.users || []), [vm.census]);
 
   const askPurge = () => {
     const targets = accounts.expired;
@@ -175,6 +192,7 @@ export const AdminAccountsScreen = memo(function AdminAccountsScreen() {
                       <AccountRow
                         key={account.uid}
                         account={account}
+                        socialName={socialNames.get(account.uid) || ''}
                         isOwn={account.uid === vm.ownUid}
                         open={openUid === account.uid}
                         now={census.fetchedAt}
@@ -195,6 +213,7 @@ export const AdminAccountsScreen = memo(function AdminAccountsScreen() {
 
 const AccountRow = memo(function AccountRow({
   account,
+  socialName,
   isOwn,
   open,
   now,
@@ -202,13 +221,16 @@ const AccountRow = memo(function AccountRow({
   onCopyUid,
 }: {
   account: AdminAccountView;
+  /** El nombre de su perfil social; vacío si no tiene. */
+  socialName: string;
   isOwn: boolean;
   open: boolean;
   now: number;
   onToggle: () => void;
   onCopyUid: () => void;
 }) {
-  const name = nameOf(account);
+  const realName = realNameOf(account);
+  const name = socialName || realName;
   const detailsId = `adm-account-${account.uid}`;
   const { verdict } = account;
   return (
@@ -244,6 +266,7 @@ const AccountRow = memo(function AccountRow({
         <tr className="adm-account-more" id={detailsId}>
           <td colSpan={5}>
             <dl className="adm-rows">
+              <div><dt>{C.realName}</dt><dd>{realName}</dd></div>
               <div><dt>{C.email}</dt><dd>{account.email || C.noEmail}</dd></div>
               <div>
                 <dt>{C.uid}</dt>

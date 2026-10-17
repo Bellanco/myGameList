@@ -22,6 +22,7 @@ import { FeedMoveCard } from './FeedMoveCard';
 import { FeedLikeBar } from './FeedLikeBar';
 import type { FeedLikes, LikeableFeedItem } from '../../../core/social/feedLikes';
 import { AchievementSprite } from '../AchievementSprite';
+import { useShowPostComposer } from '../../hooks/useShowPostComposer';
 
 /**
  * Cuántas medallas caben en una entrada del feed antes del «+N».
@@ -167,6 +168,7 @@ function SocialFeedScreenBase({
   // El sorteo va en `useState` con inicializador perezoso y no en el cuerpo: así se decide una sola vez por
   // montaje y no cambia en cada repintado (esta pantalla re-renderiza con cualquier cambio del hub).
   const [lienzoFx] = React.useState(() => Math.floor(Math.random() * LIENZO_FX_VARIANTS));
+  const { showPostComposer } = useShowPostComposer();
   // Prefijo de los ids de las cabeceras de día: cada lista de tarjetas se nombra con su fecha (`aria-labelledby`).
   const dayHeadingId = React.useId();
   const feedSentinelRef = React.useRef<HTMLButtonElement>(null);
@@ -252,7 +254,9 @@ function SocialFeedScreenBase({
           readFailed={feedReadFailed && !loadingDirectory && feedItems.length > 0}
         />
       )}
-      composer={canPublishPosts ? (
+      /* Con rango para publicar, el cuadro aún se puede esconder desde Ajustes › Diseño («Publicaciones»): hay quien
+         entra solo a leer y no lo quiere encima de la actividad. */
+      composer={canPublishPosts && showPostComposer ? (
         <FeedComposer
           SOCIAL_UI={SOCIAL_UI}
           publishing={publishingPost}

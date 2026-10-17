@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { ADMIN_SHELL_UI } from '../../../core/constants/adminLabels';
 import { createLocalDateFormat } from '../../../core/utils/dateTime';
+import type { ItadUsage } from '../../../model/repository/adminHealthRepository';
 import type { HealthMeterView } from '../../../viewmodel/useAdminHealth';
 import { Icon } from '../Icon';
 import { formatNumber, Meter } from './AdminCharts';
@@ -29,6 +30,37 @@ function footOf(meter: HealthMeterView, now: number): string {
   if (meter.resetsAt) parts.push(K.resets(TIME.format(new Date(meter.resetsAt))));
   parts.push(meter.sourceLabel);
   return parts.join(' · ');
+}
+
+/** Hoy y, si se sabe, ayer. */
+function withYesterday(today: number, yesterday: number | null): string {
+  return yesterday === null ? formatNumber(today) : `${formatNumber(today)} · ${K.yesterday(formatNumber(yesterday))}`;
+}
+
+/** ISTHEREANYDEAL: las llamadas del día y las veces sin cupo. Sin barra: su techo es de 5 minutos, no del día. */
+function ItadCard({ itad }: { itad: ItadUsage }) {
+  const I = K.itad;
+  return (
+    <section className="adm-card" aria-labelledby="adm-k-itad">
+      <div className="adm-card-head"><h3 id="adm-k-itad">{I.title}</h3></div>
+      {itad.status === 'not-configured' ? (
+        <p className="adm-muted"><b>{K.notConfigured}.</b> {I.notConfiguredHint}</p>
+      ) : itad.calls === null || itad.denied === null ? (
+        <p className="admin-warning">{I.failed}</p>
+      ) : (
+        <>
+          <dl className="adm-rows">
+            <div><dt>{I.calls}</dt><dd>{withYesterday(itad.calls, itad.callsYesterday)}</dd></div>
+            <div><dt title={I.deniedHint}>{I.denied}</dt><dd>{withYesterday(itad.denied, itad.deniedYesterday)}</dd></div>
+          </dl>
+          <p className="adm-muted">
+            {I.rules}
+            {itad.resetsAt ? ` ${I.resets(TIME.format(new Date(itad.resetsAt)))}` : null}
+          </p>
+        </>
+      )}
+    </section>
+  );
 }
 
 /** CAPACIDAD: el gasto del día de cada servicio frente al techo del plan gratuito, y lo que cuesta el propio panel. */
@@ -91,6 +123,8 @@ export const AdminCapacityScreen = memo(function AdminCapacityScreen() {
             )}
           </ul>
         </section>
+
+        {health.itad ? <ItadCard itad={health.itad} /> : null}
 
         <section className="adm-card" aria-labelledby="adm-k-cost">
           <div className="adm-card-head"><h3 id="adm-k-cost">{K.panelCost}</h3></div>

@@ -200,11 +200,13 @@
   .hub-seg-ind,
   .bottom-nav-btn,
   .bottom-nav-ind,
+  .tab-btn,
+  .tab-ind,
   .sync-help-toggle
 ):not(.btn-icon, .fab, .stat-tile-go) {
   border-radius: var(--tm-btn-radius) var(--tm-btn-vivo);
 }
-:root[data-palette="tierramedia"] .bottom-nav-inner {
+:root[data-palette="tierramedia"] :is(.bottom-nav-inner, .tabs-inner) {
   border-radius: calc(var(--tm-btn-radius) + .4rem) calc(var(--tm-btn-vivo) + .4rem);
 }
 :root[data-palette="tierramedia"] .hub-seg { border-radius: calc(var(--tm-btn-radius) + 4px) calc(var(--tm-btn-vivo) + 4px); }

@@ -591,7 +591,7 @@ export function useSignatureEffects(): void {
 
       if (moment === 'library-saved' && fxRef.current('witcher')) {
         // El filete de acero vive bajo las pestañas: el destello va justo ahí, no por el borde de la ventana.
-        const sweep = over('fx-silver-sweep', '.tabs');
+        const sweep = over('fx-silver-sweep', '.tabs-inner');
         if (sweep) spawn(sweep);
         return;
       }
