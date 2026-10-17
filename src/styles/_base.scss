@@ -134,7 +134,6 @@
 
   /* Derivaciones del acento (válidas en ambos temas: cuelgan de --steam-rgb/--steam-hover). */
   --steam-soft: rgba(var(--steam-rgb),.12);
-  --tab-bar: linear-gradient(90deg, rgba(var(--steam-rgb),0), var(--steam-hover) 50%, rgba(var(--steam-rgb),0));
   --tab-bar-v: linear-gradient(180deg, rgba(var(--steam-rgb),0), var(--steam-hover) 50%, rgba(var(--steam-rgb),0));
   /* Aro/insignia "sin nota": acento apagado (sigue la paleta) + su velo translúcido. */
   --noscore: color-mix(in srgb, var(--steam), var(--text-muted) 45%);
@@ -224,7 +223,6 @@
    Solo redefine lo que difiere del oscuro. En claro los tintes (overlay/sombra/pista)
    van sobre `--tint-rgb`, un marrón/tono cálido que aporta cada paleta. */
 :root[data-theme="light"] {
-  --tab-bar: linear-gradient(90deg, rgba(var(--steam-rgb),0), var(--steam) 50%, rgba(var(--steam-rgb),0));
   --tab-bar-v: linear-gradient(180deg, rgba(var(--steam-rgb),0), var(--steam) 50%, rgba(var(--steam-rgb),0));
 
   --surface-soft: rgba(var(--tint-rgb),.035);

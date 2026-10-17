@@ -78,6 +78,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Capacidad cuenta lo que se pide a IsThereAnyDeal.** En el panel de administración, una tarjeta enseña las
   llamadas del día a IsThereAnyDeal y cuántas peticiones de precios se quedaron sin cupo, con las de ayer al lado.
 
+- **Las listas, en una pastilla.** Las pestañas de arriba (completista, vergüenza, en curso, próximos y deseos) son
+  ahora una pastilla como la barra de abajo, vestida igual que ella en cada tema, con la lista activa resaltada y el
+  número de juegos en su ficha. En una pantalla ancha sube a la fila de la lupa y el tema, y desaparece el hueco que
+  quedaba encima. En el móvil va debajo de esos botones, a todo el ancho.
+
 ### Fixed
 
 - **Los chips de años, puntos fuertes y puntos débiles se leen mejor en modo claro.** En «No puedes pasar»,

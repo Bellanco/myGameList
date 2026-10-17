@@ -598,8 +598,7 @@
 :root[data-palette="witcher"] .flabel,
 :root[data-palette="witcher"] .detail-label { font-family: var(--font-display); letter-spacing: .12em; color: var(--steam); }
 
-/* ── §8 · Pestañas e insignias. ── */
-:root[data-palette="witcher"] .tab-btn.active { color: var(--tab-active); }
+/* ── §8 · Pestañas e insignias. Las pestañas de las listas son la misma chapa que la barra de abajo (§8b). ── */
 :root[data-palette="witcher"] .badge-rejugar-activo,
 :root[data-palette="witcher"] .badge-opp-activo {
   background: linear-gradient(180deg, #e9eff6, #b6c1cd) !important;
@@ -620,7 +619,7 @@
 /* AFILADA COMO LOS BOTONES: la barra se recorta en punta por los dos lados, igual que una hoja, y por lo
    mismo que ellos la forma la dan las dos capas de §4b — con el filete por dentro, sus dos puntas se
    quedaban sin canto. El canto de luz de arriba viaja como capa de la chapa. */
-:root[data-palette="witcher"] .bottom-nav-inner {
+:root[data-palette="witcher"] :is(.bottom-nav-inner, .tabs-inner) {
   @include pieza-de-chapa;
   --pz-corte: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
   --pz-filete: rgba(198,206,216,.35);
@@ -630,26 +629,26 @@
   -webkit-backdrop-filter: none; backdrop-filter: none;
   padding-inline: 1.1rem;
 }
-:root[data-palette="witcher"][data-theme="light"] .bottom-nav-inner {
+:root[data-palette="witcher"][data-theme="light"] :is(.bottom-nav-inner, .tabs-inner) {
   --pz-filete: rgba(71,82,95,.4);
   --wt-canto-nav: rgba(255,255,255,.9);
 }
-:root[data-palette="witcher"] .bottom-nav-btn { border-radius: var(--radius-sm); }
-:root[data-palette="witcher"] .bottom-nav-btn.active { color: var(--on-accent); }
+:root[data-palette="witcher"] :is(.bottom-nav-btn, .tab-btn) { border-radius: var(--radius-sm); }
+:root[data-palette="witcher"] :is(.bottom-nav-btn, .tab-btn).active { color: var(--on-accent); }
 /* La sección activa es la placa pulida con el filo de Igni. Es `position: absolute`, así que ya posiciona
    sus capas; el filo de Igni pasa a ser el filete de la pieza y recorre también las dos puntas. */
-:root[data-palette="witcher"] .bottom-nav-ind {
+:root[data-palette="witcher"] :is(.bottom-nav-ind, .tab-ind) {
   @include pieza-de-chapa;
   --pz-corte: polygon(9px 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 9px 100%, 0 50%);
   --pz-chapa: linear-gradient(180deg, #e2e8ef 0%, #c3ccd7 46%, #92a0af 54%, #d6dee6 100%);
   --pz-filete: rgba(255,143,74,.75);
   --pz-grosor: 1.5px;
 }
-:root[data-palette="witcher"][data-theme="light"] .bottom-nav-ind {
+:root[data-palette="witcher"][data-theme="light"] :is(.bottom-nav-ind, .tab-ind) {
   --pz-chapa: linear-gradient(180deg, #566270 0%, #434d5a 46%, #333c47 54%, #4d5765 100%);
   --pz-filete: rgba(143,54,8,.6);
 }
-:root[data-palette="witcher"][data-theme="light"] .bottom-nav-btn.active { color: #fff; }
+:root[data-palette="witcher"][data-theme="light"] :is(.bottom-nav-btn, .tab-btn).active { color: #fff; }
 
 /* ── §9 · La puntuación, que era lo más plano del tema ─────────────────────────────────────────────
    LA NOTA ES UN MEDALLÓN TROQUELADO: el arco de color sigue diciendo la nota (lo pinta la hoja base con

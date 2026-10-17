@@ -269,10 +269,10 @@
 :root[data-palette="seaofstars"] .fab-roulette:hover { filter: brightness(1.06); }
 
 /* ── §13 · Barra inferior: caja pixelada; pastilla activa recta. ── */
-:root[data-palette="seaofstars"] .bottom-nav-inner { border: 2px solid var(--border); border-radius: 0; background: var(--surface); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px color-mix(in srgb, var(--sos-turq) 45%, var(--border)); }
+:root[data-palette="seaofstars"] :is(.bottom-nav-inner, .tabs-inner) { border: 2px solid var(--border); border-radius: 0; background: var(--surface); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px color-mix(in srgb, var(--sos-turq) 45%, var(--border)); }
 /* El fondo del HOVER (`.bottom-nav-btn`) lleva el mismo canto que el indicador del activo: con la pastilla de la
    casa, al pasar por encima aparecía una cápsula dentro de una barra de esquinas vivas. */
-:root[data-palette="seaofstars"] :is(.bottom-nav-ind, .bottom-nav-btn) { border-radius: 0; }
+:root[data-palette="seaofstars"] :is(.bottom-nav-ind, .bottom-nav-btn, .tab-ind, .tab-btn) { border-radius: 0; }
 
 /* Brillo de agua: latido MUY sutil del título hero (respeta reduced-motion).
    UNA RESPIRACIÓN Y UN DESCANSO, no un latido sin fin. El `drop-shadow` no lo mueve el compositor, así que en
@@ -712,16 +712,11 @@
   --stats-num: var(--font-body);
 }
 
-/* ── §18 · LAS PESTAÑAS DE ESCRITORIO: la franja es el borde de una caja de diálogo y el indicador, un
-   bloque de oro. Nada de píldoras ni de degradados: aquí la interfaz se dibuja con la rejilla. El contador
-   no se mete en una caja —las cajas de este mundo son las de diálogo—: se queda en la letra de píxel. ── */
-:root[data-palette="seaofstars"] .tabs { border-bottom: 2px solid var(--sos-line); }
-:root[data-palette="seaofstars"] .tab-underline {
-  height: 3px;
-  border-radius: 0;
-  background: var(--fg-link);
-}
-:root[data-palette="seaofstars"] .count-badge { font-family: var(--font-body); }
+/* ── §18 · LAS PESTAÑAS DE LAS LISTAS: la caja pixelada de la barra de abajo (§13), con el indicador rematado
+   por un bloque de oro. Nada de píldoras ni de degradados: aquí la interfaz se dibuja con la rejilla. El
+   contador no se mete en una caja —las cajas de este mundo son las de diálogo—: se queda en la letra de píxel. ── */
+:root[data-palette="seaofstars"] .tab-ind { box-shadow: inset 0 0 0 1px rgba(var(--steam-rgb),.25), inset 0 -3px 0 var(--fg-link); }
+:root[data-palette="seaofstars"] .count-badge { font-family: var(--font-body); --tab-count-bg: transparent; }
 
 /* ── §19 · LAS ESTRELLAS: sombra pixelada, la misma idea que el titular del §1 —un solo desplazamiento
    nítido, sin difuminar—. A medio tono y un píxel: a dos píxeles y turquesa pleno, la sombra pesaba más que

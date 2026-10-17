@@ -499,17 +499,15 @@
 :root[data-palette="arcade"][data-theme="light"] .flabel,
 :root[data-palette="arcade"][data-theme="light"] .detail-label { color: var(--fg-link); }
 
-/* ── §8 · Pestañas: la activa es el rótulo ENCENDIDO —violeta con halo— y el contador, una FICHA ámbar con
-   su tinta y su sombra dura, que es la única cifra de la pantalla que se mira de lejos. ── */
+/* ── §8 · Pestañas: la pastilla es el mismo mueble que la barra de abajo (§11) y la activa, su TECLA violeta
+   pulsada con el rótulo en blanco; el contador, una FICHA ámbar con su tinta y su sombra dura, que es la única
+   cifra de la pantalla que se mira de lejos. ── */
 :root[data-palette="arcade"] .tab-btn {
+  border-radius: var(--radius-sm);
   letter-spacing: .06em;
   font-size: var(--fs-2xs);
 }
-:root[data-palette="arcade"] .tab-btn.active {
-  color: var(--steam-hover);
-  text-shadow: 0 0 10px rgba(178, 60, 255, .5);
-}
-:root[data-palette="arcade"][data-theme="light"] .tab-btn.active { text-shadow: none; }
+:root[data-palette="arcade"] .tab-btn.active { color: #fff; }
 :root[data-palette="arcade"] .count-badge {
   display: inline-block;
   padding: .05rem .42rem;
@@ -596,25 +594,25 @@
    móvil con la CPU ×4, scroll del listado con el piloto destellando, 17-20 % de fotogramas perdidos → 1-1,6 %).
    Hacen falta LAS DOS: con solo una seguía igual. Y la sombra difusa necesita 12 px de radio o más: con 8 no
    bastaba. No se sabe el porqué dentro del compositor; se encontró bisecando la hoja regla a regla. */
-:root[data-palette="arcade"] .bottom-nav-inner {
+:root[data-palette="arcade"] :is(.bottom-nav-inner, .tabs-inner) {
   border: 2px solid var(--arc-ink);
   border-radius: var(--radius-sm);
   background: linear-gradient(180deg, #2a1745, #1b0f2e);
   box-shadow: var(--arc-cast-panel), 0 0 12px rgba(0, 0, 0, .01);
 }
-:root[data-palette="arcade"][data-theme="light"] .bottom-nav-inner {
+:root[data-palette="arcade"][data-theme="light"] :is(.bottom-nav-inner, .tabs-inner) {
   background: linear-gradient(180deg, #fff, #eadcfa);
 }
 :root[data-palette="arcade"] .bottom-nav-btn { border-radius: var(--radius-sm); letter-spacing: .05em; font-size: var(--fs-2xs); }
 :root[data-palette="arcade"] .bottom-nav-btn.active { color: #fff; }
 :root[data-palette="arcade"][data-theme="light"] .bottom-nav-btn.active { color: #fff; }
 /* La pastilla deslizante deja de ser un velo del acento y pasa a ser la TECLA: relleno macizo y filete. */
-:root[data-palette="arcade"] .bottom-nav-ind {
+:root[data-palette="arcade"] :is(.bottom-nav-ind, .tab-ind) {
   border-radius: var(--radius-sm);
   background: linear-gradient(180deg, #b957ff, #6d1fc9);
   box-shadow: inset 0 0 0 2px var(--arc-ink), inset 0 2px 0 rgba(255, 255, 255, .25);
 }
-:root[data-palette="arcade"][data-theme="light"] .bottom-nav-ind {
+:root[data-palette="arcade"][data-theme="light"] :is(.bottom-nav-ind, .tab-ind) {
   background: linear-gradient(180deg, #9b34f0, #6b12bd);
 }
 

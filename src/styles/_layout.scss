@@ -42,88 +42,126 @@
    de la pantalla porque no depende de dónde esté el desplazamiento. */
 
 /* Tabs */
+/* LAS LISTAS SON UNA PASTILLA, como la barra inferior y los botones redondos de los lados. Eran una franja a todo
+   el ancho con un subrayado bajo la activa: la única pieza de navegación de la app que no era de cristal, y la
+   que más ocupaba de la cabecera. Dentro de `.tabs` va `.tabs-inner`, que mide lo que piden sus pestañas, con la
+   activa marcada por la misma pastilla deslizante de la barra inferior (`.tab-ind`). Cada tema la viste a la vez
+   que su barra de abajo: en sus hojas, `.tabs-inner` va junto a `.bottom-nav-inner` y `.tab-ind` junto a
+   `.bottom-nav-ind`.
+
+   Y SUBE A LA FILA DE LA LUPA Y EL TEMA SI CABE. La franja guardaba 3,4rem arriba para los controles flotantes
+   (como Social/Ajustes) y la pastilla iba debajo: a los lados de los dos botones redondos quedaba una fila vacía.
+   `TabBar` mide si la pastilla cabe a su lado y elige la forma (ver `tabBarLayout.ts`); aquí solo se dibujan:
+   `is-inline` la sube a esa fila, `is-icons` deja icono y contador, `is-tight` los aprieta y `is-stretch` los
+   reparte por todo el ancho. En un móvil va siempre en su fila, a todo el ancho: apretada a la izquierda de los
+   controles parecía descentrada respecto a las tarjetas de debajo. */
 .tabs {
   position: relative;
-  display: flex; gap: .15rem;
-  /* Franja superior para los controles flotantes (tema + sync), igual que Social/Ajustes,
-     para que el cluster no se mezcle con las pestañas. */
-  padding: 3.4rem clamp(1rem, 5vw, 2rem) 0;
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  /* `overflow-y: hidden` NO es redundante: con `overflow-x: auto` el eje vertical pasa de `visible` a `auto`,
-     así que cualquier hijo absoluto que asome por abajo (el subrayado, el tooltip al pasar el ratón) convertía
-     la franja en un contenedor scrolleable y pintaba una barra vertical de ancho completo justo al lado de los
-     controles flotantes. Se ve solo en algunas resoluciones porque la altura de la franja es fraccionaria. */
-  overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; flex: 0 0 auto;
-  width: 100%; justify-content: safe center;
+  display: flex; justify-content: center;
+  padding: 3.4rem clamp(1rem, 5vw, 2rem) .4rem;
+  flex: 0 0 auto;
+  width: 100%;
 }
 
-.tabs::-webkit-scrollbar { height: 4px; }
+/* En la fila de los controles, con el centro de la pastilla (44 px: botones de 36 + su relleno y filete) a la
+   altura del de los botones redondos (36 px desde .6rem, en `_overlays-and-responsive`). */
+.tabs.is-inline { padding-top: calc(.4rem - 1px + env(safe-area-inset-top, 0px)); }
 
-.tabs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.tabs-inner {
+  position: relative;
+  display: flex; gap: .15rem;
+  width: fit-content; max-width: 100%;
+  padding: .3rem;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: var(--surface-glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--e2);
+}
+
+.tabs.is-inline .tabs-inner { padding-block: .2rem; }
+
+.tabs-inner.is-stretch { width: 100%; gap: 0; }
+
+/* Y SI NI APRETADA CABE A TODO EL ANCHO (360 px con el texto grande del sistema y la ficha ámbar de Arcade), la
+   pastilla se desplaza en vez de cortar las cifras: es lo único que hacía bien la franja de antes. */
+.tabs-inner.is-stretch { overflow-x: auto; scrollbar-width: none; }
+
+.tabs-inner.is-stretch::-webkit-scrollbar { display: none; }
+
+/* LAS COPIAS DE MEDIDA: la pastilla en cada forma, fuera de la vista y sin anchura impuesta, para que `TabBar` sepa
+   lo que pediría cada una sin tener que pintarla. Por la izquierda: lo que asoma por ese lado no abre scroll. */
+.tabs-inner.is-measure {
+  position: absolute; top: 0; left: -10000px;
+  width: max-content; max-width: none;
+  visibility: hidden; pointer-events: none;
+}
+
+/* Se miden con el rótulo en negrita, que es como va la activa: cualquiera de ellas puede serlo. */
+.tabs-inner.is-measure .tab-btn { font-weight: 650; }
 
 .tab-btn {
-  background: transparent; color: var(--text-dim);
-  border: none;
-  padding: .85rem 1rem; font-weight: 500; font-size: var(--fs-md);
-  cursor: pointer; transition: color .2s, font-weight .2s;
-  white-space: nowrap; display: inline-flex; align-items: center; gap: .5rem;
-  font-family: inherit; position: relative;
+  position: relative; z-index: 1;
+  background: transparent; color: var(--text-muted);
+  border: none; border-radius: var(--radius-pill);
+  min-height: 2.5rem;
+  padding: .4rem .95rem; font-weight: 500; font-size: var(--fs-sm);
+  cursor: pointer; transition: background .2s, color .2s;
+  white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  font-family: inherit;
 }
 
-/* Barra inferior con brillo centrado (G2): se desvanece en los extremos. Solo en la activa. */
-.tab-btn::before {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 0;
-  background: var(--tab-bar); border-radius: 2px; transition: height .2s;
+.tabs.is-inline .tab-btn { min-height: 2.25rem; }
+
+.tabs-inner.is-icons .tab-btn { padding-inline: .8rem; gap: .4rem; }
+
+.tabs-inner.is-icons .tab-text-full { display: none; }
+
+/* APRETADA: cinco pestañas en un móvil, también con el texto grande del sistema. El relleno justo y la cifra sin
+   ficha son lo que deja icono y contador enteros sin scroll. */
+.tabs-inner.is-tight .tab-btn { padding-inline: .3rem; gap: .25rem; }
+
+.tabs-inner.is-tight .count-badge { min-width: 0; padding-inline: 0; background: none; }
+
+.tabs-inner.is-stretch .tab-btn { flex: 1 0 auto; }
+
+.tab-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+@media (hover:hover) {
+  .tab-btn:not(.active):hover { background: var(--overlay-hover); color: var(--text); }
 }
 
-.tab-btn:focus-visible { outline: none; box-shadow: inset 0 -2px 0 var(--focus-ring); border-radius: 6px; }@media (hover:hover) {
+.tab-btn.active { color: var(--tab-active); font-weight: 650; }
 
- .tab-btn:hover { color: var(--text-muted); }
-}
-
-
-.tab-btn.active { color: var(--tab-active); font-weight: 700; }
-
-/* El subrayado activo ahora lo dibuja el indicador deslizante `.tab-underline` (posicionado por JS). */
+/* EL CONTADOR, EN SU FICHA: una pastilla del color del rótulo a media luz, que es lo que lo separa del nombre sin
+   un segundo color. Los temas que no enmarcan la cifra —su letra ya basta— lo apagan con `--tab-count-bg`. */
 .count-badge {
-  color: var(--text-dim); font-size: var(--fs-xs); font-weight: 600;
+  min-width: 1.6em;
+  padding: .1rem .4rem;
+  border-radius: var(--radius-pill);
+  background: var(--tab-count-bg, color-mix(in srgb, currentColor 14%, transparent));
+  font-size: var(--fs-2xs); font-weight: 650; line-height: 1.35; text-align: center;
   font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
 }
 
-.tab-btn.active .count-badge { color: var(--tab-active); }
-
-.tab-icon { width: 1.1rem; height: 1.1rem; opacity: .55; fill: currentColor; stroke: currentColor; transition: opacity .2s; }
+.tab-icon { width: 1.05rem; height: 1.05rem; flex: 0 0 auto; opacity: .7; fill: currentColor; stroke: currentColor; transition: opacity .2s; }
 
 .tab-btn.active .tab-icon { opacity: 1; }
 
-.tab-btn[data-tooltip] { position: relative; }
-
+/* EL RÓTULO CORTO AL PASAR EL RATÓN, por fuera de la pastilla: la franja ya no recorta nada (no tiene `overflow`),
+   así que asoma entero por debajo. */
 .tab-btn[data-tooltip]:hover::after {
   content: attr(data-tooltip);
-  position: absolute; bottom: -35px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: calc(100% + .55rem); left: 50%; transform: translateX(-50%);
   background: var(--surface-elevated); color: var(--text);
   padding: .5rem .75rem; border-radius: 6px; font-size: var(--fs-2xs); font-weight: 600;
   white-space: nowrap; border: 1px solid var(--border); z-index: 10;
   animation: fadeIn .2s ease-in; pointer-events: none;
 }
 
-@keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }@media (max-width:1024px) {
+@keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
-  .tab-btn { padding: .8rem .7rem; font-size: var(--fs-sm); }
-
-  .tab-btn .tab-text-full { display: none; }
-
-  .count-badge { font-size: var(--fs-2xs); }
-}
-/* CINCO PESTAÑAS EN UN MÓVIL. Con la lista de deseos el relleno fijo de cada pestaña ya no cabía: a 280 px
-   sobraban 40 px, y con el texto grande del sistema (+30 %) la quinta se salía hasta en 412. Aquí se reparten
-   el ancho a partes iguales con el relleno justo, que es lo que deja icono y contador enteros sin scroll. */
-@media (max-width:480px) {
-
-  .tabs { gap: 0; }
-
-  .tab-btn { flex: 1 1 0; min-width: 0; justify-content: center; gap: .3rem; padding-inline: .2rem; }
-}
 @media (max-width:720px) {
 
   thead { display: none; }
@@ -801,21 +839,15 @@
    (`ach-toast-in` en `_capsule.scss`), con su guarda de `prefers-reduced-motion` incluida. Dos animaciones
    distintas para la misma pieza según dónde esté era exactamente lo que se venía a quitar. */
 
-/* Pestañas: subrayado que se desliza bajo la activa (posición y ancho los fija TabBar por JS). */
-/* Pegado al borde inferior POR DENTRO (antes `bottom: -1px`): asomando 1px generaba desbordamiento vertical
-   en `.tabs` y, con ello, la barra de scroll fantasma de la franja superior. */
-.tab-underline {
-  position: absolute; bottom: 0; left: 0; height: 1.5px;
-  background: var(--tab-bar); border-radius: 2px; pointer-events: none;
-  transition: transform .28s cubic-bezier(.2,.8,.25,1), width .28s cubic-bezier(.2,.8,.25,1);
-}
-
-/* Navegación inferior: pastilla deslizante tras la sección activa + icono que sube. */
-.bottom-nav-ind {
+/* Navegación inferior y pestañas de las listas: pastilla deslizante tras la activa (posición y ancho los fija el
+   componente por JS) + en la inferior, icono que sube. Es la misma pieza en las dos barras. */
+.bottom-nav-ind,
+.tab-ind {
   position: absolute; top: .3rem; bottom: .3rem; left: 0; z-index: 0;
   border-radius: var(--radius-pill);
   background: linear-gradient(180deg, rgba(var(--steam-rgb),.18), rgba(var(--steam-rgb),.1));
   box-shadow: inset 0 0 0 1px rgba(var(--steam-rgb),.25);
+  pointer-events: none;
   transition: transform .3s cubic-bezier(.2,.8,.25,1), width .3s cubic-bezier(.2,.8,.25,1);
 }
 
@@ -866,7 +898,7 @@
   .hub-friend-chip,
   .hub-feed-empty { animation: none; }
 
-  .tab-underline, .bottom-nav-ind { transition: none; }
+  .tab-ind, .bottom-nav-ind { transition: none; }
 
   .bottom-nav-btn.active .bottom-nav-icon { transform: none; }
 
