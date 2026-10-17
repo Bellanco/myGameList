@@ -745,7 +745,8 @@ function localTmdbApi(): Plugin {
  * `/cover`: tira de `functions/_lib/itad`, el mismo módulo que la Function, con la clave de `.dev.vars`
  * (`ITAD_API_KEY`). Lo que no tiene, y a propósito: la sesión (quien llama es quien ha levantado el servidor en su
  * máquina, como en `localPremiosApi`), los topes por rango y por minuto, y la caché de Cloudflare, que aquí es un
- * `Map` en memoria con el plazo más corto (el de mithril, 15 min) para no repetir llamadas a ITAD al recargar.
+ * `Map` en memoria con el plazo más corto (el de mithril, 15 min) para no repetir llamadas a ITAD al recargar. Como
+ * mithril, también con la tercera pasada (la de las ediciones).
  */
 function localPreciosApi(): Plugin {
   const deDevVars = (clave: string): string => {
@@ -811,6 +812,7 @@ function localPreciosApi(): Plugin {
                 cache,
                 presupuesto: { tomar: () => true },
                 ahora: Date.now(),
+                conEdiciones: true,
               });
               const diagnostico = { 'x-cache': preguntoAItad ? 'miss' : 'hit' };
               if (fallo && !Object.values(juegos).some(Boolean)) {
