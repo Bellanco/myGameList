@@ -19,10 +19,14 @@ export function normalizeSearchText(text: string): string {
 
 /**
  * ¿Contiene `name` lo buscado? `query` ya normalizada. También sin espacios, para que «spiderman» encuentre
- * «Spider-Man» y «spider man» encuentre «Spiderman».
+ * «Spider-Man» y «spider man» encuentre «Spiderman», pero solo desde el principio de una palabra: «ewi» no encuentra
+ * «The Witcher» saltándose el hueco entre «the» y «witcher».
  */
 export function matchesSearch(name: string, query: string): boolean {
   if (!query) return true;
   const text = normalizeSearchText(name);
-  return text.includes(query) || text.replace(/ /g, '').includes(query.replace(/ /g, ''));
+  if (text.includes(query)) return true;
+  const joined = query.replace(/ /g, '');
+  const words = text.split(' ');
+  return words.some((_, i) => words.slice(i).join('').startsWith(joined));
 }
