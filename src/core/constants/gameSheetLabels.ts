@@ -63,7 +63,7 @@ export const GAME_SHEET_UI = {
   saga: 'Saga',
   sameGenre: (genre: string) => `Más de «${genre}»`,
   sagaOwn: (tab: TabId | null) => (tab ? LIST_SHORT[tab] : 'No lo tienes'),
-  sagaFriends: (count: number) => `${count} ${count === 1 ? 'amistad' : 'amistades'}`,
+  sagaFriends: (count: number) => `${count} ${count === 1 ? 'amigo' : 'amigos'}`,
   sagaOpenAria: (name: string) => `Abrir la ficha de ${name}`,
   /** El nombre de un juego que abre su ficha desde otra pantalla (una reseña, el feed). */
   openSheetAria: (name: string) => `Abrir la ficha de ${name}`,
