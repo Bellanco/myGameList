@@ -38,7 +38,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   abierta (y al cerrarla te quedas en esa lista); desde el nombre de un
   juego en el chip de una reseña o en un aviso de lista del feed; y desde las listas de una amistad, con lo suyo
   arriba: su lista, sus datos y su reseña. También se abre la de un juego que no tienes, y puedes añadirlo a deseados
-  o a próximos desde ella. El detalle que se desplegaba bajo cada juego ya no existe.
+  o a próximos desde ella. En Estadísticas, los juegos de «Lo mejor de tu biblioteca», los de cada año y el que ya
+  tienes en «Ya lo tienes en casa» abren su ficha sin sacarte del panel. El detalle que se desplegaba bajo cada
+  juego ya no existe.
 
 - **«No puedes pasar» estrena colores.** De noche, el fondo es el verde hondo del bosque de Lórien, la hoja es más
   luminosa y el oro más vivo, y la pestaña activa y las letras de los títulos van en plata. De día, el pergamino

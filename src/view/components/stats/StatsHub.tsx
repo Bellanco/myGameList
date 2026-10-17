@@ -19,6 +19,7 @@ import { OWN_STATS_BLOCKS } from '../../../core/stats/types';
 import { TAB_IDS, type TabData } from '../../../model/types/game';
 import { STATS_REVIEWS_ROUTE, parseStatsReviewPath, statsReviewPath } from '../../../core/utils/reviewPath';
 import { useShowWishlist } from '../../hooks/useShowWishlist';
+import { useGameSheetParam } from '../../../viewmodel/gameSheet/useGameSheetParam';
 // La hoja del panel se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS
 // en el mismo chunk perezoso y el arranque no carga ni un byte de estilos de esta pantalla.
 import '../../../styles/stats.scss';
@@ -89,9 +90,8 @@ export const StatsHub = memo(function StatsHub({
   const openReviews = useCallback(() => { void navigate(REVIEWS_ROUTE); }, [navigate]);
   const openAchievements = useCallback(() => { void navigate(ACHIEVEMENTS_ROUTE); }, [navigate]);
   /**
-   * Abrir una reseña recuerda DE DÓNDE se vino: quien la abre desde el podio o desde una ficha del top espera
-   * volver al panel, y quien la abre desde el listado, al listado. El origen viaja en el estado de la ruta, así
-   * que el atrás del navegador y el botón de la pantalla llevan al mismo sitio.
+   * Abrir una reseña recuerda DE DÓNDE se vino: quien la abre desde el listado vuelve al listado. El origen viaja
+   * en el estado de la ruta, así que el atrás del navegador y el botón de la pantalla llevan al mismo sitio.
    */
   const nameById = useMemo(() => {
     const names = new Map<number, string>();
@@ -104,9 +104,12 @@ export const StatsHub = memo(function StatsHub({
     },
     [navigate, nameById],
   );
-  const openReviewFromPanel = useCallback((gameId: number) => openReviewFrom(gameId, PANEL_ROUTE), [openReviewFrom]);
   const openReviewFromList = useCallback((gameId: number) => openReviewFrom(gameId, REVIEWS_ROUTE), [openReviewFrom]);
   const backToPanel = useCallback(() => { void navigate(PANEL_ROUTE); }, [navigate]);
+  /* El top y el listado de un año abren la FICHA del juego encima del panel (`?juego=`, que no cambia el `pathname`):
+     se sigue en la misma pestaña y a la misma altura, y «atrás» la cierra. La reseña se lee desde la propia ficha. */
+  const { openSheet } = useGameSheetParam();
+  const openGameSheet = useCallback((name: string) => openSheet(name), [openSheet]);
   /**
    * DE DÓNDE SE VINO, y a dónde vuelve el botón. El origen viaja en el estado de la ruta y se valida contra una
    * lista corta: el panel, cualquiera de las cuatro listas —desde el detalle de un juego— y, si no es ninguno,
@@ -192,7 +195,9 @@ export const StatsHub = memo(function StatsHub({
           mode: vm.hasRealHistory ? 'real' : 'derived',
         }}
         onOpenReviews={openReviews}
-        onOpenReview={openReviewFromPanel}
+        // El top abre la ficha del juego, no la reseña: desde la ficha se llega a ella.
+        onOpenReview={null}
+        onOpenGame={openGameSheet}
         wishKin={showWishlist ? vm.wishKin : null}
         achievements={
           ENABLE_ACHIEVEMENTS ? (

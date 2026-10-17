@@ -7,6 +7,7 @@ import { Dumbbell } from './Dumbbell';
 import { Icon } from '../Icon';
 import { categoryToneStyle } from '../../../core/constants/categoryTone';
 import { TAB_ROUTE } from '../../../core/constants/labels';
+import { GAME_SHEET_UI } from '../../../core/constants/gameSheetLabels';
 import type { WishKinSummary } from '../../../core/stats/wishKin';
 
 /**
@@ -15,8 +16,13 @@ import type { WishKinSummary } from '../../../core/stats/wishKin';
  * Tres piezas, de la más directa a la más general: cuántos deseos tienen ya un pariente, cuáles son las parejas
  * (una por género mientras los haya; el juego y el género llevan a Próximos) y, por géneros, en qué se parecen y en qué no lo que deseas y lo que esperas. Sin parejas se queda la frase y
  * la comparación, que sigue diciendo algo: dónde un deseo cubriría un hueco.
+ *
+ * Con `onOpenGame`, el juego que ya tienes abre su ficha encima del panel en vez de llevar a Próximos.
  */
-export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSummary }) {
+export const WishKinCard = memo(function WishKinCard({ kin, onOpenGame }: {
+  kin: WishKinSummary;
+  onOpenGame?: (name: string) => void;
+}) {
   const L = useStatsLabels().kin;
   const hidden = kin.withKin - kin.pairs.length;
 
@@ -52,14 +58,26 @@ export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSumm
                     <span className="kin-have">
                       <Icon name="angle-right" className="kin-arrow" />
                       <span className="kin-have-label">{L.youHave}</span>{' '}
-                      {/* Al juego en su lista, como lo abre el buscador: Próximos con su nombre en el filtro. */}
-                      <Link
-                        to={`${TAB_ROUTE.p}?q=${encodeURIComponent(pair.kin.name)}`}
-                        className="kin-have-name"
-                        title={L.gameLink(pair.kin.name)}
-                      >
-                        {pair.kin.name}
-                      </Link>
+                      {/* Su ficha, sin salir del panel; sin ella, al juego en su lista, como lo abre el buscador:
+                          Próximos con su nombre en el filtro. */}
+                      {onOpenGame ? (
+                        <button
+                          type="button"
+                          className="kin-have-name"
+                          title={GAME_SHEET_UI.openSheetAria(pair.kin.name)}
+                          onClick={() => onOpenGame(pair.kin.name)}
+                        >
+                          {pair.kin.name}
+                        </button>
+                      ) : (
+                        <Link
+                          to={`${TAB_ROUTE.p}?q=${encodeURIComponent(pair.kin.name)}`}
+                          className="kin-have-name"
+                          title={L.gameLink(pair.kin.name)}
+                        >
+                          {pair.kin.name}
+                        </Link>
+                      )}
                     </span>
                     <span className="sr-only">{L.because}</span>
                     {/* Los MISMOS chips que en los listados: la saga como los años (genérico) y el género con su tono,

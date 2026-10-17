@@ -6,6 +6,7 @@ import { DonutShare } from './DonutShare';
 import { ShineRows } from './ShineRows';
 import { formatDecimal, formatHours } from './format';
 import { GRADE_MAX, hueFromGrade } from '../../../core/utils/scoreScale';
+import { GAME_SHEET_UI } from '../../../core/constants/gameSheetLabels';
 import type { TopSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
@@ -40,19 +41,36 @@ interface TopGamesProps {
    */
   onOpenReview?: (gameId: number) => void;
   /**
+   * Abre la FICHA del juego (el panel lateral, sin salir de la pantalla). Manda sobre `onOpenReview`: con ella, todas
+   * las tarjetas son pulsables, tengan reseña o no, porque la ficha la tiene cualquier juego.
+   */
+  onOpenGame?: (name: string) => void;
+  /**
    * Año del ámbito, si se está viendo uno. Solo cambia el aviso de las rejugadas: ahí la cuenta llega hasta ese
    * año, no es el total de la biblioteca, y el rótulo lo dice.
    */
   year?: number;
 }
 
-export const TopGames = memo(function TopGames({ top, scale, average, showRest = true, onOpenReview, year }: TopGamesProps) {
+export const TopGames = memo(function TopGames({ top, scale, average, showRest = true, onOpenReview, onOpenGame, year }: TopGamesProps) {
   const labels = useStatsLabels();
   const L = labels.top;
   const REVIEWS = labels.reviews;
   if (top.sample === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
+
+  /** Qué abre la tarjeta de un juego y cómo se dice, o `null` si no abre nada. */
+  const opener = (game: TopSummary['ranked'][number]) => {
+    if (onOpenGame) return { title: GAME_SHEET_UI.openSheetAria(game.name), open: () => onOpenGame(game.name) };
+    if (game.hasReview && onOpenReview) return { title: REVIEWS.openTitle(game.name), open: () => onOpenReview(game.id) };
+    return null;
+  };
+  const openButton = (open: ReturnType<typeof opener>) => (open ? (
+    <button type="button" className="top-chip-open" title={open.title} onClick={open.open}>
+      <span className="sr-only">{open.title}</span>
+    </button>
+  ) : null);
 
   const replaysTitle = (times: number) => (year ? L.replaysTitleYear(times, year) : L.replaysTitle(times));
   const avgInScale = scale === 'grade' ? top.avgGrade : top.avgGrade / 20;
@@ -65,38 +83,32 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
       {/* El puesto va de MARCA DE AGUA al fondo de su tarjeta: da la jerarquía del podio sin robarle sitio al
           nombre, que es lo que se viene a leer. El metal lo dice además con palabras, para no depender del color. */}
       <ol className="podium">
-        {top.podium.map((game, index) => (
-          <li
-            key={game.id}
-            className={`podium-step is-${MEDALS[index]}${game.hasReview ? ' has-review' : ''}`}
-            style={{ '--i': index } as CSSProperties}
-          >
-            <span className="podium-ghost" aria-hidden="true">{index + 1}</span>
-            {/* Con reseña, la tarjeta entera abre: no todos los del podio tienen una, y los que la tienen no
-                siempre dan para una cita (una reseña de dos letras no se enseña, pero se puede leer). */}
-            {game.hasReview && onOpenReview ? (
-              <button
-                type="button"
-                className="top-chip-open"
-                title={REVIEWS.openTitle(game.name)}
-                onClick={() => onOpenReview(game.id)}
-              >
-                <span className="sr-only">{REVIEWS.openTitle(game.name)}</span>
-              </button>
-            ) : null}
-            <span className="podium-medal">{L.medals[index]}</span>
-            <span className="podium-name" title={game.name}>{game.name}</span>
-            <span className="podium-meta">
-              <ScoreDisplay game={{ grade: game.grade }} />
-              {game.replays > 1 ? (
-                <b className="podium-replays" title={replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
-              ) : null}
-              {game.hours > 0 ? <small>{L.hours(formatHours(game.hours))}</small> : null}
-            </span>
-            {/* Tus propias palabras sobre el juego, si las escribiste: no todos los del podio están reseñados. */}
-            {game.quote ? <p className="podium-quote">{game.quote}</p> : null}
-          </li>
-        ))}
+        {top.podium.map((game, index) => {
+          const open = opener(game);
+          return (
+            <li
+              key={game.id}
+              className={`podium-step is-${MEDALS[index]}${open ? ' is-openable' : ''}`}
+              style={{ '--i': index } as CSSProperties}
+            >
+              <span className="podium-ghost" aria-hidden="true">{index + 1}</span>
+              {/* La tarjeta entera abre: la ficha, o, sin ella, la reseña si la hay (no todos los del podio tienen
+                  una, y los que la tienen no siempre dan para una cita: una de dos letras no se enseña, pero se lee). */}
+              {openButton(open)}
+              <span className="podium-medal">{L.medals[index]}</span>
+              <span className="podium-name" title={game.name}>{game.name}</span>
+              <span className="podium-meta">
+                <ScoreDisplay game={{ grade: game.grade }} />
+                {game.replays > 1 ? (
+                  <b className="podium-replays" title={replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
+                ) : null}
+                {game.hours > 0 ? <small>{L.hours(formatHours(game.hours))}</small> : null}
+              </span>
+              {/* Tus propias palabras sobre el juego, si las escribiste: no todos los del podio están reseñados. */}
+              {game.quote ? <p className="podium-quote">{game.quote}</p> : null}
+            </li>
+          );
+        })}
       </ol>
 
       <div className="top-figures">
@@ -112,37 +124,31 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
           {/* Misma receta que el podio —puesto al fondo— y una barra de nota al pie: puestas en rejilla, las
               barras dejan ver de un vistazo cómo caen las notas del cuarto al quince. */}
           <ol className="top-chips">
-            {rest.map((game, index) => (
-              <li
-                key={game.id}
-                className={game.hasReview ? 'has-review' : undefined}
-                style={{ '--i': index } as CSSProperties}
-              >
-                <span className="top-chip-ghost" aria-hidden="true">{index + top.podium.length + 1}</span>
-                {/* El botón cubre la ficha entera en vez de colgar el clic de la fila: así el objetivo es la
-                    tarjeta —que sí llega al tamaño mínimo— y el teclado lo alcanza como a cualquier control. */}
-                {game.hasReview && onOpenReview ? (
-                  <button
-                    type="button"
-                    className="top-chip-open"
-                    title={REVIEWS.openTitle(game.name)}
-                    onClick={() => onOpenReview(game.id)}
-                  >
-                    <span className="sr-only">{REVIEWS.openTitle(game.name)}</span>
-                  </button>
-                ) : null}
-                <span className="top-chip-name" title={game.name}>{game.name}</span>
-                <span className="top-chip-meta">
-                  <ScoreDisplay game={{ grade: game.grade }} />
-                  {game.replays > 1 ? (
-                    <b className="podium-replays" title={replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
-                  ) : null}
-                </span>
-                <span className="top-chip-bar" aria-hidden="true">
-                  <i style={{ width: `${(game.grade / GRADE_MAX) * 100}%`, '--dot-hue': String(hueFromGrade(game.grade)) } as CSSProperties} />
-                </span>
-              </li>
-            ))}
+            {rest.map((game, index) => {
+              const open = opener(game);
+              return (
+                <li
+                  key={game.id}
+                  className={open ? 'is-openable' : undefined}
+                  style={{ '--i': index } as CSSProperties}
+                >
+                  <span className="top-chip-ghost" aria-hidden="true">{index + top.podium.length + 1}</span>
+                  {/* El botón cubre la ficha entera en vez de colgar el clic de la fila: así el objetivo es la
+                      tarjeta —que sí llega al tamaño mínimo— y el teclado lo alcanza como a cualquier control. */}
+                  {openButton(open)}
+                  <span className="top-chip-name" title={game.name}>{game.name}</span>
+                  <span className="top-chip-meta">
+                    <ScoreDisplay game={{ grade: game.grade }} />
+                    {game.replays > 1 ? (
+                      <b className="podium-replays" title={replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
+                    ) : null}
+                  </span>
+                  <span className="top-chip-bar" aria-hidden="true">
+                    <i style={{ width: `${(game.grade / GRADE_MAX) * 100}%`, '--dot-hue': String(hueFromGrade(game.grade)) } as CSSProperties} />
+                  </span>
+                </li>
+              );
+            })}
           </ol>
         </section>
       ) : null}
