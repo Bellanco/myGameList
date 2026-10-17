@@ -14,13 +14,13 @@ const LIST_PILL: Record<TabId, string> = {
   d: 'En tus deseos',
 };
 
-/** Lo mismo, en minúscula, para la línea de una entrega de la saga («Tú: en deseos»). */
+/** La lista en la que tienes una entrega de la saga, en su línea («En completados»). */
 const LIST_SHORT: Record<TabId, string> = {
-  c: 'completado',
-  v: 'abandonado',
-  e: 'en curso',
-  p: 'en próximos',
-  d: 'en deseos',
+  c: 'En completados',
+  v: 'En abandonados',
+  e: 'En curso',
+  p: 'En próximos',
+  d: 'En deseos',
 };
 
 const MONTH_YEAR = new Intl.DateTimeFormat(APP_LOCALE, { month: 'long', year: 'numeric' });
@@ -61,7 +61,7 @@ export const GAME_SHEET_UI = {
   hours: (hours: number) => String(hours).replace('.', ','),
   hoursUnit: (hours: number) => (hours === 1 ? 'hora' : 'horas'),
   saga: 'Saga',
-  sagaOwn: (tab: TabId | null) => (tab ? `Tú: ${LIST_SHORT[tab]}` : 'No lo tienes'),
+  sagaOwn: (tab: TabId | null) => (tab ? LIST_SHORT[tab] : 'No lo tienes'),
   sagaFriends: (count: number) => `${count} ${count === 1 ? 'amistad' : 'amistades'}`,
   sagaOpenAria: (name: string) => `Abrir la ficha de ${name}`,
   /** El nombre de un juego que abre su ficha desde otra pantalla (una reseña, el feed). */

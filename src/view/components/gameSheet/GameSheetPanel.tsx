@@ -548,7 +548,7 @@ export function GameSheetPanelView({
   const barRef = useRef<HTMLElement>(null);
   const { covers } = useCovers();
   const key = ficha?.slug ?? '';
-  const { width, showFiller } = useGameSheetWidth(visible, key, scrollRef, contentRef, Boolean(ficha?.wishers.length));
+  const { width, showFiller, boost } = useGameSheetWidth(visible, key, scrollRef, contentRef, Boolean(ficha?.wishers.length));
   const navigate = useNavigate();
   // Su perfil CON EL JUEGO ABIERTO y su bloque arriba (F0.7).
   const nombreAbierto = ficha?.name ?? '';
@@ -621,7 +621,7 @@ export function GameSheetPanelView({
       {ficha && (visible || saliendo) ? (
         <div
           ref={panelRef}
-          className={`modal gs-panel ${width}`}
+          className={`modal gs-panel ${width} ${boost}`.trim()}
           {...swipe}
           onAnimationEnd={(event) => {
             if (saliendo && event.target === event.currentTarget && event.animationName.startsWith('gsSale')) terminarSalida();

@@ -8,10 +8,15 @@ const MOVIL = '(max-width: 600px)';
 
 type EstadoRelleno = 'probando' | 'si' | 'no';
 
-/** El ancho elegido y si cabe el relleno. */
+/** Los escalones del realce: la carátula y el título, más grandes (sus medidas, en `styles/gameSheet.scss`). */
+export const GAME_SHEET_BOOSTS = ['', 'is-realce-1', 'is-realce-2', 'is-realce-3', 'is-realce-4'] as const;
+export type GameSheetBoost = (typeof GAME_SHEET_BOOSTS)[number];
+
+/** El ancho elegido, si cabe el relleno y el realce. */
 export interface GameSheetWidthState {
   width: GameSheetWidth;
   showFiller: boolean;
+  boost: GameSheetBoost;
 }
 
 /**
@@ -20,13 +25,19 @@ export interface GameSheetWidthState {
  * que todo cabe sin scroll. Solo se ensancha si el cuerpo tiene más de una sección que repartir: con una sola, dos
  * columnas no ganarían altura.
  *
- * EL RELLENO («Lo quieren», F0.4) entra al final: primero se elige el ancho sin él; después se prueba a añadirlo y, si
+ * EL RELLENO («Lo quieren», F0.4) entra después: primero se elige el ancho sin él; después se prueba a añadirlo y, si
  * así ya no cabe sin scroll, se quita. Nunca ensancha el panel ni provoca scroll.
+ *
+ * EL REALCE, lo último (17-10-2026, decisión del usuario): el panel va a todo el alto, y una ficha con poco que contar
+ * (un deseo sin precio ni saga) dejaba media pantalla en blanco. Con todo ya colocado, se prueba a agrandar la carátula
+ * y el título un escalón y otro, y se queda en el mayor que cabe sin scroll. Si el contenido crece después, es lo
+ * primero que se va, antes que el relleno: es adorno.
  *
  * Cuándo se mide:
  *  · al abrir y cada vez que cambia la ficha (`key`);
  *  · cada vez que el contenido cambia de tamaño (`ResizeObserver`): la letra que llega tarde, una carátula, las
- *    amistades que llegan después. Ese caso SOLO ensancha (o quita el relleno), así que no puede entrar en bucle;
+ *    amistades que llegan después. Ese caso SOLO ensancha (o quita el realce o el relleno), así que no puede entrar en
+ *    bucle;
  *  · al cambiar el tamaño de la ventana, que vuelve a empezar por el más estrecho.
  *
  * En el móvil el panel es siempre casi la pantalla entera: no hay ancho que elegir, pero el relleno sí se prueba.
@@ -43,14 +54,18 @@ export function useGameSheetWidth(
 ): GameSheetWidthState {
   const [medida, setMedida] = useState<{ key: string; etapa: number } | null>(null);
   const [relleno, setRelleno] = useState<{ key: string; estado: EstadoRelleno } | null>(null);
+  const [realce, setRealce] = useState<{ key: string; nivel: number; fijo: boolean } | null>(null);
   const [pasada, setPasada] = useState(0);
   const etapa = medida?.key === key ? medida.etapa : 0;
   const estadoRelleno = relleno?.key === key ? relleno.estado : null;
+  const nivel = realce?.key === key ? realce.nivel : 0;
+  const realceFijo = realce?.key === key ? realce.fijo : false;
 
   useEffect(() => {
     const alCambiar = () => {
       setMedida(null);
       setRelleno(null);
+      setRealce(null);
       setPasada((n) => n + 1);
     };
     window.addEventListener('resize', alCambiar);
@@ -75,22 +90,33 @@ export function useGameSheetWidth(
       return;
     }
     if (sobra) {
+      if (nivel > 0) {
+        setRealce({ key, nivel: nivel - 1, fijo: true });
+        return;
+      }
       if (estadoRelleno === 'si') {
         setRelleno({ key, estado: 'no' });
         return;
       }
       const secciones = scroll.querySelector('.gs-cuerpo')?.children.length ?? 0;
       if (!esMovil && etapa < GAME_SHEET_WIDTHS.length - 1 && secciones > 1) {
+        // Con otro ancho, el relleno y el realce se vuelven a probar desde cero.
         setMedida({ key, etapa: etapa + 1 });
         setRelleno(null);
+        setRealce(null);
       }
       return;
     }
-    if (estadoRelleno === null && hasFiller) setRelleno({ key, estado: 'probando' });
-  }, [open, key, etapa, estadoRelleno, hasFiller, pasada, scrollRef]);
+    if (estadoRelleno === null && hasFiller) {
+      setRelleno({ key, estado: 'probando' });
+      return;
+    }
+    if (!realceFijo && nivel < GAME_SHEET_BOOSTS.length - 1) setRealce({ key, nivel: nivel + 1, fijo: false });
+  }, [open, key, etapa, estadoRelleno, hasFiller, nivel, realceFijo, pasada, scrollRef]);
 
   return {
     width: GAME_SHEET_WIDTHS[etapa],
     showFiller: hasFiller && (estadoRelleno === 'probando' || estadoRelleno === 'si'),
+    boost: GAME_SHEET_BOOSTS[nivel],
   };
 }
