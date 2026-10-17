@@ -61,6 +61,7 @@ export const GAME_SHEET_UI = {
   hours: (hours: number) => String(hours).replace('.', ','),
   hoursUnit: (hours: number) => (hours === 1 ? 'hora' : 'horas'),
   saga: 'Saga',
+  sameGenre: (genre: string) => `Más de «${genre}»`,
   sagaOwn: (tab: TabId | null) => (tab ? LIST_SHORT[tab] : 'No lo tienes'),
   sagaFriends: (count: number) => `${count} ${count === 1 ? 'amistad' : 'amistades'}`,
   sagaOpenAria: (name: string) => `Abrir la ficha de ${name}`,

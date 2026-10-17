@@ -212,6 +212,15 @@ describe('GameSheetPanel', () => {
     expect(props.onOpenGame).toHaveBeenCalledWith('Hollow Knight: Silksong');
     expect(document.querySelector('.gs-saga-item[aria-current="true"]')).not.toBeNull();
   });
+
+  it('sin saga, la tira es Más de «<género>», con la lista en la que tienes cada uno', () => {
+    const ori = juego(3, 'Ori and the Blind Forest', { grade: 90 });
+    const props = pintar({ data: biblioteca({ c: [hollow], p: [ori] }) });
+    expect(screen.getAllByText('Más de «Metroidvania»').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('En próximos').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Abrir la ficha de Ori and the Blind Forest' })[0]);
+    expect(props.onOpenGame).toHaveBeenCalledWith('Ori and the Blind Forest');
+  });
 });
 
 describe('GameSheetPanel · deslizar a la derecha para cerrar', () => {

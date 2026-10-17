@@ -100,8 +100,10 @@ function horasJugadas(tab: TabId, item: GameItem): number | null {
   return (tab === 'c' || tab === 'v') && (item.hours ?? 0) > 0 ? Number(item.hours) : null;
 }
 
-function Saga({ saga, onOpenGame, covers, className = '' }: {
+/** La tira de carátulas: la saga o, sin ella, Más de «<género>» (`title`). */
+function Saga({ saga, title, onOpenGame, covers, className = '' }: {
   saga: GameSheetSagaEntry[];
+  title: string;
   onOpenGame: (name: string) => void;
   covers: boolean;
   className?: string;
@@ -110,7 +112,7 @@ function Saga({ saga, onOpenGame, covers, className = '' }: {
   return (
     <div className={`hub-detail-metadata gs-sec-saga ${className}`.trim()}>
       <div className="hub-metadata-section">
-        <strong>{GAME_SHEET_UI.saga}</strong>
+        <strong>{title}</strong>
         <ul className="gs-saga">
           {saga.map((entry) => {
             const { src } = coverDeCaja(covers, juegoParaCaratula(entry.name, entry.platforms), entry.ownTab ? PEDIDO_PROPIO : PEDIDO_AJENO);
@@ -605,6 +607,10 @@ export function GameSheetPanelView({
   // cabecera se queda como sin precio.
   const conPrecio = Boolean((own === null || own.tab === 'd') && price?.mejor);
   const plataformas = ficha?.saga.find((entry) => entry.current)?.platforms ?? bloque?.item.platforms ?? [];
+  // La tira: la saga o, si no hay, los de su género principal.
+  const tira = ficha?.saga.length
+    ? { title: GAME_SHEET_UI.saga, entries: ficha.saga }
+    : ficha?.sameGenre ? { title: GAME_SHEET_UI.sameGenre(ficha.sameGenre.genre), entries: ficha.sameGenre.games } : null;
   return (
     <dialog
       ref={dialogRef}
@@ -633,12 +639,12 @@ export function GameSheetPanelView({
           </button>
           <div className="gs-scroll" key={ficha.slug} ref={scrollRef}>
             <div className="gs-contenido" ref={contentRef}>
-              {/* Con ancho, el lado de la cabecera es la saga (sin ella, ese hueco quedaba vacío); en estrecho, la saga
-                  va al final del cuerpo. Se pinta en los dos sitios y el CSS esconde la que no toca. */}
+              {/* Con ancho, el lado de la cabecera es la tira (sin ella, ese hueco quedaba vacío); en estrecho, va al
+                  final del cuerpo. Se pinta en los dos sitios y el CSS esconde la que no toca. */}
               <Cabecera
                 sheet={ficha}
                 covers={covers}
-                lado={ficha.saga.length ? <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
+                lado={tira ? <Saga saga={tira.entries} title={tira.title} onOpenGame={onOpenGame} covers={covers} className="is-cabecera" /> : null}
               />
               <div className="gs-cuerpo">
                 {bloque ? <BloqueDeAmistad entrada={bloque} onOpenReview={openFriendReview} /> : null}
@@ -665,7 +671,7 @@ export function GameSheetPanelView({
                     />
                   </Suspense>
                 ) : null}
-                <Saga saga={ficha.saga} onOpenGame={onOpenGame} covers={covers} className="is-solo-estrecho" />
+                {tira ? <Saga saga={tira.entries} title={tira.title} onOpenGame={onOpenGame} covers={covers} className="is-solo-estrecho" /> : null}
               </div>
             </div>
           </div>

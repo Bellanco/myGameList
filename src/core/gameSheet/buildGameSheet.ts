@@ -1,4 +1,5 @@
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
+import { buildPickPool, filterPickPool } from '../pick/pickNext';
 import { gameSheetSlug, matchesGameSheet } from '../utils/gameSheetPath';
 import { sharedSagaName } from '../utils/gameSaga';
 import { resolveGrade } from '../utils/scoreScale';
@@ -63,6 +64,8 @@ export interface GameSheet {
   wishers: GameSheetFriend[];
   average: { grade: number; count: number } | null;
   saga: GameSheetSagaEntry[];
+  /** Sin saga, Más de «<género>»: tus juegos de su género principal (`buildSameGenre`). `null` si no hay. */
+  sameGenre: { genre: string; games: GameSheetSagaEntry[] } | null;
 }
 
 export interface BuildGameSheetInput {
@@ -221,6 +224,31 @@ function buildSaga(
   return saga.sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
+/** Cuántos juegos enseña Más de «<género>». */
+export const SAME_GENRE_MAX = 8;
+
+/**
+ * «MÁS DE <GÉNERO>», para que una ficha sin saga no se quede sin tira (17-10-2026, decisión del usuario): tus juegos
+ * de su género principal (el primero, el del resumen), solo de tu biblioteca. Son los candidatos de «¿A qué juego
+ * ahora?» y en su orden (`buildPickPool`: el peso de la ruleta sin el azar), así que salen tus próximos, los
+ * abandonados con «otra oportunidad» y los completados con «rejugar»; nunca el juego de la ficha.
+ */
+function buildSameGenre(slug: string, genre: string | undefined, own: TabData): GameSheet['sameGenre'] {
+  if (!genre) return null;
+  const games = filterPickPool(buildPickPool(own), { genres: [genre], platforms: [] })
+    .filter(({ game }) => gameSheetSlug(game.name) !== slug)
+    .slice(0, SAME_GENRE_MAX)
+    .map(({ game, sourceTab }) => ({
+      slug: gameSheetSlug(game.name),
+      name: game.name,
+      platforms: game.platforms || [],
+      ownTab: sourceTab,
+      friendCount: 0,
+      current: false,
+    }));
+  return games.length ? { genre, games } : null;
+}
+
 /**
  * Monta la ficha de un juego. Los deseos de las amistades van aparte («lo quieren») y sin nota; la media sale con las
  * notas que haya, por pocas que sean (F0.2), y dice cuántas son. El nombre que se enseña es el tuyo si lo tienes y,
@@ -236,6 +264,10 @@ export function buildGameSheet({ slug, own, signals }: BuildGameSheetInput): Gam
     ? { grade: Math.round(grades.reduce((sum, grade) => sum + grade, 0) / grades.length), count: grades.length }
     : null;
   const name = ownEntry?.item.name ?? signalGameName(slug, signals) ?? slug.replace(/-/g, ' ');
+  const saga = buildSaga(slug, name, own, signals);
+  const deAmistad = signals.find((signal): signal is Extract<GameSheetSignal, { kind: 'library' }> =>
+    signal.kind === 'library' && matchesGameSheet(slug, signal.item.name) && Boolean(signal.item.genres?.length));
+  const genre = ownEntry?.item.genres?.[0] ?? deAmistad?.item.genres[0];
   return {
     slug,
     name,
@@ -243,6 +275,7 @@ export function buildGameSheet({ slug, own, signals }: BuildGameSheetInput): Gam
     friends,
     wishers,
     average,
-    saga: buildSaga(slug, name, own, signals),
+    saga,
+    sameGenre: saga.length ? null : buildSameGenre(slug, genre, own),
   };
 }

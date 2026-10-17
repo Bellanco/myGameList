@@ -112,6 +112,9 @@ aciertan siempre con su precio porque llegan con su id.
    - **Lo que se le escapa, a conciencia:** sagas que solo se distinguen por subtítulo («Nier Automata» ~ «Nier
      Replicant») y las de nombre distinto («Dark Souls» ~ «Demon's Souls», «Thronebreaker» ~ «The Witcher»). Las
      arreglaría la franquicia de IGDB (idea C5 de la investigación), fuera de este plan.
+   - **Sin saga, Más de «<género>»** (17-10-2026, decisión del usuario), en el mismo sitio y con la misma tira: tus
+     juegos del género principal del de la ficha, solo de tu biblioteca. Son los candidatos de «¿A qué juego ahora?»
+     en su orden (`buildPickPool`: el peso de la ruleta sin el azar), hasta 8; sin ninguno, no sale.
    - **Quién la ve:** cada uno, en su ficha y solo sobre lo que puede ver. Tus entregas, siempre, también sin social.
      Las de tus amistades, solo con social y según su visibilidad: con el índice de bibliotecas (F4, desde plata)
      todas; sin él (bronce), solo las que han reseñado o movido de lista en los últimos 30 días. Nadie ve tu saga:

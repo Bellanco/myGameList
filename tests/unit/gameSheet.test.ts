@@ -3,6 +3,7 @@ import { gameSheetSearch, gameSheetSlug, matchesGameSheet, ownGameSheetTab } fro
 import {
   buildGameSheet,
   entriesForGame,
+  SAME_GENRE_MAX,
   findOwnEntry,
   signalGameName,
   type GameSheetFriendRef,
@@ -195,5 +196,34 @@ describe('buildGameSheet', () => {
   it('no emparenta títulos que solo comparten una palabra suelta', () => {
     const conDead = biblioteca({ c: [juego(1, 'Dead Space'), juego(2, 'Dead Cells')] });
     expect(buildGameSheet({ slug: 'dead-space', own: conDead, signals: [] }).saga).toEqual([]);
+  });
+
+  it('sin saga, Más de «<género>»: los candidatos de «¿A qué juego ahora?» de su género principal, en su orden', () => {
+    const accion = (id: number, name: string, extra: Partial<GameItem> = {}) => juego(id, name, { genres: ['Acción'], ...extra });
+    const own = biblioteca({
+      d: [accion(1, "Marvel's Spider-Man", { genres: ['Acción', 'Mundo abierto'] }), accion(2, 'Otro deseo')],
+      p: [accion(3, 'Próximo flojo', { grade: 50 }), accion(4, 'Próximo bueno', { grade: 90 }), juego(5, 'Próximo de otro género', { genres: ['RPG'], grade: 99 })],
+      c: [accion(6, 'Completado sin rejugar', { grade: 100 }), accion(7, 'Completado para rejugar', { grade: 100, replayable: true })],
+      v: [accion(8, 'Abandonado con otra oportunidad', { retry: true })],
+    });
+    const sheet = buildGameSheet({ slug: gameSheetSlug("Marvel's Spider-Man"), own, signals: [] });
+    expect(sheet.sameGenre?.genre).toBe('Acción');
+    // El peso de la ruleta (nota² × lista): 90 en próximos (70,9), 100 en completados (25), la vergüenza con su nota
+    // neutra (24,5) y 50 en próximos (21,9). Ni deseos, ni completados sin «rejugar», ni el propio juego.
+    expect(sheet.sameGenre?.games.map((game) => [game.name, game.ownTab])).toEqual([
+      ['Próximo bueno', 'p'],
+      ['Completado para rejugar', 'c'],
+      ['Abandonado con otra oportunidad', 'v'],
+      ['Próximo flojo', 'p'],
+    ]);
+  });
+
+  it('Más de «<género>» solo sin saga, con tope y nada si no hay ninguno', () => {
+    const accion = (id: number, name: string) => juego(id, name, { genres: ['Acción'] });
+    const muchos = biblioteca({ c: [accion(1, 'Hollow Knight'), accion(2, 'Hollow Knight: Silksong')], p: ['Celeste', 'Hades', 'Inside', 'Limbo', 'Tunic', 'Cuphead', 'Ori', 'Gris', 'Braid', 'Fez'].map((name, i) => accion(10 + i, name)) });
+    expect(buildGameSheet({ slug: 'hollow-knight', own: muchos, signals: [] }).sameGenre).toBeNull();
+    expect(buildGameSheet({ slug: 'celeste', own: muchos, signals: [] }).sameGenre?.games).toHaveLength(SAME_GENRE_MAX);
+    const solo = biblioteca({ c: [accion(1, 'Celeste')] });
+    expect(buildGameSheet({ slug: 'celeste', own: solo, signals: [] }).sameGenre).toBeNull();
   });
 });
